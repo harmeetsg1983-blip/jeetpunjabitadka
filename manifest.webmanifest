@@ -1,0 +1,24 @@
+{
+  "name": "Jeet Punjabi Tadka — Smart Ordering App",
+  "short_name": "Jeet Punjabi Tadka",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0d0d0d",
+  "theme_color": "#111111",
+  "description": "Jeet Punjabi Tadka digital menu and direct ordering app",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
