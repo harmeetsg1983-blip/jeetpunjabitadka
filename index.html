@@ -19,13 +19,13 @@ header{position:sticky;top:0;z-index:20;background:#090909;padding:13px 14px;bor
 .heroTrack{position:relative;min-height:150px}.heroSlide{display:none;padding:17px;min-height:150px;background:linear-gradient(135deg,#30210b,#111)}.heroSlide.active{display:flex;flex-direction:column;justify-content:center}.heroSlide h2{margin:0 0 5px;color:var(--accent);font-size:22px}.heroSlide p{margin:0;color:#ddd;font-size:12px;line-height:1.4}.today{margin-top:10px;display:inline-block;width:max-content;padding:7px 10px;border-radius:9px;background:#fff2c5;color:#17120a;font-weight:900;font-size:12px}.dots{position:absolute;right:10px;bottom:9px;display:flex;gap:4px}.dot{width:7px;height:7px;border-radius:50%;background:#777}.dot.active{background:var(--accent)}
 .videoBanner{margin:9px 14px;border-radius:14px;overflow:hidden;border:1px solid #3d331e;background:#111;min-height:155px}.videoBanner video,.videoBanner img{width:100%;height:180px;object-fit:cover;display:block}.videoFallback{height:155px;display:grid;place-items:center;padding:18px;text-align:center;background:linear-gradient(135deg,#241b0d,#111);color:#ddd}.videoFallback b{display:block;color:var(--accent);font-size:18px;margin-bottom:5px}
 .section{font-size:17px;font-weight:900;margin:14px 14px 8px;color:var(--accent)}
-.highlightGrid{display:flex;gap:9px;overflow:auto;padding:0 14px 4px}.highlight{box-shadow:0 0 0 1px rgba(216,174,66,.18),0 8px 24px rgba(0,0,0,.28);min-height:108px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}min-width:190px;border:1px solid #3a301d;border-radius:14px;padding:12px;background:#151515;cursor:pointer}.highlight b{display:block;font-size:14px}.highlight small{display:block;color:#aaa;margin:4px 0 9px}.highlight .offer{font-weight:950;font-size:12px;padding:7px 9px;border-radius:9px;background:#222;color:#fff}
+.highlightGrid{display:flex;gap:9px;overflow:auto;padding:0 14px 4px}.highlight{box-shadow:0 0 0 1px rgba(216,174,66,.18),0 8px 24px rgba(0,0,0,.28);min-height:108px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease;min-width:190px;border:1px solid #3a301d;border-radius:14px;padding:12px;background:#151515;cursor:pointer}.highlight b{display:block;font-size:14px}.highlight small{display:block;color:#aaa;margin:4px 0 9px}.highlight .offer{font-weight:950;font-size:12px;padding:7px 9px;border-radius:9px;background:#222;color:#fff}
 main{padding-bottom:12px}.item{display:flex;gap:14px;padding:15px 14px;border-bottom:1px solid #252525;min-height:144px}.pic{width:160px;height:160px;border-radius:14px;background:linear-gradient(135deg,#302818,#151515);border:1px solid #40351f;display:grid;place-items:center;text-align:center;color:#9b8b62;font-size:10px;flex:none;overflow:hidden}.pic img{width:100%;height:100%;object-fit:cover}.info{flex:1;min-width:0}.dish{font-weight:900;font-size:15px}.desc{font-size:11px;color:#aaa;margin:5px 0;line-height:1.35}.price{font-weight:900;margin-top:7px}.add{float:right;margin-top:-29px;border:1px solid var(--accent);background:#17130a;color:var(--accent);border-radius:9px;padding:7px 12px;font-weight:950}.qty{float:right;margin-top:-31px;display:flex;align-items:center;border:1px solid var(--accent);border-radius:9px;overflow:hidden}.qty button{background:#17130a;color:var(--accent);border:0;padding:7px 10px;font-weight:1000}.qty span{padding:7px 9px}
 .cart{position:fixed;bottom:calc(58px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:min(492px,calc(100% - 28px));background:var(--accent);color:#111;border-radius:13px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;font-weight:950;box-shadow:0 5px 25px #0008;z-index:60;cursor:pointer}
 .nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(520px,100%);display:flex;justify-content:space-around;background:#111;border-top:1px solid #333;padding:9px 0;color:#aaa;font-size:11px;z-index:59}.nav b{color:var(--accent)}
 .modal{display:none;position:fixed;inset:0;background:#000c;z-index:200;padding-top:4vh}.modal.show{display:block}.sheet{height:96vh;max-height:96vh;overflow-y:auto;position:absolute;bottom:0;width:min(520px,100%);left:50%;transform:translateX(-50%);background:#151515;border-radius:20px 20px 0 0;padding:18px 18px calc(28px + env(safe-area-inset-bottom));color:#fff;box-shadow:0 -10px 35px #0009}.sheetHead{display:flex;justify-content:space-between;align-items:center;position:sticky;top:-18px;background:#151515;padding:8px 0 12px;z-index:2}.close{background:#2a2417;color:#fff;border:1px solid #59461e;border-radius:9px;padding:8px 11px}.box{border:1px solid #3a301d;border-radius:12px;padding:12px;margin:10px 0}.box h3{margin:0 0 8px;color:var(--accent)}.field{margin:9px 0}.field label{display:block;font-size:12px;color:#bbb;margin-bottom:4px}.input,.select,.area{width:100%;padding:11px;border-radius:9px;border:1px solid #4a3b22;background:#0e0e0e;color:#fff}.area{min-height:75px}.pay{width:100%;padding:13px;background:var(--accent);color:#111;border:0;border-radius:10px;font-weight:950;font-size:15px}.summaryRow{display:flex;justify-content:space-between;margin:7px 0}.offerChip{border:1px dashed var(--accent);border-radius:10px;padding:10px;margin:7px 0;color:#f4d77a}
 .scratch{position:relative;border:1px solid var(--accent);border-radius:14px;padding:14px;text-align:center;background:linear-gradient(135deg,#2a210e,#121212);overflow:hidden}.scratch h2{margin:0;color:var(--accent)}.scratch .ribbon{font-size:30px;margin:2px 0}.scratch .amount{font-size:28px;font-weight:1000;color:#fff}.scratch button{margin-top:8px;border:0;border-radius:10px;padding:10px 16px;font-weight:950;background:var(--accent);color:#111}.confetti{font-size:25px;letter-spacing:4px}.toast{position:fixed;top:15px;left:50%;transform:translateX(-50%);background:#f2cf63;color:#17120a;padding:10px 14px;border-radius:99px;z-index:300;font-size:12px;max-width:90%;text-align:center}
-@media(max-width:380px){.pic{width:138px;height:138px}.item{min-height:106px}.highlight{box-shadow:0 0 0 1px rgba(216,174,66,.18),0 8px 24px rgba(0,0,0,.28);min-height:108px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}min-width:175px}
+@media(max-width:380px){.pic{width:138px;height:138px}.item{min-height:106px}.highlight{box-shadow:0 0 0 1px rgba(216,174,66,.18),0 8px 24px rgba(0,0,0,.28);min-height:108px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease;min-width:175px}}
 </style>
 </head>
 <body>
@@ -77,13 +77,11 @@ main{padding-bottom:12px}.item{display:flex;gap:14px;padding:15px 14px;border-bo
 </div>
 </div>
 
-<script>
 <!-- JPT_PRODUCTION_CHECKLIST: live verification required before production Green. Real UPI VPA must be configured outside source code. -->
-
-let jptCheckoutBusy=false;
- src="../supabase-config.js"></script>
+<script src="supabase-config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+let jptCheckoutBusy=false;
 const sb=window.supabase.createClient(window.JPT_SUPABASE_URL,window.JPT_SUPABASE_PUBLISHABLE_KEY);
 const WA='9148161094';
 const OUTLETS={
@@ -103,6 +101,9 @@ function toast(t){$('toast')?.remove();let x=document.createElement('div');x.id=
 function setTheme(){document.documentElement.style.setProperty('--accent',OUTLETS[outletId].accent);$('restaurant').textContent=outletRecords[outletId]?.name||OUTLETS[outletId].name;$('menuTitle').textContent=(outletId==='JPT-001'?'📋 Jeet Punjabi Tadka Menu':'📋 '+(outletRecords[outletId]?.name||OUTLETS[outletId].name)+' Menu')}
 function renderOutlets(){$('outletbar').innerHTML=Object.entries(OUTLETS).map(([id,o])=>`<button class="outlet ${id===outletId?'on':''}" onclick="switchOutlet('${id}')">${esc(o.name)}</button>`).join('')}
 function renderHighlights(){
+ const title=document.querySelector('.section');
+ const grid=$('highlightGrid');
+ if(title&&grid){const show=outletId==='JPT-001'; title.style.display=show?'':'none'; grid.style.display=show?'':'none';}
  const ids=Object.keys(OUTLETS).filter(id=>id!=='JPT-001');
  $('highlightGrid').innerHTML=ids.map(id=>{
   const o=OUTLETS[id], rec=outletRecords[id]||{}, os=(offersByOutlet[id]||[]).filter(activeWindow);
@@ -111,7 +112,7 @@ function renderHighlights(){
  }).join('');
 }
 async function switchOutlet(id){outletId=id;history.replaceState({},'',location.pathname+'?outlet='+encodeURIComponent(id));cartState={};selectedPromo=null;items=[];offers=[];campaigns=[];imageMap={};setTheme();renderOutlets();await loadManagedMenu()}
-function renderChips(cats){$('chips').innerHTML=['All',...cats].map((c,i)=>`<button class="chip ${i===0?'on':''}" onclick="filterCat('${esc(c)}',this)">${esc(c)}</button>`).join('')}
+function renderChips(cats){$('chips').innerHTML=['All',...cats].map((c,i)=>`<button class="chip ${i===0?'on':''}" data-cat="${esc(c)}" onclick="filterCat(this.dataset.cat,this)">${esc(c)}</button>`).join('')}
 function render(list=items){
  const cats=[...new Set(list.map(x=>x.category).filter(Boolean))];
  if(!cats.length){$('menu').innerHTML='<div class="box" style="margin:14px">No menu items are available for this outlet right now.</div>';return}
@@ -174,7 +175,7 @@ async function loadManagedMenu(){
  try{
   let sr=await sb.from('outlets').select('*').eq('outlet_id',outletId).maybeSingle();if(sr.data){outletRecords[outletId]=sr.data;$('restaurantMeta').textContent=(sr.data.cuisine||'North Indian • Punjabi')+' • Direct Order'}
   let r=await sb.from('menu_items').select('*').eq('outlet_id',outletId).eq('available',true).eq('is_deleted',false).order('sort_order').order('name');if(!r.error)items=r.data||[];
-  let cr=await sb.from('categories').select('name,sort_order').eq('outlet_id',outletId).eq('is_active',true).order('sort_order').order('name');let cats=!cr.error?(cr.data||[]).map(x=>x.name):[...new Set(items.map(x=>x.category).filter(Boolean))];renderChips(cats);render();
+  let cr=await sb.from('categories').select('name,sort_order').eq('outlet_id',outletId).eq('is_active',true).order('sort_order').order('name');let tableCats=!cr.error?(cr.data||[]).map(x=>x.name):[];let itemCats=[...new Set(items.map(x=>x.category).filter(Boolean))];let cats=[...new Set([...tableCats,...itemCats])];renderChips(cats);render();
   let ir=await sb.from('menu_item_images').select('*').eq('outlet_id',outletId);if(!ir.error)imageMap=Object.fromEntries((ir.data||[]).map(x=>[x.menu_item_id||x.item_name,x.image_url]));render();
   let or=await sb.from('offers').select('*').eq('outlet_id',outletId).eq('active',true);if(!or.error)offers=(or.data||[]).filter(activeWindow);offersByOutlet[outletId]=offers;
   let ca=await sb.from('campaigns').select('*').eq('outlet_id',outletId);if(!ca.error)campaigns=(ca.data||[]).filter(activeWindow);
@@ -202,6 +203,7 @@ async function placeOrder(){
  ord.payment_status=payment==='UPI'?'PENDING':'CASH_ON_DELIVERY';let result=await sb.from('orders').insert(ord);if(result.error){jptCheckoutBusy=false;return toast('Order save failed: '+result.error.message);}if(payment==='UPI'&&!openUpiPayment(ord.order_no,c.total,OUTLETS[outletId].name))return;
  let msg=`NEW ORDER ${ord.order_no}%0A${encodeURIComponent(rows.map(r=>r.x.name+' x '+r.q).join('\\n'))}%0ASubtotal: ${encodeURIComponent(money(c.subtotal))}%0ADiscount: ${encodeURIComponent(money(c.discount))}%0ADelivery: ${encodeURIComponent(c.delivery?money(c.delivery):'FREE')}%0ATotal: ${encodeURIComponent(money(c.total))}%0AOutlet: ${encodeURIComponent(OUTLETS[outletId].name)}%0AOutlet ID: ${encodeURIComponent(outletId)}%0APayment: ${encodeURIComponent(payment)}%0ACustomer: ${encodeURIComponent(ord.customer_name)}%0APhone: ${phone}%0AAddress: ${encodeURIComponent(ord.customer_address)}`;
  window.open(`https://wa.me/91${WA}?text=${msg}`,'_blank');cartState={};selectedPromo=null;updateCart();closeCart();toast('Order placed successfully')
+ }catch(e){console.error(e);toast('Order could not be completed. Please try again.')} finally {jptCheckoutBusy=false}
 }
 loadAllOutletOffers().catch(()=>{});
 loadManagedMenu();
