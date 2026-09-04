@@ -1,67 +1,125 @@
-<!DOCTYPE html>
-<html lang="hi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jeet Punjabi Tadka - Admin Panel</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; background: #121212; color: #fff; padding: 15px; margin: 0; }
-        .card { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #333; }
-        .btn { background: #e50914; color: #fff; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        .btn-refresh { background: #007bff; margin-bottom: 10px; }
-        .order-title { font-size: 1.1em; color: #f39c12; font-weight: bold; }
-    </style>
-</head>
-<body>
-    <h2>Jeet Punjabi Tadka - Admin Panel</h2>
-    <button class="btn btn-refresh" onclick="loadOrders()">Refresh Orders</button>
-    
-    <div id="orders-container">ऑर्डर लोड हो रहे हैं...</div>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Jeet Punjabi Tadka — Owner Admin</title>
+<style>
+:root{--bg:#090909;--panel:#121212;--gold:#d8ad45;--gold2:#f4d77a;--text:#f7f2e7;--muted:#aaa;--line:#3a301d}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#211b0e,#090909 40%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:14px}.wrap{max-width:720px;margin:auto}.card{background:var(--panel);border:1px solid #4b3b1e;border-radius:16px;padding:16px;margin-bottom:12px}h1,h2{font-family:Georgia,serif;color:var(--gold2)}h1{margin:0 0 4px;font-size:26px}h2{margin:0 0 12px;font-size:20px}.muted{color:var(--muted);font-size:13px;line-height:1.5}.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.field{margin:8px 0}.field label{display:block;color:#c9bea6;font-size:12px;margin-bottom:5px}.field input,.field textarea,.field select{width:100%;padding:11px;border-radius:10px;border:1px solid #4a3b22;background:#0e0e0e;color:white}.field textarea{min-height:65px}.btn{border:0;border-radius:10px;padding:11px 13px;font-weight:900;cursor:pointer}.primary{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#111}.dark{background:#1c1914;color:var(--gold2);border:1px solid #4b3b1e}.danger{background:#5d2721;color:#ffd8d1}.online{background:#1f8f52;color:white}.offline{background:#7d3028;color:white}.hidden{display:none!important}.tabs{display:flex;gap:7px;overflow:auto;margin-bottom:12px}.tab{white-space:nowrap}.tab.active{outline:2px solid var(--gold)}.msg{color:var(--gold2);min-height:20px;margin:8px 0;font-size:13px}.status{padding:11px;border-radius:11px;border:1px solid #4b3b1e;background:#111;margin-bottom:10px}.order{border:1px solid #3a301d;border-radius:12px;padding:12px;margin:9px 0;background:#101010}.order.new{box-shadow:0 0 0 1px #8e6a27}.order-top{display:flex;justify-content:space-between;gap:8px}.badge{padding:5px 8px;border-radius:999px;background:#2a2417;color:var(--gold2);font-size:11px;font-weight:900}.item{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid #292318}.thumb{width:58px;height:58px;border-radius:9px;object-fit:cover;background:#222}.row{display:flex;gap:8px;align-items:center;justify-content:space-between}.offer,.image-row{border:1px solid #3a301d;border-radius:12px;padding:10px;margin:8px 0}.image-row{display:grid;grid-template-columns:58px 1fr auto;gap:10px;align-items:center}.preview{width:58px;height:58px;border-radius:9px;object-fit:cover;background:#222}.switch{display:flex;gap:8px}.small{font-size:11px;color:#888}.bell{font-size:22px}.count{background:#9b2f26;color:white;border-radius:999px;padding:2px 7px;font-size:11px}.free{color:#7be19a;font-weight:900}@media(max-width:520px){.grid{grid-template-columns:1fr}.image-row{grid-template-columns:48px 1fr}.image-row .upload{grid-column:1/-1;width:100%}}
+</style></head><body><div class="wrap">
+<div class="card"><h1>JEET PUNJABI TADKA</h1><div class="muted">Owner Admin Panel — Full restaurant control: menu, images, categories, offers & orders</div></div>
+<section id="login" class="card"><h2>Owner Login</h2><div class="field"><label>Email</label><input id="email" type="email" autocomplete="username"></div><div class="field"><label>Password</label><input id="password" type="password" autocomplete="current-password"></div><button class="btn primary" id="loginBtn">🔐 Login</button><div id="loginMsg" class="msg"></div></section>
+<section id="app" class="hidden">
+<div class="card"><div class="row"><h2>Restaurant Status</h2><span id="bell" class="bell">🔔 <span id="newCount" class="count">0</span></span></div><div id="state" class="status">Loading…</div><div class="field"><label>Active Outlet</label><select id="outletSelect">
+<option value="JPT-001">Jeet Punjabi Tadka</option>
+<option value="SOP-002">Shahi Punjab</option>
+<option value="PFA-003">Punjabi Food Adda</option>
+<option value="NME-004">99 Meal Express</option>
+<option value="TOP-005">Taste of Punjab</option>
+</select></div><div class="switch"><button class="btn online" id="online">🟢 ONLINE</button><button class="btn offline" id="offline">🔴 OFFLINE</button></div><div id="appMsg" class="msg"></div></div>
+<div class="tabs"><button class="btn dark tab active" data-tab="orders">📦 Orders</button><button class="btn dark tab" data-tab="items">🍽️ Items</button><button class="btn dark tab" data-tab="images">🖼️ Images</button><button class="btn dark tab" data-tab="offers">🎁 Offers</button><button class="btn dark tab" data-tab="categories">🏷️ Categories</button></div>
+<div id="items" class="tabpane card hidden"><div class="row"><h2>Items Manager</h2><button class="btn primary" id="newItem">＋ Add Item</button></div><div class="muted">Add, edit, delete, change price, category and availability. Changes are saved to Supabase and applied to the live menu.</div><div id="itemForm" class="hidden"></div><div id="itemList"></div></div><div id="orders" class="tabpane card"><div class="row"><h2>Orders</h2><button class="btn dark" id="refreshOrders">↻ Refresh</button></div><div class="muted">New orders are checked automatically. Keep this page open for the order bell.</div><div id="ordersList"></div></div>
+<div id="images" class="tabpane card hidden"><h2>Menu Images</h2><div class="muted">Choose a dish, pick a photo from your phone, adjust/crop it, then Save. The image is automatically mapped to that exact menu item.</div><div id="imageList"></div></div>
+<div id="categories" class="tabpane card hidden"><div class="row"><h2>Categories</h2><button class="btn primary" id="newCategory">＋ Add Category</button></div><div class="muted">Create, rename and delete categories for the active outlet. Renaming updates the items in that category.</div><div id="categoryForm" class="hidden"></div><div id="categoryList"></div></div>
+<div id="offers" class="tabpane card hidden"><div class="row"><h2>Offers</h2><button class="btn primary" id="newOffer">＋ New Offer</button></div><div class="muted">Set start/end date & time. Offers automatically become inactive outside that window.</div><div id="offerForm" class="hidden"></div><div id="offerList"></div></div>
+<div class="card"><button class="btn dark" id="logout">Log out</button> <a class="btn dark" href="./" style="text-decoration:none;display:inline-block">Open Live Menu</a></div>
+</section></div>
+<script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
+const sb=window.supabase.createClient(window.JPT_SUPABASE_URL,window.JPT_SUPABASE_PUBLISHABLE_KEY);
+const OUTLET_KEY='jpt_admin_outlet';
+let currentOutlet=localStorage.getItem(OUTLET_KEY)||'JPT-001', menuItems=[], categories=[], lastSeen=localStorage.getItem('jpt_admin_last_seen')||'', orderTimer=null, audioCtx=null, orderChannel=null;
+const $=id=>document.getElementById(id);
+const BASE_MENU=[];
+function msg(t){$('appMsg').textContent=t} function loginMsg(t){$('loginMsg').textContent=t}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function isoLocal(v){return v?new Date(v).toISOString():null}
+function outletFilter(q){return q.eq('outlet_id',currentOutlet)}
+function orderAlert(){try{audioCtx=audioCtx||new(window.AudioContext||window.webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.frequency.value=880;g.gain.value=.08;o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+.22)}catch(e){}try{navigator.vibrate?.(300)}catch(e){}try{if('Notification'in window&&Notification.permission==='granted')new Notification('Jeet Punjabi Tadka — New Order',{body:'A new customer order has arrived.'})}catch(e){}}
+async function loadStatus(){const r=await sb.from('outlets').select('is_active,name').eq('outlet_id',currentOutlet).maybeSingle();if(r.error){msg(r.error.message);return}if(!r.data){$('state').textContent='⚠️ Outlet record not found in Supabase';return}$('state').textContent=r.data.is_active?'🟢 '+r.data.name+' is ONLINE — accepting orders':'🔴 '+r.data.name+' is OFFLINE — orders stopped'}
+async function setStatus(v){msg('Saving…');const r=await sb.from('outlets').update({is_active:v}).eq('outlet_id',currentOutlet);msg(r.error?r.error.message:'Saved successfully.');await loadStatus()}
+async function subscribeOrders(){try{if(orderChannel){await sb.removeChannel(orderChannel);orderChannel=null}orderChannel=sb.channel('jpt-orders-'+currentOutlet).on('postgres_changes',{event:'INSERT',schema:'public',table:'orders',filter:'outlet_id=eq.'+currentOutlet},payload=>{orderAlert();loadOrders()}).on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders',filter:'outlet_id=eq.'+currentOutlet},payload=>loadOrders()).subscribe()}catch(e){}}
+async function loadOrders(){const r=await outletFilter(sb.from('orders').select('*')).order('created_at',{ascending:false}).limit(50);if(r.error){msg('Orders: '+r.error.message);return}const data=r.data||[],fresh=data.filter(o=>o.status==='new');$('newCount').textContent=fresh.length;$('ordersList').innerHTML=data.length?data.map(o=>{let items=Array.isArray(o.items)?o.items:[];return `<div class="order ${o.status==='new'?'new':''}"><div class="order-top"><div><b>${esc(o.order_no||('#'+String(o.id).slice(0,8)))}</b><div class="small">${new Date(o.created_at).toLocaleString()}</div></div><span class="badge">${esc(o.status||'new')}</span></div><div style="margin:8px 0"><b>${esc(o.customer_name||'Customer')}</b>${o.phone?' · '+esc(o.phone):''}<br>${esc(o.address||'')}<br>${esc(o.order_type||'')} ${o.payment?' · '+esc(o.payment):''}</div>${items.map(x=>`<div class="item"><div><b>${esc(x.name||x.item_name||'Item')}</b> × ${Number(x.qty||x.quantity||1)}</div><div>₹${Math.round(Number(x.price||x.unit_price||0)*Number(x.qty||x.quantity||1)).toLocaleString('en-IN')}</div></div>`).join('')}<div class="row" style="margin-top:9px"><span>Subtotal ₹${Math.round(Number(o.subtotal||0))} · Discount ₹${Math.round(Number(o.discount||0))}</span><b>₹${Math.round(Number(o.total||0))}</b></div>${o.free_item?`<div class="free">🎁 FREE: ${esc(o.free_item)}</div>`:''}${o.note?`<div class="small">Note: ${esc(o.note)}</div>`:''}<div class="field"><label>Status</label><select data-order="${esc(o.id)}"><option ${o.status==='new'?'selected':''}>new</option><option ${o.status==='accepted'?'selected':''}>accepted</option><option ${o.status==='preparing'?'selected':''}>preparing</option><option ${o.status==='ready'?'selected':''}>ready</option><option ${o.status==='completed'?'selected':''}>completed</option><option ${o.status==='cancelled'?'selected':''}>cancelled</option></select></div></div>`}).join(''):'<div class="muted">No orders yet.</div>';$('ordersList').querySelectorAll('select[data-order]').forEach(s=>s.onchange=async()=>{const r=await sb.from('orders').update({status:s.value,updated_at:new Date().toISOString()}).eq('id',s.dataset.order).eq('outlet_id',currentOutlet);if(r.error)msg(r.error.message);else await loadOrders()});if(fresh.length&&fresh[0].created_at!==lastSeen){lastSeen=fresh[0].created_at;localStorage.setItem('jpt_admin_last_seen',lastSeen);orderAlert()}}
+async function loadMenuItems(){const r=await outletFilter(sb.from('menu_items').select('*')).order('sort_order').order('name');if(r.error){msg('Menu: '+r.error.message);return []}menuItems=(r.data||[]).filter(x=>!x.is_deleted);return menuItems}
+async function loadItems(){
+ await loadCategories();
+ const data=await loadMenuItems();
+ const ir=await outletFilter(sb.from('menu_item_images').select('menu_item_id,item_name,image_url'));
+ const imageMap={};
+ if(!ir.error){for(const x of (ir.data||[])) imageMap[x.menu_item_id||x.item_name]=x.image_url}
+ data.forEach(x=>x.image_url=imageMap[x.id]||null);
+ $('itemList').innerHTML=data.map(o=>`<div class="offer"><div class="row"><b>🍽️ ${esc(o.name)}</b><span class="badge">${o.available?'AVAILABLE':'HIDDEN'}</span>${o.featured?'<span class="badge">⭐ SPECIAL</span>':'<span class="badge">STANDARD</span>'}</div><div class="small">${esc(o.category||'Other')} · ₹${Number(o.price||0).toLocaleString('en-IN')}</div>${o.description?`<div class="muted">${esc(o.description)}</div>`:''}${o.image_url?`<div style="margin-top:8px"><img class="preview" src="${esc(o.image_url)}" alt="${esc(o.name)}"></div>`:''}<div style="margin-top:8px"><button class="btn dark" data-ie="${esc(o.id)}">Edit</button> <button class="btn primary" data-img="${esc(o.id)}">🖼️ ${o.image_url?'Replace image':'Add image'}</button> <button class="btn ${o.available?'danger':'online'}" data-ia="${esc(o.id)}">${o.available?'Make Unavailable':'Make Available'}</button> <button class="btn danger" data-id="${esc(o.id)}">Delete</button></div></div>`).join('')||'<div class="muted">No menu items yet.</div>';
+ $('itemList').querySelectorAll('[data-ie]').forEach(b=>b.onclick=()=>itemForm(data.find(x=>x.id===b.dataset.ie)));
+ $('itemList').querySelectorAll('[data-img]').forEach(b=>b.onclick=()=>chooseImageForItem(data.find(x=>x.id===b.dataset.img)));
+ $('itemList').querySelectorAll('[data-ia]').forEach(b=>b.onclick=async()=>{const o=data.find(x=>x.id===b.dataset.ia);const r=await sb.from('menu_items').update({available:!o.available,is_deleted:false,updated_at:new Date().toISOString()}).eq('id',o.id).eq('outlet_id',currentOutlet);if(r.error)msg(r.error.message);await loadItems()});
+ $('itemList').querySelectorAll('[data-id]').forEach(b=>b.onclick=async()=>{if(!confirm('Delete this menu item?'))return;const r=await sb.from('menu_items').update({is_deleted:true,available:false,updated_at:new Date().toISOString()}).eq('id',b.dataset.id).eq('outlet_id',currentOutlet);if(r.error)msg(r.error.message);await loadItems()})
+}
+function itemForm(o={}){const cats=categories.length?categories.map(c=>c.name):[...new Set([...BASE_MENU.map(x=>x[3]),...menuItems.map(x=>x.category).filter(Boolean)])];$('itemForm').classList.remove('hidden');$('itemForm').innerHTML=`<div class="card" style="margin:0"><h2>${o.id?'Edit':'Add'} Item</h2><div class="field"><label>Dish name</label><input id="iname" value="${esc(o.name||'')}"></div><div class="grid"><div class="field"><label>Category</label><select id="icat">${cats.map(c=>`<option ${o.category===c?'selected':''}>${esc(c)}</option>`).join('')}</select></div><div class="field"><label>Price ₹</label><input id="iprice" type="number" min="0" value="${o.price??0}"></div></div><div class="field"><label>Description</label><textarea id="idesc">${esc(o.description||'')}</textarea></div><div class="field"><label><input id="iavail" type="checkbox" ${o.available!==false?'checked':''}> Available / visible</label></div><div class="field"><label><input id="ifeatured" type="checkbox" ${o.featured===true?'checked':''}> ⭐ Featured / Special</label></div><button class="btn primary" id="saveItem">Save Item</button> <button class="btn dark" id="cancelItem">Cancel</button></div>`;$('cancelItem').onclick=()=>{$('itemForm').classList.add('hidden')};$('saveItem').onclick=async()=>{const row={outlet_id:currentOutlet,name:$('iname').value.trim(),category:$('icat').value,price:Number($('iprice').value||0),description:$('idesc').value.trim(),available:$('iavail').checked,featured:$('ifeatured').checked,is_deleted:false,updated_at:new Date().toISOString()};if(!row.name){msg('Dish name required.');return}const r=o.id?await sb.from('menu_items').update(row).eq('id',o.id).eq('outlet_id',currentOutlet):await sb.from('menu_items').insert({...row,sort_order:Date.now()});if(r.error){msg('Item: '+r.error.message);return}if(o.id&&o.name&&o.name!==row.name){const im=await sb.from('menu_item_images').update({item_name:row.name,updated_at:new Date().toISOString()}).eq('outlet_id',currentOutlet).eq('item_name',o.name);if(im.error){msg('Item saved, but image mapping could not follow the renamed dish: '+im.error.message);return}}msg('Item saved.');$('itemForm').classList.add('hidden');await loadItems()} }
+function openCropper(file,onDone){const fr=new FileReader();fr.onload=()=>{const src=fr.result;const wrap=document.createElement('div');wrap.style='position:fixed;inset:0;background:#000e;z-index:50;display:grid;place-items:center;padding:14px';wrap.innerHTML=`<div style="width:min(480px,100%);background:#151515;border:1px solid #59461e;border-radius:16px;padding:14px;color:#fff"><h2 style="margin:0 0 8px;color:#f4d77a">Adjust Image</h2><div style="background:#050505;border-radius:12px;padding:8px"><canvas id="cropCanvas" style="width:100%;max-height:55vh;object-fit:contain"></canvas></div><div class="small" style="margin:8px 0">Drag on the image to move the crop. Use the slider to zoom.</div><input id="zoom" type="range" min="1" max="3" step="0.05" value="1" style="width:100%"><div style="margin-top:10px"><button id="useCrop" class="btn primary">Use this image</button> <button id="cancelCrop" class="btn dark">Cancel</button></div></div>`;document.body.appendChild(wrap);const c=wrap.querySelector('#cropCanvas'),ctx=c.getContext('2d'),img=new Image();let zoom=1,ox=0,oy=0,drag=false,sx=0,sy=0;img.onload=()=>{const side=Math.min(img.width,img.height);c.width=720;c.height=720;function draw(){ctx.clearRect(0,0,720,720);const scale=Math.max(720/img.width,720/img.height)*zoom,w=img.width*scale,h=img.height*scale;ctx.drawImage(img,360-w/2+ox,360-h/2+oy,w,h)}draw();wrap.querySelector('#zoom').oninput=e=>{zoom=+e.target.value;draw()};c.onpointerdown=e=>{drag=true;sx=e.clientX;sy=e.clientY;c.setPointerCapture(e.pointerId)};c.onpointermove=e=>{if(!drag)return;ox+=e.clientX-sx;oy+=e.clientY-sy;sx=e.clientX;sy=e.clientY;draw()};c.onpointerup=()=>drag=false;wrap.querySelector('#useCrop').onclick=()=>c.toBlob(b=>{const f=new File([b],'menu-image.jpg',{type:'image/jpeg'});wrap.remove();onDone(f)},'image/jpeg',.9);wrap.querySelector('#cancelCrop').onclick=()=>wrap.remove()};img.src=src};fr.readAsDataURL(file)}
+async function chooseImageForItem(item){
+ if(!item||!item.id){msg('Menu item not found.');return}
+ const inp=document.createElement('input');
+ inp.type='file'; inp.accept='image/*'; inp.capture='environment'; inp.style.display='none';
+ document.body.appendChild(inp);
+ inp.onchange=()=>{
+  const file=inp.files&&inp.files[0];
+  if(!file){inp.remove();return}
+  openCropper(file,async cropped=>{
+   inp.remove();
+   await saveImageForItem(item,cropped);
+  });
+ };
+ inp.click();
+}
+async function saveImageForItem(item,file){
+ if(file.size>5*1024*1024){msg('Image 5MB से छोटी रखें।');return}
+ msg('Uploading image…');
+ const safe=item.name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'menu-item';
+ const path=currentOutlet+'/'+safe+'-'+Date.now()+'.jpg';
+ const up=await sb.storage.from('menu-images').upload(path,file,{contentType:'image/jpeg',upsert:false});
+ if(up.error){msg('Storage: '+up.error.message);return}
+ const url=sb.storage.from('menu-images').getPublicUrl(path).data.publicUrl;
+ const payload={outlet_id:currentOutlet,menu_item_id:item.id,item_name:item.name,image_url:url,updated_at:new Date().toISOString()};
+ const q=await sb.from('menu_item_images').upsert(payload,{onConflict:'outlet_id,item_name'});
+ if(q.error){msg('Image mapping: '+q.error.message);return}
+ // Keep the primary menu_items image_url in sync when that column exists.
+ const mr=await sb.from('menu_items').update({image_url:url,updated_at:new Date().toISOString()}).eq('id',item.id).eq('outlet_id',currentOutlet);
+ if(mr.error && !/image_url/i.test(mr.error.message)){msg('Image saved, but menu item sync failed: '+mr.error.message);return}
+ msg('Image saved and mapped to '+item.name+'.');
+ await loadItems();
+}
 
-    <script>
-        async function loadOrders() {
-            const container = document.getElementById('orders-container');
-            container.innerHTML = "लोड हो रहा है...";
-
-            if (!window.supabaseClient) {
-                container.innerHTML = "Supabase कॉन्फ़िगरेशन नहीं मिला!";
-                return;
-            }
-
-            const { data: orders, error } = await window.supabaseClient
-                .from('orders')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) {
-                container.innerHTML = "ऑर्डर लोड करने में एरर: " + error.message;
-                return;
-            }
-
-            if (!orders || orders.length === 0) {
-                container.innerHTML = "कोई ऑर्डर नहीं मिला।";
-                return;
-            }
-
-            container.innerHTML = "";
-            orders.forEach(order => {
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = `
-                    <div class="order-title">Order No: ${order.order_id || 'N/A'}</div>
-                    <p><b>नाम:</b> ${order.customer_name || 'N/A'}</p>
-                    <p><b>मोबाइल:</b> ${order.customer_phone || 'N/A'}</p>
-                    <p><b>पता:</b> ${order.address || 'N/A'}</p>
-                    <p><b>टोटल अमाउंट:</b> ₹${order.total_amount || 0}</p>
-                    <p><b>स्टेटस:</b> ${order.status || 'new'}</p>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        window.onload = loadOrders;
-    </script>
-</body>
-</html>
+async function loadImages(){
+ const items=await loadMenuItems();
+ const r=await outletFilter(sb.from('menu_item_images').select('menu_item_id,item_name,image_url'));
+ if(r.error){msg('Images: '+r.error.message);return}
+ const map=Object.fromEntries((r.data||[]).map(x=>[x.menu_item_id||x.item_name,x.image_url]));
+ $('imageList').innerHTML=items.map((x,i)=>`<div class="image-row"><img class="preview" id="pv${i}" src="${esc(map[x.id]||'')}" onerror="this.style.visibility='hidden'" style="${map[x.id]?'':'visibility:hidden'}"><div><b>${esc(x.name)}</b><div class="small">₹${Number(x.price||0).toLocaleString('en-IN')} · ${esc(x.category||'')}</div></div><div class="upload"><input type="file" accept="image/*" capture="environment" id="fi${i}"><button class="btn primary" data-save="${i}">${map[x.id]?'Replace image':'Add image'}</button></div></div>`).join('')||'<div class="muted">No menu items yet.</div>';
+ $('imageList').querySelectorAll('input[type=file]').forEach(inp=>inp.onchange=()=>{if(inp.files[0])openCropper(inp.files[0],f=>{const dt=new DataTransfer();dt.items.add(f);inp.files=dt.files})});
+ $('imageList').querySelectorAll('[data-save]').forEach(b=>b.onclick=async()=>{const i=Number(b.dataset.save),file=$('fi'+i).files[0];if(!file){msg('पहले image चुनिए।');return}const item=items[i];await saveImageForItem(item,file)})
+}
+async function loadCategories(){
+ const r=await outletFilter(sb.from('categories').select('id,name,sort_order,is_active')).eq('is_active',true).order('sort_order').order('name');
+ if(r.error){msg('Categories: '+r.error.message);categories=[];return}
+ categories=r.data||[];
+}
+function categoryForm(c={}){
+ $('categoryForm').classList.remove('hidden');
+ $('categoryForm').innerHTML=`<div class="card" style="margin:0"><h2>${c.id?'Edit':'New'} Category</h2><div class="field"><label>Category name</label><input id="cname" value="${esc(c.name||'')}"></div><button class="btn primary" id="saveCategory">Save Category</button> <button class="btn dark" id="cancelCategory">Cancel</button></div>`;
+ $('cancelCategory').onclick=()=>$('categoryForm').classList.add('hidden');
+ $('saveCategory').onclick=async()=>{
+  const name=$('cname').value.trim(); if(!name){msg('Category name required.');return}
+  const dup=categories.find(x=>x.name.toLowerCase()===name.toLowerCase()&&x.id!==c.id); if(dup){msg('Category already exists.');return}
+  const row={outlet_id:currentOutlet,name,is_active:true,updated_at:new Date().toISOString()};
+  const r=c.id?await sb.from('categories').update(row).eq('id',c.id).eq('outlet_id',currentOutlet):await sb.from('categories').insert({...row,sort_order:(categories.length+1)*10});
+  if(r.error){msg('Category: '+r.error.message);return}
+  if(c.id && c.name!==name){const u=await sb.from('menu_items').update({category:name,updated_at:new Date().toISOString()}).eq('outlet_id',currentOutlet).eq('category',c.name);if(u.error){msg('Category renamed, but items could not be updated: '+u.error.message);return}}
+  $('categoryForm').classList.add('hidden');msg('Category saved.');await loadCategories();await loadItems();
+ }
+}
+async function loadCategoryManager(){await loadCategories();await loadMenuItems();$('categoryList').innerHTML=categories.map(c=>`<div class="offer"><div class="row"><b>🏷️ ${esc(c.name)}</b><span class="badge">ACTIVE</span></div><div class="small">${menuItems.filter(x=>x.category===c.name).length} menu item(s)</div><div style="margin-top:8px"><button class="btn dark" data-ce="${esc(c.id)}">Edit</button> <button class="btn danger" data-cd="${esc(c.id)}">Delete</button></div></div>`).join('')||'<div class="muted">No categories yet. Add your first category.</div>';
+ $('categoryList').querySelectorAll('[data-ce]').forEach(b=>b.onclick=()=>categoryForm(categories.find(x=>x.id===b.dataset.ce)));
+ $('categoryList').querySelectorAll('[data-cd]').forEach(b=>b.onclick=async()=>{const c=categories.find(x=>x.id===b.dataset.cd);const used=menuItems.some(x=>x.category===c.name);if(used){msg('Cannot delete a category while menu items use it. Rename it or move those items first.');return}if(!confirm('Delete '+c.name+'?'))return;const r=await sb.from('categories').update({is_active:false,updated_at:new Date().toISOString()}).eq('id',c.id).eq('outlet_id',currentOutlet);if(r.error)msg('Category: '+r.error.message);else {msg('Category deleted.');await loadCategoryManager();}})
+}
+function offerForm(o={}){const x=o||{};$('offerForm').classList.remove('hidden');$('offerForm').innerHTML=`<div class="card" style="margin:0"><h2>${x.id?'Edit':'New'} Offer</h2><div class="field"><label>Offer title</label><input id="otitle" value="${esc(x.title||'')}"></div><div class="field"><label>Description</label><textarea id="odesc">${esc(x.description||'')}</textarea></div><div class="grid"><div class="field"><label>Type</label><select id="otype"><option value="percent" ${x.offer_type==='percent'?'selected':''}>% Discount</option><option value="fixed" ${x.offer_type==='fixed'?'selected':''}>₹ Discount</option><option value="free_item" ${x.offer_type==='free_item'?'selected':''}>Free Item</option></select></div><div class="field"><label>Value (% / ₹)</label><input id="ovalue" type="number" min="0" value="${x.value??0}"></div></div><div class="field"><label>Free item (for Free Item offers)</label><input id="ofree" value="${esc(x.free_item||'')}"></div><div class="field"><label>Minimum order ₹</label><input id="omin" type="number" min="0" value="${x.min_order??0}"></div><div class="grid"><div class="field"><label>Start date & time</label><input id="ostart" type="datetime-local" value="${x.start_at?new Date(x.start_at).toISOString().slice(0,16):''}"></div><div class="field"><label>End date & time</label><input id="oend" type="datetime-local" value="${x.end_at?new Date(x.end_at).toISOString().slice(0,16):''}"></div></div><div class="field"><label><input id="oactive" type="checkbox" ${x.active!==false?'checked':''}> Active</label></div><button class="btn primary" id="saveOffer">Save Offer</button> <button class="btn dark" id="cancelOffer">Cancel</button></div>`;$('cancelOffer').onclick=()=>{$('offerForm').classList.add('hidden')};$('saveOffer').onclick=async()=>{const row={outlet_id:currentOutlet,title:$('otitle').value.trim(),description:$('odesc').value.trim(),offer_type:$('otype').value,value:Number($('ovalue').value||0),free_item:$('ofree').value.trim()||null,min_order:Number($('omin').value||0),start_at:isoLocal($('ostart').value),end_at:isoLocal($('oend').value),active:$('oactive').checked,updated_at:new Date().toISOString()};if(!row.title){msg('Offer title required.');return}const r=x.id?await sb.from('offers').update(row).eq('id',x.id).eq('outlet_id',currentOutlet):await sb.from('offers').insert(row);msg(r.error?r.error.message:'Offer saved.');if(!r.error){$('offerForm').classList.add('hidden');await loadOffers()}}}
+async function loadOffers(){const r=await outletFilter(sb.from('offers').select('*')).order('created_at',{ascending:false});if(r.error){msg('Offers: '+r.error.message);return}const data=r.data||[];$('offerList').innerHTML=data.map(o=>`<div class="offer"><div class="row"><b>🎁 ${esc(o.title)}</b><span class="badge">${o.active?'ON':'OFF'}</span></div><div class="muted">${esc(o.description||'')}</div><div style="margin:6px 0">${o.offer_type==='free_item'?`🆓 FREE: <b>${esc(o.free_item||'')}</b>`:o.offer_type==='percent'?`${o.value}% OFF`:`₹${o.value} OFF`} · Minimum ₹${o.min_order||0}</div><div class="small">${o.start_at?new Date(o.start_at).toLocaleString():'Any time'} → ${o.end_at?new Date(o.end_at).toLocaleString():'No end time'}</div><div style="margin-top:8px"><button class="btn dark" data-edit="${esc(o.id)}">Edit</button> <button class="btn ${o.active?'danger':'online'}" data-toggle="${esc(o.id)}">${o.active?'Turn OFF':'Turn ON'}</button> <button class="btn danger" data-delete="${esc(o.id)}">Delete</button></div></div>`).join('')||'<div class="muted">No offers yet.</div>';$('offerList').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>offerForm(data.find(x=>x.id===b.dataset.edit)));$('offerList').querySelectorAll('[data-toggle]').forEach(b=>b.onclick=async()=>{const o=data.find(x=>x.id===b.dataset.toggle),r=await sb.from('offers').update({active:!o.active,updated_at:new Date().toISOString()}).eq('id',o.id).eq('outlet_id',currentOutlet);if(r.error)msg(r.error.message);await loadOffers()});$('offerList').querySelectorAll('[data-delete]').forEach(b=>b.onclick=async()=>{if(!confirm('Delete this offer?'))return;const r=await sb.from('offers').delete().eq('id',b.dataset.delete).eq('outlet_id',currentOutlet);if(r.error)msg(r.error.message);await loadOffers()})}
+$('outletSelect').value=currentOutlet;$('outletSelect').onchange=async()=>{currentOutlet=$('outletSelect').value;localStorage.setItem(OUTLET_KEY,currentOutlet);await loadStatus();await loadOrders();await loadItems();await loadImages();await loadOffers();await loadCategoryManager()};
+async function enterApp(){const s=await sb.auth.getSession();if(!s.data.session)return;$('login').classList.add('hidden');$('app').classList.remove('hidden');try{if('Notification'in window&&Notification.permission==='default')Notification.requestPermission()}catch(e){}await loadStatus();await loadOrders();await subscribeOrders();clearInterval(orderTimer);orderTimer=setInterval(loadOrders,10000)}
+$('loginBtn').onclick=async()=>{const r=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(r.error){loginMsg(r.error.message);return}await enterApp()};
+enterApp();
+$('online').onclick=()=>setStatus(true);$('offline').onclick=()=>setStatus(false);$('refreshOrders').onclick=loadOrders;$('logout').onclick=async()=>{clearInterval(orderTimer);if(orderChannel)await sb.removeChannel(orderChannel);await sb.auth.signOut();location.reload()};$('newOffer').onclick=()=>offerForm({active:true});$('newCategory').onclick=()=>categoryForm({});$('newItem').onclick=()=>itemForm({available:true});document.querySelectorAll('.tab').forEach(t=>t.onclick=async()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');document.querySelectorAll('.tabpane').forEach(x=>x.classList.add('hidden'));$(t.dataset.tab).classList.remove('hidden');if(t.dataset.tab==='items')await loadItems();if(t.dataset.tab==='images')await loadImages();if(t.dataset.tab==='offers')await loadOffers();if(t.dataset.tab==='categories')await loadCategoryManager()});
+</script></body></html>
