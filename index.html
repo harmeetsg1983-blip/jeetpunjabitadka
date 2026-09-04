@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111">
+<title>Jeet Punjabi Tadka — Customer App</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;padding:0}
+:root{--accent:#d8ae42;--bg:#090909;--card:#151515;--text:#fff;--muted:#aaa;--line:#2b2b2b}
+body{background:#eee;color:#111;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+.phone{max-width:520px;margin:auto;min-height:100vh;background:var(--bg);color:var(--text);padding-bottom:126px}
+header{position:sticky;top:0;z-index:20;background:#090909;padding:13px 14px;border-bottom:1px solid var(--line)}
+.top{display:flex;align-items:center;gap:10px}.logo{width:46px;height:46px;border-radius:50%;border:2px solid var(--accent);display:grid;place-items:center;font-weight:1000;color:var(--accent);font-size:11px;text-align:center;flex:none}
+.name{font-size:20px;font-weight:950;color:var(--accent)}.meta{font-size:11px;color:var(--muted);margin-top:3px}
+.tools{margin-top:11px;display:flex;gap:8px}.search{flex:1;background:#181818;border:1px solid #333;border-radius:12px;padding:11px;color:#fff;outline:0}.icon{background:#181818;border:1px solid #333;border-radius:12px;color:var(--accent);padding:10px}
+.outletbar,.chips{display:flex;gap:7px;overflow:auto;padding:10px 0 2px}.outlet,.chip{white-space:nowrap;border:1px solid #444;background:#161616;color:#ddd;border-radius:99px;padding:8px 11px;font-size:11px}.outlet.on,.chip.on{background:var(--accent);color:#111;border-color:var(--accent);font-weight:950}
+.hero{margin:12px 14px 9px;border-radius:16px;overflow:hidden;border:1px solid #5b471c;background:#20180b;box-shadow:0 8px 22px #0007}
+.heroTrack{position:relative;min-height:150px}.heroSlide{display:none;padding:17px;min-height:150px;background:linear-gradient(135deg,#30210b,#111)}.heroSlide.active{display:flex;flex-direction:column;justify-content:center}.heroSlide h2{margin:0 0 5px;color:var(--accent);font-size:22px}.heroSlide p{margin:0;color:#ddd;font-size:12px;line-height:1.4}.today{margin-top:10px;display:inline-block;width:max-content;padding:7px 10px;border-radius:9px;background:#fff2c5;color:#17120a;font-weight:900;font-size:12px}.dots{position:absolute;right:10px;bottom:9px;display:flex;gap:4px}.dot{width:7px;height:7px;border-radius:50%;background:#777}.dot.active{background:var(--accent)}
+.videoBanner{margin:9px 14px;border-radius:14px;overflow:hidden;border:1px solid #3d331e;background:#111;min-height:155px}.videoBanner video,.videoBanner img{width:100%;height:180px;object-fit:cover;display:block}.videoFallback{height:155px;display:grid;place-items:center;padding:18px;text-align:center;background:linear-gradient(135deg,#241b0d,#111);color:#ddd}.videoFallback b{display:block;color:var(--accent);font-size:18px;margin-bottom:5px}
+.section{font-size:17px;font-weight:900;margin:14px 14px 8px;color:var(--accent)}
+.highlightGrid{display:flex;gap:9px;overflow:auto;padding:0 14px 4px}.highlight{box-shadow:0 0 0 1px rgba(216,174,66,.18),0 8px 24px rgba(0,0,0,.28);min-height:108px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}min-width:190px;border:1px solid #3a301d;border-radius:14px;padding:12px;background:#151515;cursor:pointer}.highlight b{display:block;font-size:14px}.highlight small{display:block;color:#aaa;margin:4px 0 9px}.highlight .offer{font-weight:950;font-size:12px;padding:7px 9px;border-radius:9px;background:#222;color:#fff}
+main{padding-bottom:12px}.item{display:flex;gap:14px;padding:15px 14px;border-bottom:1px solid #252525;min-height:144px}.pic{width:160px;height:160px;border-radius:14px;background:linear-gradient(135deg,#302818,#151515);border:1px solid #40351f;display:grid;place-items:center;text-align:center;color:#9b8b62;font-size:10px;flex:none;overflow:hidden}.pic img{width:100%;height:100%;object-fit:cover}.info{flex:1;min-width:0}.dish{font-weight:900;font-size:15px}.desc{font-size:11px;color:#aaa;margin:5px 0;line-height:1.35}.price{font-weight:900;margin-top:7px}.add{float:right;margin-top:-29px;border:1px solid var(--accent);background:#17130a;color:var(--accent);border-radius:9px;padding:7px 12px;font-weight:950}.qty{float:right;margin-top:-31px;display:flex;align-items:center;border:1px solid var(--accent);border-radius:9px;overflow:hidden}.qty button{background:#17130a;color:var(--accent);border:0;padding:7px 10px;font-weight:1000}.qty span{padding:7px 9px}
+.cart{position:fixed;bottom:calc(58px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:min(492px,calc(100% - 28px));background:var(--accent);color:#111;border-radius:13px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;font-weight:950;box-shadow:0 5px 25px #0008;z-index:60;cursor:pointer}
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(520px,100%);display:flex;justify-content:space-around;background:#111;border-top:1px solid #333;padding:9px 0;color:#aaa;font-size:11px;z-index:59}.nav b{color:var(--accent)}
+.modal{display:none;position:fixed;inset:0;background:#000c;z-index:200;padding-top:4vh}.modal.show{display:block}.sheet{height:96vh;max-height:96vh;overflow-y:auto;position:absolute;bottom:0;width:min(520px,100%);left:50%;transform:translateX(-50%);background:#151515;border-radius:20px 20px 0 0;padding:18px 18px calc(28px + env(safe-area-inset-bottom));color:#fff;box-shadow:0 -10px 35px #0009}.sheetHead{display:flex;justify-content:space-between;align-items:center;position:sticky;top:-18px;background:#151515;padding:8px 0 12px;z-index:2}.close{background:#2a2417;color:#fff;border:1px solid #59461e;border-radius:9px;padding:8px 11px}.box{border:1px solid #3a301d;border-radius:12px;padding:12px;margin:10px 0}.box h3{margin:0 0 8px;color:var(--accent)}.field{margin:9px 0}.field label{display:block;font-size:12px;color:#bbb;margin-bottom:4px}.input,.select,.area{width:100%;padding:11px;border-radius:9px;border:1px solid #4a3b22;background:#0e0e0e;color:#fff}.area{min-height:75px}.pay{width:100%;padding:13px;background:var(--accent);color:#111;border:0;border-radius:10px;font-weight:950;font-size:15px}.summaryRow{display:flex;justify-content:space-between;margin:7px 0}.offerChip{border:1px dashed var(--accent);border-radius:10px;padding:10px;margin:7px 0;color:#f4d77a}
+.scratch{position:relative;border:1px solid var(--accent);border-radius:14px;padding:14px;text-align:center;background:linear-gradient(135deg,#2a210e,#121212);overflow:hidden}.scratch h2{margin:0;color:var(--accent)}.scratch .ribbon{font-size:30px;margin:2px 0}.scratch .amount{font-size:28px;font-weight:1000;color:#fff}.scratch button{margin-top:8px;border:0;border-radius:10px;padding:10px 16px;font-weight:950;background:var(--accent);color:#111}.confetti{font-size:25px;letter-spacing:4px}.toast{position:fixed;top:15px;left:50%;transform:translateX(-50%);background:#f2cf63;color:#17120a;padding:10px 14px;border-radius:99px;z-index:300;font-size:12px;max-width:90%;text-align:center}
+@media(max-width:380px){.pic{width:138px;height:138px}.item{min-height:106px}.highlight{box-shadow:0 0 0 1px rgba(216,174,66,.18),0 8px 24px rgba(0,0,0,.28);min-height:108px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}min-width:175px}
+</style>
+</head>
+<body>
+<div class="phone">
+<header>
+ <div class="top"><div class="logo">JPT</div><div><div class="name" id="restaurant">Jeet Punjabi Tadka</div><div class="meta" id="restaurantMeta">North Indian • Direct Order</div></div></div>
+ <div class="tools"><input id="search" class="search" placeholder="Search dishes..."><button class="icon" onclick="scrollTo({top:0,behavior:'smooth'})">☰</button></div>
+ <div id="outletbar" class="outletbar"></div>
+ <div id="chips" class="chips"></div>
+</header>
+
+<section class="hero" id="hero" aria-label="Promotional banner"><div class="heroTrack" id="heroTrack" aria-live="polite"></div></section>
+<section class="videoBanner" id="videoBanner"><div class="videoFallback"><div><b>🎬 Festival & Restaurant Video</b>Today's featured video/campaign will appear here.</div></div></section>
+
+<div class="section">🏷️ Other Outlets & Active Offers</div>
+<div id="highlightGrid" class="highlightGrid"></div>
+
+<main>
+ <div id="menuTitle" class="section">📋 Jeet Punjabi Tadka Menu</div>
+ <section id="menu"></section>
+</main>
+
+<div class="cart" id="cart" onclick="openCart()"><span id="cartItems">0 Items</span><span id="cartTotal">₹0 · Checkout →</span></div>
+<div class="nav"><b>Menu</b><span onclick="scrollTo({top:0,behavior:'smooth'})">Offers</span><span onclick="openCart()">Cart</span><span onclick="openCart()">Checkout</span><span>More</span></div>
+
+<div class="modal" id="modal">
+ <div class="sheet">
+  <div class="sheetHead"><h2 style="margin:0;color:var(--accent)">Checkout</h2><button class="close" onclick="closeCart()">✕</button></div>
+  <div class="box"><h3>🛒 Your Order</h3><div id="cartBody"></div></div>
+  <div class="box"><h3>🎁 Promo Scratch Card</h3><div id="scratchBody"></div></div>
+  <div class="box"><h3>Offer / Campaign</h3><div id="offerBody"><div class="offerChip">Active outlet offers appear here automatically.</div></div></div>
+  <div class="box">
+   <h3>Customer Details</h3>
+   <div class="field"><label>Name</label><input id="custName" class="input" placeholder="Your name"></div>
+   <div class="field"><label>Phone</label><input id="phone" class="input" inputmode="tel" maxlength="10" placeholder="10 digit mobile"></div>
+   <div class="field"><label>Address</label><textarea id="address" class="area" placeholder="Delivery address"></textarea></div>
+  </div>
+  <div class="box"><h3>💳 Payment</h3><select id="payment" class="select"><option value="COD">Cash on Delivery</option><option value="UPI">UPI</option></select></div>
+  <div class="box">
+   <div class="summaryRow"><span>Subtotal</span><b id="subtotal">₹0</b></div>
+   <div class="summaryRow"><span>Promo discount</span><b id="discount">₹0</b></div>
+   <div class="summaryRow"><span>Delivery</span><b id="delivery">₹30</b></div>
+   <div class="summaryRow"><span>Payable</span><b id="payable">₹0</b></div>
+   <small style="color:#aaa">Delivery is FREE at ₹180 or above. Below ₹180, ₹30 delivery is added automatically.</small>
+  </div>
+  <button class="pay" onclick="if(jptCheckoutBusy)return;placeOrder()">PLACE ORDER</button>
+  <p class="meta">The order is saved with the selected outlet ID before direct WhatsApp confirmation opens.</p>
+ </div>
+</div>
+</div>
+
+<script>
+<!-- JPT_PRODUCTION_CHECKLIST: live verification required before production Green. Real UPI VPA must be configured outside source code. -->
+
+let jptCheckoutBusy=false;
+ src="../supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const sb=window.supabase.createClient(window.JPT_SUPABASE_URL,window.JPT_SUPABASE_PUBLISHABLE_KEY);
+const WA='9148161094';
+const OUTLETS={
+ "JPT-001":{name:"Jeet Punjabi Tadka",accent:"#d8ae42"},
+ "SOP-002":{name:"Shahi Punjab",accent:"#49b36a"},
+ "PFA-003":{name:"Punjabi Food Adda",accent:"#df6680"},
+ "NME-004":{name:"99 Meal Express",accent:"#f29b32"},
+ "TOP-005":{name:"Taste of Punjab",accent:"#7b74e8"}
+};
+let outletId=new URLSearchParams(location.search).get("outlet")||"JPT-001";
+if(!OUTLETS[outletId])outletId="JPT-001";
+let items=[],cartState={},imageMap={},offers=[],campaigns=[],outletRecords={},selectedPromo=null;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const money=n=>'₹'+Math.max(0,Math.round(Number(n||0))).toLocaleString('en-IN');
+function toast(t){$('toast')?.remove();let x=document.createElement('div');x.id='toast';x.className='toast';x.textContent=t;document.body.appendChild(x);setTimeout(()=>x.remove(),2200)}
+function setTheme(){document.documentElement.style.setProperty('--accent',OUTLETS[outletId].accent);$('restaurant').textContent=outletRecords[outletId]?.name||OUTLETS[outletId].name;$('menuTitle').textContent=(outletId==='JPT-001'?'📋 Jeet Punjabi Tadka Menu':'📋 '+(outletRecords[outletId]?.name||OUTLETS[outletId].name)+' Menu')}
+function renderOutlets(){$('outletbar').innerHTML=Object.entries(OUTLETS).map(([id,o])=>`<button class="outlet ${id===outletId?'on':''}" onclick="switchOutlet('${id}')">${esc(o.name)}</button>`).join('')}
+function renderHighlights(){
+ const ids=Object.keys(OUTLETS).filter(id=>id!=='JPT-001');
+ $('highlightGrid').innerHTML=ids.map(id=>{
+  const o=OUTLETS[id], rec=outletRecords[id]||{}, os=(offersByOutlet[id]||[]).filter(activeWindow);
+  const best=os[0], label=best?offerText(best):'View menu';
+  return `<div class="highlight" style="border-color:${o.accent}" onclick="switchOutlet('${id}')"><b style="color:${o.accent}">${esc(rec.name||o.name)}</b><small>${id} • Direct outlet ordering</small><div class="offer" style="border:1px solid ${o.accent}">${esc(label)}</div></div>`
+ }).join('');
+}
+async function switchOutlet(id){outletId=id;history.replaceState({},'',location.pathname+'?outlet='+encodeURIComponent(id));cartState={};selectedPromo=null;items=[];offers=[];campaigns=[];imageMap={};setTheme();renderOutlets();await loadManagedMenu()}
+function renderChips(cats){$('chips').innerHTML=['All',...cats].map((c,i)=>`<button class="chip ${i===0?'on':''}" onclick="filterCat('${esc(c)}',this)">${esc(c)}</button>`).join('')}
+function render(list=items){
+ const cats=[...new Set(list.map(x=>x.category).filter(Boolean))];
+ if(!cats.length){$('menu').innerHTML='<div class="box" style="margin:14px">No menu items are available for this outlet right now.</div>';return}
+ let html='';cats.forEach(cat=>{let arr=list.filter(x=>x.category===cat);html+=`<div class="section">${esc(cat)}</div>`+arr.map(x=>{let src=x.image_url||imageMap[x.id]||imageMap[x.name];return `<div class="item"><div class="pic">${src?`<img src="${esc(src)}" alt="${esc(x.name)}">`:`<span>IMAGE<br>AVAILABLE FROM ADMIN</span>`}</div><div class="info"><div class="dish">${esc(x.name)}</div><div class="desc">${esc(x.description||'')}</div><div class="price">${money(x.price)}</div>${cartState[x.id]?`<div class="qty"><button onclick="change('${x.id}',-1)">−</button><span>${cartState[x.id]}</span><button onclick="change('${x.id}',1)">+</button></div>`:`<button class="add" onclick="change('${x.id}',1)">ADD +</button>`}</div></div>`}).join('')});
+ $('menu').innerHTML=html
+}
+function filterCat(cat,btn){document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));btn.classList.add('on');render(cat==='All'?items:items.filter(x=>x.category===cat))}
+function change(id,d){cartState[id]=(cartState[id]||0)+d;if(cartState[id]<=0)delete cartState[id];updateCart();render()}
+function cartRows(){return Object.entries(cartState).map(([id,q])=>({x:items.find(i=>i.id===id),q})).filter(r=>r.x)}
+function calc(){
+ const rows=cartRows(),subtotal=rows.reduce((s,r)=>s+Number(r.x.price)*r.q,0);
+ const eligible=subtotal>=300;
+ let discount=0;
+ if(selectedPromo){
+   const pct=Number(selectedPromo.discount_percent||0),cap=Number(selectedPromo.max_discount||0);
+   const min=Number(selectedPromo.min_order||0),max=Number(selectedPromo.max_order_amount||Infinity);
+   if(subtotal>=min&&subtotal<=max) discount=Math.min(subtotal*pct/100,cap,subtotal);
+ }
+ const delivery=subtotal>=180?0:30;
+ return {subtotal,discount,delivery,total:subtotal-discount+delivery,eligible}
+}
+function updateCart(){let rows=cartRows(),c=rows.reduce((s,r)=>s+r.q,0),t=rows.reduce((s,r)=>s+Number(r.x.price)*r.q,0);$('cartItems').textContent=c+' Item'+(c===1?'':'s');$('cartTotal').textContent=money(t)+' · Checkout →'}
+function offerText(o){let pct=o.discount_percent??o.discount??o.percentage;let cap=o.max_discount??o.discount_cap;let min=o.min_order??o.minimum_order;let a=pct?`${pct}% OFF`:'';if(cap)a+=(a?' up to ':'')+money(cap);if(min)a+=(a?' • ':'')+'Min '+money(min);return a||o.title||'Active offer'}
+function activeWindow(x){let now=Date.now();return (!x.start_at||new Date(x.start_at).getTime()<=now)&&(!x.end_at||new Date(x.end_at).getTime()>=now)}
+let offersByOutlet={};
+async function loadAllOutletOffers(){
+ offersByOutlet={};
+ for(const id of Object.keys(OUTLETS)){let r=await sb.from('offers').select('*').eq('outlet_id',id).eq('active',true);if(!r.error)offersByOutlet[id]=r.data||[]}
+ renderHighlights()
+}
+let heroTimer=null;
+function renderHero(){
+ const active=campaigns.filter(activeWindow), today=new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short'});
+ const slides=active.length?active.slice(0,5):[{title:'Fresh Punjabi Taste',description:'Special offers and festival greetings from Jeet Punjabi Tadka.'}];
+ if(heroTimer){clearInterval(heroTimer);heroTimer=null}
+ $('heroTrack').innerHTML=slides.map((c,i)=>`<div class="heroSlide ${i===0?'active':''}" role="group" aria-roledescription="slide" aria-label="${i+1} of ${slides.length}"><h2>🎉 ${esc(c.title||c.name||'Festival Special')}</h2><p>${esc(c.description||c.subtitle||'Festival and daily offer')}</p><span class="today">Today • ${esc(today)} • ${esc(c.today_offer||c.offer_text||offerText(c)||'Special Offer')}</span></div>`).join('')+`<div class="dots" aria-hidden="true">${slides.map((_,i)=>`<i class="dot ${i===0?'active':''}"></i>`).join('')}</div>`;
+ if(slides.length>1){let n=0;heroTimer=setInterval(()=>{let s=document.querySelectorAll('.heroSlide'),d=document.querySelectorAll('.dot');if(!s.length){clearInterval(heroTimer);heroTimer=null;return}n=(n+1)%s.length;s.forEach(x=>x.classList.remove('active'));d.forEach(x=>x.classList.remove('active'));s[n].classList.add('active');d[n].classList.add('active')},5000)}
+}
+function renderVideo(){
+ let c=campaigns.find(x=>x.video_url||x.video||x.video_banner_url),src=c&&(c.video_url||c.video||c.video_banner_url),img=c&&(c.video_thumbnail||c.thumbnail_url||c.image_url);
+ $('videoBanner').innerHTML=src?`<video controls muted playsinline loop poster="${esc(img||'')}"><source src="${esc(src)}"></video>`:img?`<img src="${esc(img)}" alt="Festival video banner">`:`<div class="videoFallback"><div><b>🎬 Festival & Restaurant Video</b>Today's featured video/campaign will appear here.</div></div>`
+}
+function renderCheckout(){
+ const rows=cartRows(),c=calc();
+ $('cartBody').innerHTML=rows.map(r=>`<div class="summaryRow"><span>${esc(r.x.name)} × ${r.q}</span><b>${money(Number(r.x.price)*r.q)}</b></div>`).join('');
+ $('offerBody').innerHTML=offers.length?offers.slice(0,3).map(o=>`<div class="offerChip"><b>${esc(o.title||'Active Offer')}</b><br>${esc(offerText(o))}</div>`).join(''):'<div class="offerChip">No active offer for this outlet.</div>';
+ $('subtotal').textContent=money(c.subtotal);$('discount').textContent=money(c.discount);$('delivery').textContent=c.delivery?money(c.delivery):'FREE';$('payable').textContent=money(c.total);
+ renderScratch(c)
+}
+function renderScratch(c){
+ if(selectedPromo){$('scratchBody').innerHTML=`<div class="scratch"><div class="confetti">🎊 🎉 🎊</div><div class="ribbon">🎀</div><h2>CONGRATULATIONS!</h2><div class="amount">${money(selectedPromo.discount_amount)} OFF</div><div style="color:#bbb">Scratch reward applied to your order.</div></div>`;return}
+ const scratchOffer=(offers||[]).find(o=>o.scratch_enabled||o.is_scratch||/scratch/i.test(String(o.title||''))); const min=Number(scratchOffer?.min_order??300); const pct=Number(scratchOffer?.value??20); const cap=Number(scratchOffer?.max_discount??40); const reward=c.subtotal>=min?Math.min(Math.round(c.subtotal*pct/100),cap):0;
+ $('scratchBody').innerHTML=`<div class="scratch"><div class="ribbon">🎁</div><h2>Scratch & Reveal</h2><div style="color:#bbb;margin:5px 0">Complete ${money(min)} order to unlock ${pct}% OFF, capped at ${money(cap)}.</div><button ${c.subtotal<min?'disabled':''} onclick="revealScratch()">${c.subtotal<min?'ADD ITEMS TO UNLOCK':'SCRATCH CARD'}</button></div>`
+}
+function revealScratch(){let c=calc();const o=(offers||[]).find(x=>x.scratch_enabled||x.is_scratch||/scratch/i.test(String(x.title||'')));const min=Number(o?.min_order??300),pct=Number(o?.value??20),cap=Number(o?.max_discount??40);if(c.subtotal<min)return toast(`${money(min)} order is required for this promo.`);const discount=Math.min(Math.round(c.subtotal*pct/100),cap);selectedPromo={discount_percent:pct,max_discount:cap,min_order:min,discount_amount:discount,code:o?.code||null};renderCheckout();toast(`🎉 Congratulations! ${money(discount)} discount unlocked.`)}
+function openCart(){if(!cartRows().length)return toast('पहले menu से item add कीजिए।');selectedPromo=null;renderCheckout();$('modal').classList.add('show');document.body.style.overflow='hidden'}
+function closeCart(){$('modal').classList.remove('show');document.body.style.overflow=''}
+async function loadManagedMenu(){
+ renderOutlets();setTheme();$('menu').innerHTML='<div class="box" style="margin:14px">Loading live menu…</div>';
+ try{
+  let sr=await sb.from('outlets').select('*').eq('outlet_id',outletId).maybeSingle();if(sr.data){outletRecords[outletId]=sr.data;$('restaurantMeta').textContent=(sr.data.cuisine||'North Indian • Punjabi')+' • Direct Order'}
+  let r=await sb.from('menu_items').select('*').eq('outlet_id',outletId).eq('available',true).eq('is_deleted',false).order('sort_order').order('name');if(!r.error)items=r.data||[];
+  let cr=await sb.from('categories').select('name,sort_order').eq('outlet_id',outletId).eq('is_active',true).order('sort_order').order('name');let cats=!cr.error?(cr.data||[]).map(x=>x.name):[...new Set(items.map(x=>x.category).filter(Boolean))];renderChips(cats);render();
+  let ir=await sb.from('menu_item_images').select('*').eq('outlet_id',outletId);if(!ir.error)imageMap=Object.fromEntries((ir.data||[]).map(x=>[x.menu_item_id||x.item_name,x.image_url]));render();
+  let or=await sb.from('offers').select('*').eq('outlet_id',outletId).eq('active',true);if(!or.error)offers=(or.data||[]).filter(activeWindow);offersByOutlet[outletId]=offers;
+  let ca=await sb.from('campaigns').select('*').eq('outlet_id',outletId);if(!ca.error)campaigns=(ca.data||[]).filter(activeWindow);
+  renderHero();renderVideo();renderHighlights();
+ }catch(e){$('menu').innerHTML='<div class="box" style="margin:14px">Menu connection is temporarily unavailable. Please try again.</div>'}
+ updateCart()
+}
+$('search').oninput=e=>{let q=e.target.value.toLowerCase();render(items.filter(x=>(x.name+' '+(x.description||'')+' '+(x.category||'')).toLowerCase().includes(q)))}
+const JPT_UPI_VPA = window.JPT_UPI_VPA || '';
+function openUpiPayment(orderNo, amount, outletName){
+ const vpa=String(JPT_UPI_VPA||'').trim();
+ if(!vpa){ toast('UPI is not configured yet. Please use COD or configure the restaurant UPI ID.'); return false; }
+ const uri='upi://pay?'+new URLSearchParams({pa:vpa,pn:'Jeet Punjabi Tadka',am:Number(amount).toFixed(2),cu:'INR',tn:`${outletName} ${orderNo}`}).toString();
+ window.location.href=uri;
+ return true;
+}
+async function placeOrder(){
+ if(jptCheckoutBusy)return;
+ jptCheckoutBusy=true;
+ try{
+ let rows=cartRows();if(!rows.length)return toast('Cart is empty');
+ let phone=$('phone').value.trim();if(!/^\d{10}$/.test(phone))return toast('Enter 10 digit phone number');
+ let c=calc(),payment=$('payment').value;
+ let ord={order_no:'JPT-'+Date.now().toString().slice(-7),customer_name:$('custName').value.trim()||'Customer',customer_phone:phone,customer_address:$('address').value.trim(),items:rows.map(r=>({id:r.x.id,name:r.x.name,qty:r.q,price:Number(r.x.price)})),subtotal:c.subtotal,discount:c.discount,delivery_charge:c.delivery,total:c.total,status:'NEW',eta_minutes:45,notes:'',outlet_id:outletId,payment,order_type:'delivery'};
+ ord.payment_status=payment==='UPI'?'PENDING':'CASH_ON_DELIVERY';let result=await sb.from('orders').insert(ord);if(result.error){jptCheckoutBusy=false;return toast('Order save failed: '+result.error.message);}if(payment==='UPI'&&!openUpiPayment(ord.order_no,c.total,OUTLETS[outletId].name))return;
+ let msg=`NEW ORDER ${ord.order_no}%0A${encodeURIComponent(rows.map(r=>r.x.name+' x '+r.q).join('\\n'))}%0ASubtotal: ${encodeURIComponent(money(c.subtotal))}%0ADiscount: ${encodeURIComponent(money(c.discount))}%0ADelivery: ${encodeURIComponent(c.delivery?money(c.delivery):'FREE')}%0ATotal: ${encodeURIComponent(money(c.total))}%0AOutlet: ${encodeURIComponent(OUTLETS[outletId].name)}%0AOutlet ID: ${encodeURIComponent(outletId)}%0APayment: ${encodeURIComponent(payment)}%0ACustomer: ${encodeURIComponent(ord.customer_name)}%0APhone: ${phone}%0AAddress: ${encodeURIComponent(ord.customer_address)}`;
+ window.open(`https://wa.me/91${WA}?text=${msg}`,'_blank');cartState={};selectedPromo=null;updateCart();closeCart();toast('Order placed successfully')
+}
+loadAllOutletOffers().catch(()=>{});
+loadManagedMenu();
+</script>
+</body>
+</html>
