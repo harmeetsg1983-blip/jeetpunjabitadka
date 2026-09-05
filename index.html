@@ -24,7 +24,7 @@ main{padding-bottom:12px}.item{display:flex;gap:14px;padding:15px 14px;border-bo
 .cart{position:fixed;bottom:calc(58px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:min(492px,calc(100% - 28px));background:var(--accent);color:#111;border-radius:13px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;font-weight:950;box-shadow:0 5px 25px #0008;z-index:60;cursor:pointer}
 .nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(520px,100%);display:flex;justify-content:space-around;background:#111;border-top:1px solid #333;padding:9px 0;color:#aaa;font-size:11px;z-index:59}.nav b{color:var(--accent)}
 .modal{display:none;position:fixed;inset:0;background:#000c;z-index:200;padding-top:4vh}.modal.show{display:block}.sheet{height:96vh;max-height:96vh;overflow-y:auto;position:absolute;bottom:0;width:min(520px,100%);left:50%;transform:translateX(-50%);background:#151515;border-radius:20px 20px 0 0;padding:18px 18px calc(28px + env(safe-area-inset-bottom));color:#fff;box-shadow:0 -10px 35px #0009}.sheetHead{display:flex;justify-content:space-between;align-items:center;position:sticky;top:-18px;background:#151515;padding:8px 0 12px;z-index:2}.close{background:#2a2417;color:#fff;border:1px solid #59461e;border-radius:9px;padding:8px 11px}.box{border:1px solid #3a301d;border-radius:12px;padding:12px;margin:10px 0}.box h3{margin:0 0 8px;color:var(--accent)}.field{margin:9px 0}.field label{display:block;font-size:12px;color:#bbb;margin-bottom:4px}.input,.select,.area{width:100%;padding:11px;border-radius:9px;border:1px solid #4a3b22;background:#0e0e0e;color:#fff}.area{min-height:75px}.pay{width:100%;padding:13px;background:var(--accent);color:#111;border:0;border-radius:10px;font-weight:950;font-size:15px}.summaryRow{display:flex;justify-content:space-between;margin:7px 0}.offerChip{border:1px dashed var(--accent);border-radius:10px;padding:10px;margin:7px 0;color:#f4d77a;cursor:pointer;background:#171717;text-align:left;width:100%;font:inherit}.offerChip:active{transform:scale(.99);background:#211b0d}
-.scratch{position:relative;border:1px solid var(--accent);border-radius:14px;padding:14px;text-align:center;background:linear-gradient(135deg,#2a210e,#121212);overflow:hidden}.scratch h2{margin:0;color:var(--accent)}.scratch .ribbon{font-size:30px;margin:2px 0}.scratch .amount{font-size:28px;font-weight:1000;color:#fff}.scratch button{margin-top:8px;border:0;border-radius:10px;padding:10px 16px;font-weight:950;background:var(--accent);color:#111}.confetti{font-size:25px;letter-spacing:4px}.toast{position:fixed;top:15px;left:50%;transform:translateX(-50%);background:#f2cf63;color:#17120a;padding:10px 14px;border-radius:99px;z-index:300;font-size:12px;max-width:90%;text-align:center}
+.scratch{position:relative;border:1px solid var(--accent);border-radius:14px;padding:14px;text-align:center;background:linear-gradient(135deg,#2a210e,#121212);overflow:hidden}.scratch h2{margin:0;color:var(--accent)}.scratch .ribbon{font-size:30px;margin:2px 0}.scratch .amount{font-size:30px;font-weight:1000;background:linear-gradient(180deg,#fff8c7 0%,#f6d86f 24%,#b88622 52%,#fff0a3 76%,#d4a83a 100%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 14px rgba(244,215,122,.32);letter-spacing:.4px}.scratch.royal-gold{box-shadow:0 0 0 1px rgba(216,174,66,.24),0 12px 34px rgba(216,174,66,.16),inset 0 0 28px rgba(216,174,66,.06)}.royal-sweep{position:absolute;inset:-40% auto -40% -35%;width:28%;transform:skewX(-18deg);background:linear-gradient(90deg,transparent,rgba(255,244,177,.55),transparent);animation:royalSweep 2.2s ease-in-out infinite;pointer-events:none}@keyframes royalSweep{0%{left:-35%}55%,100%{left:120%}}.scratch button{margin-top:8px;border:0;border-radius:10px;padding:10px 16px;font-weight:950;background:var(--accent);color:#111}.confetti{font-size:25px;letter-spacing:4px}.toast{position:fixed;top:15px;left:50%;transform:translateX(-50%);background:#f2cf63;color:#17120a;padding:10px 14px;border-radius:99px;z-index:300;font-size:12px;max-width:90%;text-align:center}
 @media(max-width:380px){.pic{width:138px;height:138px}.item{min-height:106px}.highlight{box-shadow:0 0 0 1px rgba(216,174,66,.18),0 8px 24px rgba(0,0,0,.28);min-height:108px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease;min-width:175px}}
 </style>
 </head>
@@ -198,10 +198,32 @@ function renderCheckout(){
  $('subtotal').textContent=money(c.subtotal);$('discount').textContent=money(c.discount);$('delivery').textContent=c.delivery?money(c.delivery):'FREE';$('payable').textContent=money(c.total);
  renderScratch(c);const pb=$('upiBox');if(pb)pb.style.display=$('payment')?.value==='UPI'?'block':'none'
 }
+function getScratchOffers(){
+ return (offers||[]).filter(o=>activeWindow(o)&&(
+  o.scratch_enabled===true || o.is_scratch===true || /scratch/i.test(String(o.title||''))
+ )).filter(o=>Number(o.value??o.discount_percent??o.discount??0)>0).sort((a,b)=>Number(a.value??a.discount_percent??0)-Number(b.value??b.discount_percent??0));
+}
+function scratchRewardForCart(c){
+ const configured=getScratchOffers();
+ const eligible=configured.filter(o=>c.subtotal>=Number(o.min_order??o.minimum_order??0));
+ if(!eligible.length)return {offer:null,discount:0};
+ const o=eligible[eligible.length-1];
+ const pct=Number(o.value??o.discount_percent??o.discount??0);
+ const capRaw=o.max_discount??o.discount_cap??o.max_discount_amount;
+ const raw=Math.round(c.subtotal*pct/100);
+ const cap=capRaw==null||capRaw===''?c.subtotal:Math.max(0,Number(capRaw));
+ return {offer:o,discount:Math.min(raw,cap,c.subtotal)};
+}
 function renderScratch(c){
- if(selectedPromo){$('scratchBody').innerHTML=`<div class="scratch"><div class="confetti">🎊 🎉 🎊</div><div class="ribbon">🎀</div><h2>CONGRATULATIONS!</h2><div class="amount">${money(selectedPromo.discount_amount)} OFF</div><div style="color:#bbb">Scratch reward applied to your order.</div></div>`;return}
- const scratchOffer=(offers||[]).find(o=>o.scratch_enabled===true||o.is_scratch===true||/scratch/i.test(String(o.title||''))); const min=Number(scratchOffer?.min_order??0); const pct=Number(scratchOffer?.value??20); const capRaw=scratchOffer?.max_discount??scratchOffer?.discount_cap??40; const cap=Number(capRaw); const reward=c.subtotal>=min?Math.min(Math.round(c.subtotal*pct/100),cap):0;
- $('scratchBody').innerHTML=`<div class="scratch"><div class="ribbon">🎁</div><h2>Scratch & Reveal</h2><div style="color:#bbb;margin:5px 0">Complete ${money(min)} order to unlock ${pct}% OFF, capped at ${money(cap)}.</div><button ${c.subtotal<min?'disabled':''} onclick="revealScratch()">${c.subtotal<min?'ADD ITEMS TO UNLOCK':'SCRATCH CARD'}</button></div>`
+ if(selectedPromo&&selectedPromo.source==='scratch'){
+  $('scratchBody').innerHTML=`<div class="scratch royal-gold"><div class="royal-sweep"></div><div class="confetti">🎊 ✨ 🎉 ✨ 🎊</div><div class="ribbon">🎀</div><h2>CONGRATULATIONS!</h2><div class="amount">${money(selectedPromo.discount_amount)} OFF</div><div style="color:#bbb">Royal Gold scratch reward applied.</div></div>`;return;
+ }
+ const configured=getScratchOffers();
+ const eligible=configured.filter(o=>c.subtotal>=Number(o.min_order??o.minimum_order??0));
+ const preview=eligible.length?eligible[eligible.length-1]:configured[0];
+ const min=Number(preview?.min_order??preview?.minimum_order??0);
+ const slabs=configured.map(o=>`${Number(o.value??o.discount_percent??0)}% up to ${money(o.max_discount??o.discount_cap??0)}`).join(' • ');
+ $('scratchBody').innerHTML=`<div class="scratch royal-gold"><div class="royal-sweep"></div><div class="ribbon">🎁</div><h2>Scratch & Reveal</h2><div style="color:#bbb;margin:5px 0">${configured.length?`Active Royal Gold slabs: ${esc(slabs)}`:'Scratch offer is not configured for this outlet yet.'}</div><button ${!eligible.length?'disabled':''} onclick="revealScratch()">${!eligible.length?(configured.length?`ADD ITEMS — MIN ${money(min)}`:'NOT CONFIGURED'):'SCRATCH & REVEAL'}</button></div>`;
 }
 function selectPromoOffer(i){
   const o=(offers||[]).filter(activeWindow)[i];
@@ -209,11 +231,22 @@ function selectPromoOffer(i){
   const c=calc();
   const min=Number(o.min_order??o.minimum_order??0);
   if(c.subtotal<min){toast(`${money(min)} order is required for this offer.`);return;}
-  selectedPromo={...o};
+  selectedPromo={...o,source:'offer'};
   renderCheckout();
   toast(`🎉 ${o.title||'Offer'} applied.`);
 }
-function revealScratch(){let c=calc();const o=(offers||[]).find(x=>x.scratch_enabled||x.is_scratch||/scratch/i.test(String(x.title||'')));const min=Number(o?.min_order??0),pct=Number(o?.value??20),cap=Number(o?.max_discount??o?.discount_cap??40);if(c.subtotal<min)return toast(`${money(min)} order is required for this promo.`);const discount=Math.min(Math.round(c.subtotal*pct/100),cap);selectedPromo={discount_percent:pct,max_discount:cap,min_order:min,discount_amount:discount,code:o?.code||null};renderCheckout();toast(`🎉 Congratulations! ${money(discount)} discount unlocked.`)}
+function revealScratch(){
+ const c=calc();
+ const reward=scratchRewardForCart(c);
+ if(!reward.offer)return toast(getScratchOffers().length?'Add items to unlock the configured scratch offer.':'Scratch offer is not configured for this outlet.');
+ const o=reward.offer;
+ const pct=Number(o.value??o.discount_percent??o.discount??0);
+ const capRaw=o.max_discount??o.discount_cap??o.max_discount_amount;
+ const cap=capRaw==null||capRaw===''?null:Number(capRaw);
+ selectedPromo={...o,discount_percent:pct,max_discount:cap,min_order:Number(o.min_order??o.minimum_order??0),discount_amount:reward.discount,source:'scratch'};
+ renderCheckout();
+ toast(`✨ Royal Gold unlocked: ${money(reward.discount)} OFF`);
+}
 function openCart(){if(!cartRows().length)return toast('पहले menu से item add कीजिए।');selectedPromo=null;renderCheckout();$('modal').classList.add('show');document.body.style.overflow='hidden';if(location.hash!=='#checkout')history.pushState({checkout:true},'',location.href.split('#')[0]+'#checkout')}
 function closeCart(fromPop=false){$('modal').classList.remove('show');document.body.style.overflow='';if(!fromPop&&location.hash==='#checkout')history.back()}
 async function loadManagedMenu(){
