@@ -1,9 +1,10 @@
 (function(){
   'use strict';
 
-  /* V106 media hotfix — safe, one-pass version.
-     Does not replace the page, menu, cart, checkout, Supabase or outlet logic.
-     It only styles/loads the media boxes after the app has rendered them. */
+  /* V106 FINAL MEDIA FIX
+     Display-only media correction.
+     Does not modify the MP4 file or menu/cart/checkout/Supabase/outlet logic. */
+
   var BASE='assets/outlets/';
   var ASSETS={
     'SOP-002':BASE+'SOP-002_banner.jpg',
@@ -15,17 +16,19 @@
   function currentOutlet(){
     try{
       var p=new URLSearchParams(location.search);
-      return p.get('outlet') || window.outletId || 'JPT-001';
-    }catch(e){
-      return window.outletId || 'JPT-001';
-    }
+      if(p.get('outlet')) return p.get('outlet');
+    }catch(e){}
+    try{
+      if(typeof outletId !== 'undefined' && outletId) return outletId;
+    }catch(e){}
+    return 'JPT-001';
   }
 
   function applyHighlightImages(){
     var grid=document.getElementById('highlightGrid');
     if(!grid)return;
     grid.querySelectorAll('.highlight').forEach(function(card){
-      var m=(card.getAttribute('onclick')||'').match(/switchOutlet\(['\"]([^'\"]+)/);
+      var m=(card.getAttribute('onclick')||'').match(/switchOutlet\(['"]([^'"]+)/);
       var id=m?m[1]:'';
       var src=ASSETS[id];
       if(!src)return;
@@ -45,35 +48,45 @@
 
     var id=currentOutlet();
 
-    /* JPT-001 keeps the exact user-supplied MP4. Never crop it. */
+    /* JPT-001: keep the exact MP4, but crop ONLY its display area.
+       The uploaded portrait video contains a horizontal banner in its center.
+       A fixed 4:3 frame + object-fit:cover shows that banner cleanly without
+       changing the original video file. */
     if(id==='JPT-001'){
       var v=box.querySelector('video');
-      if(v){
-        v.muted=true;
-        v.autoplay=true;
-        v.loop=true;
-        v.playsInline=true;
-        v.setAttribute('playsinline','');
-        v.setAttribute('webkit-playsinline','');
-        v.style.width='100%';
-        v.style.height='auto';
-        v.style.maxHeight='none';
-        v.style.objectFit='contain';
-        v.style.objectPosition='center';
-        v.style.display='block';
-        v.play().catch(function(){});
-      }
+      if(!v)return;
+
+      box.style.position='relative';
       box.style.minHeight='0';
       box.style.height='auto';
+      box.style.aspectRatio='4 / 3';
       box.style.background='#111';
       box.style.overflow='hidden';
+      box.style.borderRadius='14px';
+
+      v.muted=true;
+      v.autoplay=true;
+      v.loop=true;
+      v.playsInline=true;
+      v.setAttribute('playsinline','');
+      v.setAttribute('webkit-playsinline','');
+      v.style.position='absolute';
+      v.style.inset='0';
+      v.style.width='100%';
+      v.style.height='100%';
+      v.style.maxHeight='none';
+      v.style.objectFit='cover';
+      v.style.objectPosition='center center';
+      v.style.display='block';
+      v.play().catch(function(){});
       return;
     }
 
     var src=ASSETS[id];
     if(!src)return;
 
-    /* Do not repeatedly rewrite innerHTML: that can create a MutationObserver loop. */
+    /* Non-JPT outlets use their supplied banner image inside a 16:9 frame.
+       Create the image once so MutationObserver cannot cause a rewrite loop. */
     var img=box.querySelector('img[data-v106-outlet-banner="1"]');
     if(!img){
       box.innerHTML='';
@@ -84,20 +97,22 @@
       img.decoding='async';
       box.appendChild(img);
     }
-    if(img.getAttribute('src')!==src)img.src=src;
-    img.style.width='100%';
-    img.style.height='auto';
-    img.style.minHeight='0';
-    img.style.objectFit='contain';
-    img.style.objectPosition='center';
-    img.style.display='block';
+    if(img.getAttribute('src')!==src) img.src=src;
 
+    box.style.position='relative';
     box.style.minHeight='0';
     box.style.height='auto';
     box.style.aspectRatio='16 / 9';
     box.style.background='#111';
     box.style.borderRadius='14px';
     box.style.overflow='hidden';
+
+    img.style.width='100%';
+    img.style.height='100%';
+    img.style.minHeight='0';
+    img.style.objectFit='contain';
+    img.style.objectPosition='center';
+    img.style.display='block';
   }
 
   function apply(){
@@ -107,17 +122,22 @@
 
   function boot(){
     apply();
-    /* Only watch for newly rendered highlight/video elements, without rewriting
-       the same element repeatedly. A small debounce keeps this safe. */
+
     var timer=null;
     var obs=new MutationObserver(function(){
       clearTimeout(timer);
-      timer=setTimeout(apply,80);
+      timer=setTimeout(apply,100);
     });
-    if(document.body)obs.observe(document.body,{childList:true,subtree:true});
-    [300,1000,2000,4000].forEach(function(ms){setTimeout(apply,ms);});
+    if(document.body) obs.observe(document.body,{childList:true,subtree:true});
+
+    [300,1000,2000,4000].forEach(function(ms){
+      setTimeout(apply,ms);
+    });
   }
 
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);
-  else boot();
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',boot);
+  }else{
+    boot();
+  }
 })();
