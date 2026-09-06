@@ -154,4 +154,106 @@
   }
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+
+/* V106 ALARM BRIDGE
+   Keeps the existing alarm UI/audio intact, but adds a reliable
+   realtime + polling detector for brand-new orders in the active outlet.
+   No menu, payment, Supabase config, or order data structure changes.
+*/
+(function(){
+  'use strict';
+
+  const KEY='jpt_v106_alarm_baseline_';
+  let alarmBaseline=null;
+  let alarmChannel=null;
+  let alarmPollTimer=null;
+  let alarmBusy=false;
+
+  function alarmKey(){ return KEY+(window.currentOutlet||'JPT-001'); }
+
+  async function getLatest(){
+    try{
+      const r=await sb.from('orders')
+        .select('id,created_at,status,order_no,outlet_id')
+        .eq('outlet_id',currentOutlet)
+        .order('created_at',{ascending:false})
+        .limit(1);
+      return (!r.error&&r.data&&r.data[0]) ? r.data[0] : null;
+    }catch(e){ return null; }
+  }
+
+  function alertIfNew(o,source){
+    if(!o || o.status!=='new') return;
+    const stamp=String(o.created_at||'')+'|'+String(o.id||'');
+    if(!alarmBaseline){
+      alarmBaseline=stamp;
+      localStorage.setItem(alarmKey(),stamp);
+      return;
+    }
+    if(stamp===alarmBaseline) return;
+    alarmBaseline=stamp;
+    localStorage.setItem(alarmKey(),stamp);
+    try{ startAlarm('New order '+(o.order_no||('#'+o.id))+' received.'); }catch(e){}
+    try{ if(typeof window.loadOrders==='function') window.loadOrders().catch(()=>{}); }catch(e){}
+  }
+
+  async function pollAlarm(){
+    if(alarmBusy)return;
+    alarmBusy=true;
+    try{
+      const o=await getLatest();
+      if(!alarmBaseline){
+        alarmBaseline=localStorage.getItem(alarmKey())||null;
+        if(!alarmBaseline && o){
+          alarmBaseline=String(o.created_at||'')+'|'+String(o.id||'');
+          localStorage.setItem(alarmKey(),alarmBaseline);
+        }
+      }else{
+        alertIfNew(o,'poll');
+      }
+    }finally{ alarmBusy=false; }
+  }
+
+  async function bindRealtime(){
+    try{
+      if(alarmChannel) await sb.removeChannel(alarmChannel);
+      alarmChannel=sb.channel('jpt-v106-alarm-'+currentOutlet+'-'+Date.now())
+        .on('postgres_changes',{
+          event:'INSERT',schema:'public',table:'orders',
+          filter:'outlet_id=eq.'+currentOutlet
+        },payload=>{
+          alertIfNew(payload&&payload.new,'realtime');
+        })
+        .subscribe();
+    }catch(e){}
+  }
+
+  function bootAlarmBridge(){
+    alarmBaseline=localStorage.getItem(alarmKey())||null;
+
+    document.getElementById('enableAlarm')?.addEventListener('click',()=>{
+      try{ unlockAlarmAudio(); }catch(e){}
+      localStorage.setItem('jpt_v106_alarm_enabled','1');
+      try{ if('Notification' in window && Notification.permission==='default') Notification.requestPermission().catch(()=>{}); }catch(e){}
+    },{passive:true});
+
+    bindRealtime();
+    pollAlarm();
+    clearInterval(alarmPollTimer);
+    alarmPollTimer=setInterval(pollAlarm,2000);
+  }
+
+  const oldOutletChange=$('outletSelect')?.onchange;
+  if($('outletSelect')){
+    $('outletSelect').addEventListener('change',()=>{
+      alarmBaseline=null;
+      bindRealtime();
+      pollAlarm();
+    });
+  }
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bootAlarmBridge);
+  else bootAlarmBridge();
+})();
+
 })();
