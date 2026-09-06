@@ -1,19 +1,19 @@
 <!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="manifest" href="customer-manifest.webmanifest">
+<link rel="manifest" href="./customer-manifest.webmanifest?v=106">
 <meta name="theme-color" content="#d8ae42">
 <title>Jeet Punjabi Tadka — Customer App</title>
 <style>
 body{margin:0;background:#090909;color:#f7f2e7;font-family:system-ui;text-align:center}
 main{max-width:430px;margin:7vh auto;padding:22px}
-img{width:150px;height:150px;border-radius:30px;border:2px solid #d8ae42;box-shadow:0 0 30px #d8ae4240}
+img{width:150px;height:150px;border-radius:30px;border:2px solid #d8ae42;box-shadow:0 0 30px #d8ae4240;object-fit:cover;display:block;margin:0 auto}
 h1{color:#f4d77a;font-family:Georgia,serif}p{color:#aaa}
 a,button{display:block;width:100%;box-sizing:border-box;margin:12px 0;padding:14px;border-radius:12px;font-weight:900;font-size:16px}
 a{background:#f4d77a;color:#111;text-decoration:none}button{background:#17130a;color:#f4d77a;border:1px solid #d8ae42}
 #install{display:none;background:#f4d77a;color:#111;border:0}.hint{font-size:12px;line-height:1.4;color:#888}
 </style></head><body><main>
-<img src="jpt-customer-icon-512.png" alt="Jeet Punjabi Tadka — Customer App">
+<img src="https://harmeetsg1983-blip.github.io/jeetpunjabitadka/jpt-customer-icon-512.png?v=106" alt="Jeet Punjabi Tadka — Customer App">
 <h1>Jeet Punjabi Tadka — Customer App</h1><p>Browse • Order • Enjoy</p>
 <a href="./index.html">OPEN APP</a>
 <button id="install" onclick="installApp()">⬇ INSTALL APP ON HOME SCREEN</button>
@@ -21,7 +21,7 @@ a{background:#f4d77a;color:#111;text-decoration:none}button{background:#17130a;c
 <p id="msg"></p><p class="hint">If Install does not appear, open Chrome ⋮ and choose “Add to Home screen” or “Install app”.</p>
 </main>
 <script>
-if('serviceWorker' in navigator) navigator.serviceWorker.register('./jpt-app-sw.js').catch(()=>{});
+if('serviceWorker' in navigator) navigator.serviceWorker.register('./jpt-app-sw.js?v=106').catch(()=>{});
 let deferredPrompt=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.getElementById('install').style.display='block';});
 window.addEventListener('appinstalled',()=>{deferredPrompt=null;document.getElementById('install').style.display='none';document.getElementById('msg').textContent='✅ Customer App installed on your home screen.';});
