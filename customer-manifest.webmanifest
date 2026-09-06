@@ -1,0 +1,17 @@
+{
+  "name": "Jeet Punjabi Tadka \u2014 Customer App",
+  "short_name": "JPT Customer",
+  "start_url": "./customer-app.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#090909",
+  "theme_color": "#d8ae42",
+  "icons": [
+    {
+      "src": "jpt-customer-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
