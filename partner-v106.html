@@ -25,9 +25,19 @@ html,body{margin:0;width:100%;height:100%;background:#090909;overflow:hidden}
       const s=doc.createElement('script');
       s.src='./partner-order-flow-v106-hotfix.js';
       s.async=false;
-      s.onload=function(){boot.style.display='none';};
-      s.onerror=function(){boot.textContent='Partner order module could not load. Please refresh.';};
-      doc.body.appendChild(s);
+      s.onload=function(){
+  const p=doc.createElement('script');
+  p.src='./partner-payment-gate-v106.js?v=launch1';
+  p.async=false;
+  p.onload=function(){boot.style.display='none';};
+  p.onerror=function(){boot.textContent='Payment gate module could not load. Please refresh.';};
+  doc.body.appendChild(p);
+};
+s.onerror=function(){boot.textContent='Partner order module could not load. Please refresh.';};
+doc.body.appendChild(s);
+
+    
+      
       setTimeout(function(){boot.style.display='none';},1200);
     }catch(e){
       boot.textContent='Partner App loading error. Please refresh.';
