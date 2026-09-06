@@ -11,16 +11,26 @@ img{width:150px;height:150px;border-radius:30px;border:2px solid #d8ae42;box-sha
 h1{color:#f4d77a;font-family:Georgia,serif}p{color:#aaa}
 a,button{display:block;width:100%;box-sizing:border-box;margin:12px 0;padding:14px;border-radius:12px;font-weight:900;font-size:16px}
 a{background:#f4d77a;color:#111;text-decoration:none}button{background:#17130a;color:#f4d77a;border:1px solid #d8ae42}
+#install{display:none;background:#f4d77a;color:#111;border:0}.hint{font-size:12px;line-height:1.4;color:#888}
 </style></head><body><main>
-<img src="jpt-partner-icon-512.png" alt="Jeet Punjabi Tadka — Restaurant Partner"><h1>Jeet Punjabi Tadka — Restaurant Partner</h1><p>Manage Orders • Update Menu • Grow Business</p>
+<img src="jpt-partner-icon-512.png" alt="Jeet Punjabi Tadka — Restaurant Partner">
+<h1>Jeet Punjabi Tadka — Restaurant Partner</h1><p>Manage Orders • Update Menu • Grow Business</p>
 <a href="./partner-v106.html">OPEN APP</a>
+<button id="install" onclick="installApp()">⬇ INSTALL PARTNER APP ON HOME SCREEN</button>
 <button onclick="shareApp()">↗ SHARE APP</button>
-<p id="msg"></p>
+<p id="msg"></p><p class="hint">If Install does not appear, open Chrome ⋮ and choose “Add to Home screen” or “Install app”.</p>
 </main>
 <script>
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./jpt-app-sw.js').catch(()=>{});
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.getElementById('install').style.display='block';});
+window.addEventListener('appinstalled',()=>{deferredPrompt=null;document.getElementById('install').style.display='none';document.getElementById('msg').textContent='✅ Partner App installed on your home screen.';});
+async function installApp(){
+ if(!deferredPrompt){document.getElementById('msg').textContent='Chrome menu ⋮ → Add to Home screen / Install app';return;}
+ deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null;
+}
 async function shareApp(){
- const data={title:"Jeet Punjabi Tadka \u2014 Restaurant Partner",text:"Manage Orders \u2022 Update Menu \u2022 Grow Business",url:location.href};
+ const data={title:"Jeet Punjabi Tadka — Restaurant Partner",text:"Manage Orders • Update Menu • Grow Business",url:location.href};
  try{if(navigator.share) await navigator.share(data); else{await navigator.clipboard.writeText(location.href);document.getElementById('msg').textContent='Link copied. Share it with your family.';}}
  catch(e){}
 }
