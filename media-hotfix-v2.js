@@ -37,7 +37,7 @@
       }
       if(v.getAttribute('src')!==VIDEO)v.src=VIDEO;
       v.muted=true; v.autoplay=true; v.loop=true; v.playsInline=true;
-      v.style.width='100%'; v.style.height='180px'; v.style.objectFit='cover'; v.style.objectPosition='center'; v.style.display='block';
+      v.style.width='100%'; v.style.height='180px'; v.style.objectFit='cover'; v.style.objectPosition='center 40%'; v.style.display='block';
       box.style.minHeight='0'; box.style.height='180px'; box.style.aspectRatio='auto'; box.style.background='#111'; box.style.overflow='hidden';
       v.play().catch(function(){});
       return;
