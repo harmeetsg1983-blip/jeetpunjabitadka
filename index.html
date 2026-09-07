@@ -292,9 +292,15 @@ async function placeOrder(){
 window.addEventListener('popstate',async e=>{if($('modal').classList.contains('show')){closeCart(true);return;}if(e.state&&e.state.outlet){const id=e.state.outlet;if(OUTLETS[id]&&id!==outletId){outletId=id;cartState={};selectedPromo=null;items=[];offers=[];campaigns=[];imageMap={};setTheme();renderOutlets();await loadManagedMenu();}}else if(outletId!=='JPT-001'){outletId='JPT-001';cartState={};selectedPromo=null;items=[];offers=[];campaigns=[];imageMap={};setTheme();renderOutlets();await loadManagedMenu();}});
 loadAllOutletOffers().catch(()=>{});
 loadManagedMenu();
+</script>
 <script src="media-hotfix-v2.js"></script>
 <script src="./customer-upi-only-v106.js?v=106-upi1"></script>
 <script src="./customer-menu-runtime-fix-v106.js?v=v106-recovery1"></script>
+</body>
+</html>
+ 
+
+
 
 
 
