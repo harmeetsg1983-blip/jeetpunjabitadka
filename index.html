@@ -96,7 +96,9 @@ main{padding-bottom:12px}.item{display:flex;gap:14px;padding:15px 14px;border-bo
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 let jptCheckoutBusy=false;
-const sb=window.supabase.createClient(window.JPT_SUPABASE_URL,window.JPT_SUPABASE_PUBLISHABLE_KEY);
+const sb=window.supabase.createClient(window.JPT_SUPABASE_URL,window.JPT_SUPABASE_
+PUBLISHABLE_KEY);
+window.sb=sb;
 const WA='9148161094';
 const OUTLETS={
  "JPT-001":{name:"Jeet Punjabi Tadka",accent:"#d8ae42"},
@@ -288,11 +290,12 @@ async function placeOrder(){
  }catch(e){console.error(e);toast('Order could not be completed. Please try again.')} finally {jptCheckoutBusy=false}
 }
 window.addEventListener('popstate',async e=>{if($('modal').classList.contains('show')){closeCart(true);return;}if(e.state&&e.state.outlet){const id=e.state.outlet;if(OUTLETS[id]&&id!==outletId){outletId=id;cartState={};selectedPromo=null;items=[];offers=[];campaigns=[];imageMap={};setTheme();renderOutlets();await loadManagedMenu();}}else if(outletId!=='JPT-001'){outletId='JPT-001';cartState={};selectedPromo=null;items=[];offers=[];campaigns=[];imageMap={};setTheme();renderOutlets();await loadManagedMenu();}});
-291  loadAllOutletOffers().catch(()=>{});
-292  loadManagedMenu();
-293  </script>
-294  <script src="media-hotfix-v2.js"></script>
-295  <script src="./customer-upi-only-v106.js?v=106-upi1"></script>
-296  </body>
-297  </html>
+loadAllOutletOffers().catch(()=>{});
+loadManagedMenu();
+<script src="media-hotfix-v2.js"></script>
+<script src="./customer-upi-only-v106.js?v=106-upi1"></script>
+<script src="./customer-menu-runtime-fix-v106.js?v=v106-recovery1"></script>
+
+
+
 
