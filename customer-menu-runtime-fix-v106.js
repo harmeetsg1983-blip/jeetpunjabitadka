@@ -1,13 +1,8 @@
-/* JPT V106 CUSTOMER MENU CONNECTION BRIDGE — CART + MENU RECOVERY V4
-   Non-destructive customer-side bridge.
-   Reads the same public Supabase menu source used by the Partner/Admin app.
-   Does NOT write, delete, import, modify prices, orders, payment data, or images.
-
-   V4 fix:
-   - Restores the complete five-outlet/menu/image bridge.
-   - Keeps the original Customer App cart as the source of truth.
-   - ADD buttons invoke the original inline `change()` through global eval,
-     allowing access to a page-level lexical function from this external script.
+/* JPT V106 CUSTOMER MENU + CART RECOVERY V5
+   Safe/additive recovery bridge.
+   Single source: Supabase menu rows are synchronized into the original
+   Customer App `items` array, then the ORIGINAL render()/change()/cartRows()
+   remain authoritative for cart behavior.
 */
 (function(){
 'use strict';
@@ -27,17 +22,6 @@ function esc(v){
   return String(v==null?'':v).replace(/[&<>"']/g,function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
   })
-}
-function money(v){return '₹'+Math.round(Number(v)||0)}
-
-function callOriginalChange(id,d){
-  try{
-    window.eval('change('+JSON.stringify(String(id))+','+Number(d)+')');
-    return true;
-  }catch(e){
-    console.warn('JPT V106 cart change failed',e);
-    return false;
-  }
 }
 
 function outlet(){
@@ -62,20 +46,51 @@ function ensureClient(){
   return null
 }
 
+/* Put the live Supabase rows into the ORIGINAL Customer App state.
+   This is the critical V5 repair: cartRows() uses `items.find(...)`. */
+function syncOriginalState(rows,map){
+  var safeRows=rows.map(function(x){
+    var y={
+      id:x.id,
+      name:x.name||'',
+      description:x.description||'',
+      price:Number(x.price)||0,
+      category:x.category||'',
+      available:x.available!==false,
+      is_deleted:x.is_deleted===true,
+      image_url:x.image_url||map[x.id]||map[x.name]||'',
+      sort_order:x.sort_order==null?0:x.sort_order
+    };
+    return y
+  });
+
+  try{
+    window.eval(
+      'items='+JSON.stringify(safeRows)+';'+
+      'imageMap='+JSON.stringify(map||{})+';'
+    );
+    return true
+  }catch(e){
+    console.warn('JPT V106 state sync failed',e);
+    return false
+  }
+}
+
+/* Keep the five-outlet selector. */
 function renderOutlets(){
   var bar=el('outletbar');if(!bar)return;
   var active=outlet();
 
   bar.innerHTML=Object.keys(OUT).map(function(id){
     return '<button type="button" class="outlet '+(id===active?'on':'')+
-      '" data-jpt-bridge-outlet="'+id+'">'+esc(OUT[id])+'</button>'
+      '" data-jpt-v5-outlet="'+id+'">'+esc(OUT[id])+'</button>'
   }).join('');
 
   Array.prototype.forEach.call(
-    bar.querySelectorAll('[data-jpt-bridge-outlet]'),
+    bar.querySelectorAll('[data-jpt-v5-outlet]'),
     function(b){
       b.onclick=function(){
-        var id=b.getAttribute('data-jpt-bridge-outlet');
+        var id=b.getAttribute('data-jpt-v5-outlet');
         window.outletId=id;
         try{
           history.pushState(
@@ -91,97 +106,15 @@ function renderOutlets(){
   )
 }
 
-function renderCats(rows){
-  var chips=el('chips');if(!chips)return;
-  var cats=[];
-  rows.forEach(function(x){
-    var c=String(x.category||'').trim();
-    if(c&&cats.indexOf(c)<0)cats.push(c)
-  });
-
-  chips.innerHTML=['All'].concat(cats).map(function(c,i){
-    return '<button type="button" class="chip '+(i===0?'on':'')+
-      '" data-jpt-bridge-cat="'+esc(c)+'">'+esc(c)+'</button>'
-  }).join('');
-
-  Array.prototype.forEach.call(
-    chips.querySelectorAll('[data-jpt-bridge-cat]'),
-    function(b){
-      b.onclick=function(){
-        Array.prototype.forEach.call(
-          chips.querySelectorAll('.chip'),
-          function(x){x.classList.remove('on')}
-        );
-        b.classList.add('on');
-        var c=b.getAttribute('data-jpt-bridge-cat');
-        renderMenu(
-          c==='All'
-            ? lastRows
-            : lastRows.filter(function(x){
-                return String(x.category||'')===c
-              }),
-          lastMap
-        )
-      }
-    }
-  )
-}
-
-function renderMenu(rows,map){
-  var menu=el('menu');if(!menu)return;
-
-  if(!rows.length){
-    menu.innerHTML='<div class="box" style="margin:14px">No menu items are available for this outlet right now.</div>';
-    return
+/* Let the ORIGINAL render() create menu cards and original ADD/+/- buttons. */
+function renderOriginal(){
+  try{
+    window.eval('render()');
+    return true
+  }catch(e){
+    console.warn('JPT V106 original render failed',e);
+    return false
   }
-
-  lastRows=rows;
-  lastMap=map||{};
-
-  var cats=[];
-  rows.forEach(function(x){
-    var c=String(x.category||'').trim();
-    if(c&&cats.indexOf(c)<0)cats.push(c)
-  });
-
-  var html='';
-
-  cats.forEach(function(cat){
-    var arr=rows.filter(function(x){
-      return String(x.category||'')===cat
-    });
-
-    html+='<div class="section">'+esc(cat)+'</div>';
-
-    html+=arr.map(function(x){
-      var src=x.image_url||lastMap[x.id]||lastMap[x.name]||'';
-
-      return '<div class="item">'+
-        '<div class="pic">'+
-          (src
-            ? '<img src="'+esc(src)+'" alt="'+esc(x.name||'')+'" loading="lazy">'
-            : '<span>IMAGE<br>AVAILABLE FROM ADMIN</span>')+
-        '</div>'+
-        '<div class="info">'+
-          '<div class="dish">'+esc(x.name||'')+'</div>'+
-          '<div class="desc">'+esc(x.description||'')+'</div>'+
-          '<div class="price">'+money(x.price)+'</div>'+
-          '<button class="add" type="button" data-jpt-add="'+esc(x.id)+'">ADD +</button>'+
-        '</div>'+
-      '</div>'
-    }).join('')
-  });
-
-  menu.innerHTML=html;
-
-  Array.prototype.forEach.call(
-    menu.querySelectorAll('[data-jpt-add]'),
-    function(b){
-      b.onclick=function(){
-        callOriginalChange(b.getAttribute('data-jpt-add'),1);
-      }
-    }
-  )
 }
 
 async function load(force){
@@ -227,8 +160,11 @@ async function load(force){
     lastRows=rows;
     lastMap=map;
 
-    renderCats(rows);
-    renderMenu(rows,map);
+    if(!syncOriginalState(rows,map)){
+      throw new Error('Could not synchronize Customer App menu state')
+    }
+
+    renderOriginal();
 
     var title=el('menuTitle');
     if(title)title.textContent='📋 '+OUT[id]+' Menu';
@@ -243,10 +179,10 @@ async function load(force){
 
     document.documentElement.setAttribute('data-jpt-v106-connection','ok');
     document.documentElement.setAttribute('data-jpt-v106-menu-count',String(rows.length));
-    document.documentElement.setAttribute('data-jpt-v106-cart-bridge','original-change-v4');
+    document.documentElement.setAttribute('data-jpt-v106-cart-bridge','original-state-sync-v5');
 
   }catch(e){
-    console.warn('JPT V106 Customer Menu Bridge',e);
+    console.warn('JPT V106 Customer Menu V5',e);
     document.documentElement.setAttribute('data-jpt-v106-connection','error')
   }finally{
     busy=false
@@ -255,6 +191,7 @@ async function load(force){
 
 function boot(){
   renderOutlets();
+
   setTimeout(function(){load(false)},250);
   setTimeout(function(){load(true)},1200);
   setTimeout(function(){load(true)},3000);
