@@ -9,14 +9,24 @@
   window.__JPT_PARTNER_SCROLL_ROOT_V4__=true;
 
   const list = document.getElementById('ordersList');
-  if(!list) {
-    setTimeout(function(){ location.reload(); }, 0);
-    return;
+   if(!list) {
+  setTimeout(function(){ location.reload(); }, 0);
+  return;
+}
+
+// V5 ROOT FIX:
+try {
+  if(typeof orderTimer !== 'undefined' && orderTimer){
+    clearInterval(orderTimer);
+    orderTimer=null;
+    console.log('[JPT V106] Native 3-second orderTimer stopped');
   }
+} catch(e) {
+  console.warn('[JPT V106] Could not clear native orderTimer', e);
+}
 
-  let locked=false;
-  let anchor=null;
-
+let locked=false;
+let anchor=null; 
   function scroller(){
     return document.scrollingElement || document.documentElement || document.body;
   }
