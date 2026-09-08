@@ -29,7 +29,7 @@ html,body{margin:0;width:100%;height:100%;background:#090909;overflow:hidden}
   const p=doc.createElement('script');
   p.src='./partner-payment-gate-v106.js?v=launch1';
   p.async=false;
-  p.onload=function(){boot.style.display='none';};
+  p.onload=function(){const st=doc.createElement('script');st.src='./jpt-v106-partner-screen-stability-v1.js?v=1';st.async=false;st.onload=function(){boot.style.display='none';};st.onerror=function(){boot.textContent='Screen stability module could not load. Please refresh.';};doc.body.appendChild(st);};
   p.onerror=function(){boot.textContent='Payment gate module could not load. Please refresh.';};
   doc.body.appendChild(p);
 };
