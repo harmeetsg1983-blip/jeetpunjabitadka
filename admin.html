@@ -227,4 +227,4 @@ $('newCategory').onclick=()=>categoryForm({});$('newItem').onclick=()=>itemForm(
 document.addEventListener('click',()=>unlockAlarmAudio(),{once:true});
 setInterval(()=>pollForNewOrders(),3000);
 $('v106ScratchSetup').onclick=ensureV106ScratchSlabs;document.querySelectorAll('.tab').forEach(t=>t.onclick=async()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');document.querySelectorAll('.tabpane').forEach(x=>x.classList.add('hidden'));$(t.dataset.tab).classList.remove('hidden');if(t.dataset.tab==='items')await loadItems();if(t.dataset.tab==='images')await loadImages();if(t.dataset.tab==='offers')await loadOffers();if(t.dataset.tab==='categories')await loadCategoryManager();if(t.dataset.tab==='import')$('importProgress').textContent='Ready. Choose current outlet or all 5 outlets.'});
-<script src="scratch-manager-v106.js"></script></body></html>
+</script><script src="scratch-manager-v106.js"></script></body></html>
