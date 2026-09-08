@@ -257,3 +257,55 @@
 })();
 
 })();
+/* JPT V106 LOUD RESTAURANT ALERT */
+(function(){
+  'use strict';
+
+  window.startAlarm = function(message){
+    try{
+      if(window.jptLoudAlarmTimer) clearInterval(window.jptLoudAlarmTimer);
+
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if(!AudioCtx) return;
+
+      const ctx = window.jptAlarmAudioCtx || new AudioCtx();
+      window.jptAlarmAudioCtx = ctx;
+
+      if(ctx.state === 'suspended') ctx.resume().catch(()=>{});
+
+      function beep(){
+        try{
+          const osc=ctx.createOscillator();
+          const gain=ctx.createGain();
+
+          osc.type='square';
+          osc.frequency.setValueAtTime(880,ctx.currentTime);
+          osc.frequency.setValueAtTime(660,ctx.currentTime+0.18);
+
+          gain.gain.setValueAtTime(0.0001,ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.45,ctx.currentTime+0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.38);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+
+          osc.start();
+          osc.stop(ctx.currentTime+0.4);
+        }catch(e){}
+      }
+
+      beep();
+      window.jptLoudAlarmTimer=setInterval(beep,900);
+
+      if(navigator.vibrate){
+        navigator.vibrate([400,150,400,150,700]);
+      }
+
+      setTimeout(()=>{
+        clearInterval(window.jptLoudAlarmTimer);
+        window.jptLoudAlarmTimer=null;
+      },12000);
+
+    }catch(e){}
+  };
+})();
