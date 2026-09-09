@@ -46,12 +46,14 @@ doc.body.appendChild(s);
 
     
       
-      setTimeout(function(){boot.style.display='none';},1200);
+      
     }catch(e){
       boot.textContent='Partner App loading error. Please refresh.';
       console.error(e);
-    }
+    
+      }
   });
+  setTimeout(function(){boot.style.display='none';},1200);
 })();
 </script>
 </body>
