@@ -270,7 +270,7 @@ function openUpiPayment(orderNo, amount, outletName){
  const vpa=String(JPT_UPI_VPA||'').trim();
  if(!vpa){ toast('UPI is not configured yet. Please use COD or configure the restaurant UPI ID.'); return false; }
  const safeAmount=Math.max(0,Number(amount)||0);
- const uri='upi://pay?'+new URLSearchParams({pa:vpa,pn:'Jeet Punjabi Tadka',am:safeAmount.toFixed(2),cu:'INR',tn:`${outletName} ${orderNo}`}).toString();
+ const uri='upi://pay?'+new URLSearchParams({pa:vpa,pn:'Jeet Punjabi Tadka',am:safeAmount.toFixed(2),cu:'INR',tn:`${outletName} ${orderNo}`,tr:String(Date.now())}).toString();
  window.location.href=uri;
  return true;
 }
