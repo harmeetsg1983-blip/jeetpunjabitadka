@@ -141,7 +141,7 @@ async function loadImages(){
  <div class="upload" style="display:flex;gap:7px;flex-wrap:wrap">
   <label class="btn primary" style="display:inline-flex;align-items:center;justify-content:center;min-width:145px;cursor:pointer;touch-action:manipulation">
    🖼️ ${map[x.id]?'Replace image':'Choose image'}
-   <input type="file" accept="image/*" capture="environment" data-pick-img="${esc(x.id)}" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+   <input type="file" accept="image/*" data-pick-img="${esc(x.id)}" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
   </label>
  </div></div>`).join('')||'<div class="muted">No menu items yet.</div>';
  $('imageList').querySelectorAll('[data-pick-img]').forEach(inp=>inp.onchange=()=>{
