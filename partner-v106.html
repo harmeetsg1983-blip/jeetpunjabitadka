@@ -17,44 +17,76 @@ html,body{margin:0;width:100%;height:100%;background:#090909;overflow:hidden}
 (function(){
   const frame=document.getElementById('partnerFrame');
   const boot=document.getElementById('boot');
+
+  function hideBoot(){
+    boot.style.display='none';
+  }
+
+  function showError(msg){
+    console.error(msg);
+    hideBoot();
+  }
+
   frame.addEventListener('load',function(){
     try{
       const doc=frame.contentDocument;
       const win=frame.contentWindow;
-      if(!doc||!win) throw new Error('Partner app frame unavailable');
+
+      if(!doc || !win){
+        showError('Partner app frame unavailable');
+        return;
+      }
+
       const s=doc.createElement('script');
       s.src='./partner-order-flow-v106-hotfix.js';
       s.async=false;
-      s.onload=function(){
-  const p=doc.createElement('script');
-  p.src='./partner-payment-gate-v106.js?v=launch1';
-  p.async=false;
-  p.onload=function(){
-  const st=doc.createElement('script');
-  st.src='./jpt-v106-partner-scroll-root-fix-v4.js?v=4';
-  st.async=false;
-  st.onload=function(){boot.style.display='none';};
-  st.onerror=function(){boot.textContent='Screen stability module could not load. Please refresh.';};
-  doc.body.appendChild(st);
-};
-};
-  p.onerror=function(){boot.textContent='Payment gate module could not load. Please refresh.';};
-  doc.body.appendChild(p);
-};
-s.onerror=function(){boot.textContent='Partner order module could not load. Please refresh.';};
-doc.body.appendChild(s);
 
-    
-      
-      
+      s.onload=function(){
+        const p=doc.createElement('script');
+        p.src='./partner-payment-gate-v106.js?v=launch1';
+        p.async=false;
+
+        p.onload=function(){
+          const st=doc.createElement('script');
+          st.src='./jpt-v106-partner-scroll-root-fix-v4.js?v=4';
+          st.async=false;
+
+          st.onload=function(){
+            console.log('JPT Partner modules loaded');
+          };
+
+          st.onerror=function(){
+            console.error('Scroll stability module failed');
+          };
+
+          doc.body.appendChild(st);
+        };
+
+        p.onerror=function(){
+          console.error('Payment gate module failed');
+        };
+
+        doc.body.appendChild(p);
+      };
+
+      s.onerror=function(){
+        console.error('Partner order module failed');
+      };
+
+      doc.body.appendChild(s);
+
     }catch(e){
-      boot.textContent='Partner App loading error. Please refresh.';
-      console.error(e);
-    
-      }
+      console.error('Partner App loading error',e);
+    }
+
+    hideBoot();
   });
-  setTimeout(function(){boot.style.display='none';},1200);
+
+  /* Safety: never allow the wrapper overlay to block the working admin panel */
+  setTimeout(hideBoot,1200);
 })();
 </script>
 </body>
 </html>
+
+      
