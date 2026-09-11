@@ -51,9 +51,23 @@ html,body{margin:0;width:100%;height:100%;background:#090909;overflow:hidden}
           st.src='./jpt-v106-partner-scroll-root-fix-v4.js?v=4';
           st.async=false;
 
-          st.onload=function(){
-            console.log('JPT Partner modules loaded');
-          };
+  st.onload=function(){
+  const ops=doc.createElement('script');
+  ops.src='./jpt-v106-partner-operations-v1.js?v=ops1';
+  ops.async=false;
+
+  ops.onload=function(){
+    console.log('JPT Partner operations module loaded');
+  };
+
+  ops.onerror=function(){
+    console.error('Partner operations module failed');
+  };
+
+  doc.body.appendChild(ops);
+
+  console.log('JPT Partner modules loaded');
+};
 
           st.onerror=function(){
             console.error('Scroll stability module failed');
