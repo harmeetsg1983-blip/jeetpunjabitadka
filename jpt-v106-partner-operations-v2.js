@@ -19,7 +19,7 @@ function statusOf(c){
   if(/delivered|completed|cancelled|canceled|rejected|failed/.test(s)) return 'history';
   return 'active';
 }
-function orderNo(c){return (c.textContent.match(/JPT-[A-Za-z0-9-]+/)||[])[0]||c.dataset.orderNo||''}
+function orderNo(c){return c.dataset.orderNo||c.querySelector('select[data-order]')?.dataset.order||c.textContent.match(/JPT[A-Za-z0-9-]+/)?.[0]||''}
 
 function style(){
  if($('#jptOpsStyleV2')) return;
@@ -68,9 +68,11 @@ function group(list){
 
 async function moveOut(no,btn){
  btn.disabled=true; btn.textContent='UPDATING…';
- const sbx=window.sb;
+ const sbx=(typeof sb!=='undefined'?sb:window.sb);
  if(!sbx){btn.disabled=false;btn.textContent='🚚 OUT FOR DELIVERY';return}
- const r=await sbx.from('orders').update({status:'out_for_delivery',updated_at:new Date().toISOString()}).eq('order_no',no).eq('outlet_id',outlet());
+ const id=btn.closest('.order')?.querySelector('select[data-order]')?.dataset.order||'';
+ if(!id){btn.disabled=false;btn.textContent='🚚 OUT FOR DELIVERY';return}
+ const r=await sbx.from('orders').update({status:'out_for_delivery',updated_at:new Date().toISOString()}).eq('id',id).eq('outlet_id',outlet());
  if(r.error){btn.disabled=false;btn.textContent='🚚 OUT FOR DELIVERY';if(typeof window.msg==='function')window.msg('Order update failed: '+r.error.message);return}
  if(typeof window.msg==='function')window.msg('🚚 Order moved to OUT FOR DELIVERY.');
  if(typeof window.loadOrders==='function') await window.loadOrders();
@@ -102,7 +104,7 @@ async function sales(period){
    const rows=(q.data||[]).filter(o=>['delivered','completed'].includes(norm(o.status)));
    let total=0,count=0; const by={};
    rows.forEach(o=>{const v=Number(o.total??o.total_amount??0);total+=v;count++;const k=o.outlet_id||'Unknown';by[k]??={n:0,t:0};by[k].n++;by[k].t+=v});
-   const n=await sb.from('outlets').select('id,name'); const names={}; (n.data||[]).forEach(x=>names[x.id]=x.name);
+   const n=await sb.from('outlets').select('outlet_id,name'); const names={}; (n.data||[]).forEach(x=>names[x.outlet_id]=x.name);
    const lines=Object.entries(by).sort((a,b)=>b[1].t-a[1].t).map(([id,v])=>'<div style="display:flex;justify-content:space-between;padding:7px 0;border-top:1px solid #2d2518"><span>'+esc(names[id]||id)+'</span><b>'+money(v.t)+' ('+v.n+')</b></div>').join('');
    body.innerHTML='<div style="font-size:20px;font-weight:1000;color:#f4d77a">'+money(total)+'</div><div style="font-size:11px;color:#aaa">'+period.toUpperCase()+' · '+count+' delivered/completed orders · ALL OUTLETS</div>'+(lines||'<div class="jptOpsEmptyV2">No delivered/completed sales in this period.</div>');
  }catch(e){body.textContent='Sales could not be loaded right now.'}
