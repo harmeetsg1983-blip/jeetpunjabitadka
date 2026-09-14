@@ -65,11 +65,10 @@ main{padding-bottom:12px}.item{display:flex;gap:14px;padding:15px 14px;border-bo
    <div class="field"><label>Address</label><textarea id="address" class="area" placeholder="Delivery address"></textarea></div>
   </div>
   <div class="box"><h3>💳 Payment</h3>
-<select id="payment" class="select">
-<option value="COD">Cash on Delivery</option>
-<option value="UPI">UPI Payment</option>
+<select id="payment" class="select" disabled aria-disabled="true">
+<option value="UPI" selected>UPI Payment</option>
 </select>
-<div id="upiBox" class="upiBox" style="display:none">
+<div id="upiBox" class="upiBox" style="display:block">
   <div style="font-weight:900;color:var(--accent);margin-bottom:6px">📲 Pay by UPI</div>
   <div style="font-size:13px;color:#ccc;margin-bottom:8px">Scan this QR with any UPI app, or tap Open UPI App.</div>
   <img src="jpt-upi-qr.png" alt="Jeet Punjabi Tadka UPI QR" style="display:block;width:min(280px,80vw);height:auto;margin:8px auto;border-radius:14px;background:#fff;padding:8px">
@@ -268,7 +267,7 @@ $('search').oninput=e=>{let q=e.target.value.toLowerCase();render(items.filter(x
 const JPT_UPI_VPA = window.JPT_UPI_VPA || 'hs8462954-2@okicici';
 function openUpiPayment(orderNo, amount, outletName){
  const vpa=String(JPT_UPI_VPA||'').trim();
- if(!vpa){ toast('UPI is not configured yet. Please use COD or configure the restaurant UPI ID.'); return false; }
+ if(!vpa){ toast('UPI is not configured yet. Please configure the restaurant UPI ID.'); return false; }
  const safeAmount=Math.max(0,Number(amount)||0);
  const uri='upi://pay?'+new URLSearchParams({pa:vpa,pn:'POOJA KAUR',am:safeAmount.toFixed(2),cu:'INR',tn:`${outletName} ${orderNo}`,tr:String(Date.now())}).toString();
  window.location.href=uri;
