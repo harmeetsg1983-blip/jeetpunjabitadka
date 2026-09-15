@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050505">
+<title>Jeet Punjabi Tadka — Delivery Partner App</title>
+<style>
+:root{--bg:#050505;--panel:#101010;--gold:#d8aa45;--gold2:#f5d477;--text:#fff;--muted:#aaa;--green:#31c56b;--red:#e34b4b}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#050505,#111);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:#070707ee;border-bottom:1px solid #4a3818;padding:14px 16px;backdrop-filter:blur(10px)}
+.brand{font-weight:900;color:var(--gold2);letter-spacing:.4px}.sub{font-size:12px;color:var(--muted)}
+main{max-width:720px;margin:auto;padding:14px 14px 90px}.card{background:linear-gradient(145deg,#151515,#0b0b0b);border:1px solid #493719;border-radius:18px;padding:15px;margin:12px 0;box-shadow:0 8px 25px #0008}
+h2,h3{margin:0 0 10px}.row{display:flex;gap:10px;align-items:center;justify-content:space-between}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{border:0;border-radius:12px;padding:12px 14px;font-weight:800;cursor:pointer}.gold{background:linear-gradient(180deg,#f4d37a,#c89228);color:#111}.dark{background:#202020;color:#fff;border:1px solid #55401c}.danger{background:#6f2424;color:#fff}.success{background:#1c6b3b;color:#fff}
+input,select,textarea{width:100%;background:#0a0a0a;color:#fff;border:1px solid #51401f;border-radius:11px;padding:11px;margin:5px 0 9px}
+label{font-size:12px;color:#c8c8c8}.pill{padding:7px 10px;border-radius:99px;background:#222;border:1px solid #4b3a1c;font-size:12px}.online{background:#123c25;border-color:#2b8d52;color:#6ff09c}
+.offer{border:1px solid #9b7628;background:radial-gradient(circle at 90% 10%,#6b501d33,#151515 55%);animation:pulse 1.1s infinite alternate}@keyframes pulse{to{box-shadow:0 0 24px #d8aa452e}}
+.big{font-size:24px;font-weight:900;color:var(--gold2)}.muted{color:var(--muted);font-size:13px}.hidden{display:none}
+.nav{position:fixed;bottom:0;left:0;right:0;background:#080808f5;border-top:1px solid #4a3818;display:flex;justify-content:center;gap:7px;padding:8px;z-index:10}.nav button{font-size:11px;padding:9px 10px}
+.statusline{display:flex;gap:8px;flex-wrap:wrap}.step{padding:8px 10px;border-radius:10px;background:#1b1b1b;border:1px solid #333;font-size:12px}.step.active{border-color:var(--gold);color:var(--gold2)}
+small{color:#888}.warn{background:#3a2d11;border:1px solid #72551d;color:#f1d486;padding:10px;border-radius:12px;font-size:12px}
+</style>
+</head>
+<body>
+<header><div class="brand">JEET PUNJABI TADKA</div><div class="sub">Delivery Partner App • Pre-Live V7 direct camera request</div></header>
+<main>
+
+<section id="home">
+<div class="card">
+ <div class="row"><div><div class="big">Delivery Partner</div><div class="muted">Secure rider workflow</div></div><span id="statusPill" class="pill">OFFLINE</span></div>
+ <div style="margin-top:12px" class="grid">
+  <button id="onlineBtn" class="success">GO ONLINE</button><button id="offlineBtn" class="dark">GO OFFLINE</button>
+ </div>
+</div>
+
+<div id="securityCard" class="card">
+<h3>🔐 Verification & Security Gate</h3>
+<div class="statusline">
+ <span id="phoneState" class="step">Phone OTP: Not verified</span>
+ <span id="kycState" class="step">KYC: Under review</span>
+ <span id="approvalState" class="step">Admin: Pending</span>
+</div>
+<p class="muted">A rider must have a confirmed phone, approved KYC and active approval before ONLINE status is allowed. OTP proves control of the phone number; it does not by itself prove document ownership.</p>
+<button class="gold" onclick="show('profile')">Open Registration / Verification</button>
+</div>
+
+<div id="offer" class="card offer hidden">
+<h3>🔔 NEW DELIVERY OFFER</h3>
+<div class="big">JPT Order #DEMO-1001</div>
+<p>Restaurant: Jeet Punjabi Tadka • Outlet JPT-001</p>
+<p>Pickup: Mohan Market, Bidar</p><p>Customer: Delivery destination shown after acceptance</p>
+<div class="grid"><button class="success" onclick="acceptOffer()">ACCEPT</button><button class="danger" onclick="rejectOffer()">REJECT</button></div>
+<div class="muted" style="margin-top:8px">Custom alert audio loops until Accept / Reject in this demo.</div>
+</div>
+
+<div id="current" class="card hidden">
+<h3>📦 Current Delivery</h3>
+<div class="row"><b id="assignText">Assignment locked</b><span class="pill online">ASSIGNED</span></div>
+<div class="statusline" style="margin:12px 0">
+ <span id="s1" class="step active">Accepted</span><span id="s2" class="step">Picked Up</span><span id="s3" class="step">Out for Delivery</span><span id="s4" class="step">Delivered</span>
+</div>
+<div class="grid">
+<button class="gold" onclick="nextStatus()">NEXT STATUS</button><button class="dark" onclick="openMaps()">OPEN MAPS</button>
+</div>
+</div>
+
+<div class="card">
+<h3>🧭 Live Delivery Network</h3>
+<p class="muted">During an active delivery, the production app will send rider GPS updates to the secure Supabase backend. Customer and Restaurant Partner can receive assignment/status/location through role-authorized reads. Location sharing stops after delivery/cancellation.</p>
+</div>
+</section>
+
+<section id="profile" class="hidden">
+<div class="card"><h2>Registration & Verification</h2>
+<label>Full name</label><input id="name" placeholder="Delivery partner name">
+<label>Mobile number</label><input id="phone" inputmode="tel" placeholder="10-digit mobile number">
+<button class="gold" onclick="requestOtp()">SEND OTP</button>
+<div id="otpBox" class="hidden"><label>OTP</label><input id="otp" inputmode="numeric" maxlength="6" placeholder="6-digit OTP">
+<button class="success" onclick="verifyOtp()">VERIFY OTP</button></div>
+<p class="muted">Production: OTP must be issued by the authenticated backend/provider. The app must not trust a manually typed “verified” flag.</p>
+</div>
+
+<div class="card"><h3>KYC / Onboarding</h3>
+<label>Date of birth</label><input type="date" id="dob">
+<label>Address</label><textarea id="address" rows="3" placeholder="Residential address"></textarea>
+
+<label>Live Selfie — camera only</label>
+<div class="card" style="margin:8px 0;padding:12px">
+  <video id="selfieVideo" autoplay playsinline muted
+    style="width:100%;max-height:320px;border-radius:12px;background:#000;display:none;object-fit:cover"></video>
+  <canvas id="selfieCanvas" style="display:none;width:100%;border-radius:12px"></canvas>
+  <div class="grid">
+    <button type="button" class="dark" onclick="startSelfieCamera()">OPEN FRONT CAMERA</button>
+    <button type="button" class="gold" id="captureSelfieBtn" onclick="captureLiveSelfie()" disabled>CAPTURE LIVE SELFIE</button>
+  </div>
+  <button type="button" class="dark" id="retakeSelfieBtn" onclick="retakeLiveSelfie()" style="display:none;margin-top:8px;width:100%">RETAKE SELFIE</button>
+  <div id="selfieState" class="step" style="margin-top:8px">Live selfie: Not captured</div>
+  <p class="muted">Selfie must be captured from the device camera. Gallery/file selection is intentionally disabled for the selfie. V7 requests the camera directly from the button click and reports the exact browser camera error.</p>
+</div>
+
+<label>Aadhaar document</label><input type="file" accept="image/*,.pdf">
+<label>PAN document</label><input type="file" accept="image/*,.pdf">
+<label>Supporting document 1</label><input type="file" accept="image/*,.pdf">
+<label>Supporting document 2</label><input type="file" accept="image/*,.pdf">
+<button class="gold" onclick="submitKyc()">SUBMIT FOR REVIEW</button>
+<p class="muted">Documents are intended for private storage and admin review. This standalone demo does not upload them anywhere.</p>
+</div>
+</section>
+
+<section id="history" class="hidden">
+<div class="card"><h2>Delivery History</h2>
+<div class="card" style="margin:8px 0"><b>#JPT-1000</b><div class="muted">Delivered • JPT-001 • ₹—</div></div>
+<div class="card" style="margin:8px 0"><b>#JPT-0999</b><div class="muted">Delivered • JPT-001 • ₹—</div></div>
+</div>
+</section>
+
+<section id="tools" class="hidden">
+<div class="card"><h2>Partner Tools</h2>
+<div class="grid"><button class="dark" onclick="alert('Availability controls ready for production connection.')">Availability</button><button class="dark" onclick="alert('Notification settings ready for production connection.')">Alerts</button><button class="dark" onclick="alert('Performance dashboard ready for production connection.')">Performance</button><button class="dark" onclick="alert('Support flow ready for production connection.')">Support</button></div>
+</div>
+<div class="card"><h3>🎵 Custom Delivery Alert</h3>
+<input id="ringtone" type="file" accept="audio/*">
+<div class="grid"><button class="gold" onclick="testTone()">TEST</button><button class="dark" onclick="stopTone()">STOP</button></div>
+<p class="muted">Choose an audio file from the phone. In this demo it loops during a new offer. Production Android should additionally use a high-priority notification channel with a custom notification sound and vibration, subject to OS rules.</p>
+</div>
+<div class="warn">Production safety note: this file is a standalone UI/demo. It does not contain Supabase secrets, service-role keys, Aadhaar/PAN data, or live customer data.</div>
+</section>
+
+</main>
+<div class="nav">
+<button class="dark" onclick="show('home')">Home</button><button class="dark" onclick="show('profile')">Verify</button><button class="dark" onclick="show('history')">History</button><button class="dark" onclick="show('tools')">Tools</button>
+</div>
+<script>
+let online=false,accepted=false,status=0,otpSent=false,phoneVerified=false,kyc='under_review',approved=false;
+let audio=null;
+
+let selfieStream=null,liveSelfieCaptured=false;
+async function startSelfieCamera(){
+  const state=document.getElementById('selfieState');
+  const cap=document.getElementById('captureSelfieBtn');
+  const v=document.getElementById('selfieVideo');
+  try{
+    if(selfieStream) selfieStream.getTracks().forEach(t=>t.stop());
+    selfieStream=null;
+    cap.disabled=true;
+    state.textContent='Live selfie: Requesting camera…';
+
+    if(!window.isSecureContext){
+      state.textContent='Live selfie: Secure HTTPS page required';
+      alert('Camera requires a secure HTTPS page. Please open the GitHub Pages HTTPS link directly in Chrome.');
+      return;
+    }
+    if(!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia!=='function'){
+      state.textContent='Live selfie: Camera API unavailable';
+      alert('This page cannot access the camera API in this browser. Open the GitHub Pages link directly in the latest Chrome.');
+      return;
+    }
+
+    // IMPORTANT V7: do NOT pre-check navigator.permissions.query({name:"camera"}).
+    // Some Android Chrome/site-permission states report "denied" here even though
+    // a direct getUserMedia() request can correctly trigger/resolve permission.
+    // The actual camera request is made directly from the user button action.
+    const constraints={
+      video:{
+        facingMode:{ideal:'user'},
+        width:{ideal:720,min:320},
+        height:{ideal:720,min:320}
+      },
+      audio:false
+    };
+
+    state.textContent='Live selfie: Opening front camera…';
+    selfieStream=await navigator.mediaDevices.getUserMedia(constraints);
+    v.srcObject=selfieStream;
+    v.style.display='block';
+    await v.play().catch(()=>{});
+    cap.disabled=false;
+    state.textContent='Live selfie: Camera ready — capture now';
+  }catch(e){
+    const name=e && e.name ? e.name : 'UnknownError';
+    const msg=e && e.message ? e.message : '';
+    selfieStream=null;
+    cap.disabled=true;
+    state.textContent='Live selfie: Camera error — '+name;
+    let hint='';
+    if(name==='NotAllowedError' || name==='PermissionDeniedError'){
+      hint=' Chrome has refused this site’s camera request. Check the site Camera permission once, then try again.';
+    }else if(name==='NotFoundError' || name==='DevicesNotFoundError'){
+      hint=' No camera device was found.';
+    }else if(name==='NotReadableError' || name==='TrackStartError'){
+      hint=' The camera may be busy in another app. Close other camera/video apps and try again.';
+    }else if(name==='OverconstrainedError'){
+      hint=' The requested camera settings were not supported. Try again; V7 uses flexible front-camera settings.';
+    }else if(name==='SecurityError'){
+      hint=' The browser security policy blocked camera access.';
+    }
+    alert('Camera could not be opened ('+name+').'+hint+(msg?'\n\nBrowser message: '+msg:''));
+  }
+}
+function captureLiveSelfie(){
+  const v=document.getElementById('selfieVideo'), c=document.getElementById('selfieCanvas');
+  if(!selfieStream || !v.videoWidth){alert('Open the front camera first.');return}
+  const size=Math.min(v.videoWidth,v.videoHeight);
+  c.width=size;c.height=size;
+  const ctx=c.getContext('2d');
+  const sx=(v.videoWidth-size)/2, sy=(v.videoHeight-size)/2;
+  ctx.drawImage(v,sx,sy,size,size,0,0,size,size);
+  c.style.display='block';v.style.display='none';
+  document.getElementById('captureSelfieBtn').disabled=true;
+  document.getElementById('retakeSelfieBtn').style.display='block';
+  document.getElementById('selfieState').textContent='Live selfie: Captured from camera';
+  liveSelfieCaptured=true;
+  if(selfieStream){selfieStream.getTracks().forEach(t=>t.stop());selfieStream=null;}
+}
+function retakeLiveSelfie(){
+  liveSelfieCaptured=false;
+  document.getElementById('selfieCanvas').style.display='none';
+  document.getElementById('retakeSelfieBtn').style.display='none';
+  document.getElementById('selfieState').textContent='Live selfie: Not captured';
+  startSelfieCamera();
+}
+
+function show(id){['home','profile','history','tools'].forEach(x=>document.getElementById(x).classList.toggle('hidden',x!==id))}
+function render(){document.getElementById('statusPill').textContent=online?'ONLINE':'OFFLINE';document.getElementById('statusPill').className='pill '+(online?'online':'');document.getElementById('offer').classList.toggle('hidden',!online||accepted)}
+function canOnline(){return phoneVerified&&kyc==='verified'&&approved}
+document.getElementById('onlineBtn').onclick=()=>{if(!canOnline()){alert('ONLINE blocked: phone OTP + KYC verification + admin approval are required.');return}online=true;render();newOffer()};
+document.getElementById('offlineBtn').onclick=()=>{online=false;stopTone();render()};
+function requestOtp(){let p=document.getElementById('phone').value.replace(/\D/g,'');if(p.length<10){alert('Enter a valid mobile number.');return}otpSent=true;document.getElementById('otpBox').classList.remove('hidden');alert('Demo OTP sent. Production must use the real OTP provider/Supabase Auth flow.');}
+function verifyOtp(){if(!otpSent)return;let o=document.getElementById('otp').value.trim();if(o.length!==6){alert('Enter the 6-digit OTP.');return}phoneVerified=true;document.getElementById('phoneState').textContent='Phone OTP: Verified';document.getElementById('phoneState').classList.add('active');alert('Demo verification complete. Production verification must be server/auth based.');}
+function submitKyc(){
+  if(!phoneVerified){alert('Verify the phone first.');return}
+  if(!liveSelfieCaptured){alert('Capture the live selfie using the front camera first. Gallery upload is not accepted.');return}
+  kyc='under_review';
+  document.getElementById('kycState').textContent='KYC: Under review';
+  alert('KYC submitted for admin review (demo). Production must upload the camera capture to private storage and call the secure onboarding RPC.');
+}
+function newOffer(){accepted=false;render();playTone()}
+function acceptOffer(){accepted=true;stopTone();document.getElementById('current').classList.remove('hidden');document.getElementById('assignText').textContent='Assignment locked to this rider';render()}
+function rejectOffer(){stopTone();accepted=false;document.getElementById('offer').classList.add('hidden');alert('Offer rejected. Production engine will offer the job to the next eligible online rider.')}
+function playTone(){let f=document.getElementById('ringtone').files[0];if(!f)return;stopTone();audio=new Audio(URL.createObjectURL(f));audio.loop=true;audio.play().catch(()=>{});}
+function testTone(){let f=document.getElementById('ringtone').files[0];if(!f){alert('Choose an audio file first.');return}playTone()}
+function stopTone(){if(audio){audio.pause();audio.currentTime=0;audio=null}}
+function nextStatus(){if(!accepted)return;status=Math.min(3,status+1);['s1','s2','s3','s4'].forEach((id,i)=>document.getElementById(id).classList.toggle('active',i<=status));if(status===3){online=false;stopTone();document.getElementById('assignText').textContent='Delivered — location sharing should stop';render();}}
+function openMaps(){window.open('https://www.google.com/maps','_blank')}
+</script>
+</body>
+</html>
