@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050505">
+<title>Jeet Punjabi Tadka — Delivery Partner App</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#050505;--panel:#101010;--gold:#d8aa45;--gold2:#f5d477;--text:#fff;--muted:#aaa;--green:#31c56b;--red:#e34b4b}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#050505,#111);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:#070707ee;border-bottom:1px solid #4a3818;padding:14px 16px;backdrop-filter:blur(10px)}
+.brand{font-weight:900;color:var(--gold2);letter-spacing:.4px}.sub{font-size:12px;color:var(--muted)}
+main{max-width:720px;margin:auto;padding:14px 14px 90px}.card{background:linear-gradient(145deg,#151515,#0b0b0b);border:1px solid #493719;border-radius:18px;padding:15px;margin:12px 0;box-shadow:0 8px 25px #0008}
+h2,h3{margin:0 0 10px}.row{display:flex;gap:10px;align-items:center;justify-content:space-between}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{border:0;border-radius:12px;padding:12px 14px;font-weight:800;cursor:pointer}.gold{background:linear-gradient(180deg,#f4d37a,#c89228);color:#111}.dark{background:#202020;color:#fff;border:1px solid #55401c}.danger{background:#6f2424;color:#fff}.success{background:#1c6b3b;color:#fff}
+input,select,textarea{width:100%;background:#0a0a0a;color:#fff;border:1px solid #51401f;border-radius:11px;padding:11px;margin:5px 0 9px}
+label{font-size:12px;color:#c8c8c8}.pill{padding:7px 10px;border-radius:99px;background:#222;border:1px solid #4b3a1c;font-size:12px}.online{background:#123c25;border-color:#2b8d52;color:#6ff09c}
+.offer{border:1px solid #9b7628;background:radial-gradient(circle at 90% 10%,#6b501d33,#151515 55%);animation:pulse 1.1s infinite alternate}@keyframes pulse{to{box-shadow:0 0 24px #d8aa452e}}
+.big{font-size:24px;font-weight:900;color:var(--gold2)}.muted{color:var(--muted);font-size:13px}.hidden{display:none}
+.nav{position:fixed;bottom:0;left:0;right:0;background:#080808f5;border-top:1px solid #4a3818;display:flex;justify-content:center;gap:7px;padding:8px;z-index:10}.nav button{font-size:11px;padding:9px 10px}
+.statusline{display:flex;gap:8px;flex-wrap:wrap}.step{padding:8px 10px;border-radius:10px;background:#1b1b1b;border:1px solid #333;font-size:12px}.step.active{border-color:var(--gold);color:var(--gold2)}
+small{color:#888}.warn{background:#3a2d11;border:1px solid #72551d;color:#f1d486;padding:10px;border-radius:12px;font-size:12px}
+</style>
+</head>
+<body>
+<header><div class="brand">JEET PUNJABI TADKA</div><div class="sub">Delivery Partner App • Production-connected V8</div></header>
+<main>
+
+<section id="home">
+<div class="card">
+ <div class="row"><div><div class="big">Delivery Partner</div><div class="muted">Secure rider workflow</div></div><span id="statusPill" class="pill">OFFLINE</span></div>
+ <div style="margin-top:12px" class="grid">
+  <button id="onlineBtn" class="success">GO ONLINE</button><button id="offlineBtn" class="dark">GO OFFLINE</button>
+ </div>
+</div>
+
+<div id="securityCard" class="card">
+<h3>🔐 Verification & Security Gate</h3>
+<div class="statusline">
+ <span id="phoneState" class="step">Phone OTP: Not verified</span>
+ <span id="kycState" class="step">KYC: Under review</span>
+ <span id="approvalState" class="step">Admin: Pending</span>
+</div>
+<p class="muted">A rider must have a confirmed phone, approved KYC and active approval before ONLINE status is allowed. OTP proves control of the phone number; it does not by itself prove document ownership.</p>
+<button class="gold" onclick="show('profile')">Open Registration / Verification</button>
+</div>
+
+<div id="offer" class="card offer hidden">
+<h3>🔔 NEW DELIVERY OFFER</h3>
+<div class="big">JPT Order #DEMO-1001</div>
+<p>Restaurant: Jeet Punjabi Tadka • Outlet JPT-001</p>
+<p>Pickup: Mohan Market, Bidar</p><p>Customer: Delivery destination shown after acceptance</p>
+<div class="grid"><button class="success" onclick="acceptOffer()">ACCEPT</button><button class="danger" onclick="rejectOffer()">REJECT</button></div>
+<div class="muted" style="margin-top:8px">Custom alert audio loops until Accept / Reject in this demo.</div>
+</div>
+
+<div id="current" class="card hidden">
+<h3>📦 Current Delivery</h3>
+<div class="row"><b id="assignText">Assignment locked</b><span class="pill online">ASSIGNED</span></div>
+<div id="assignmentStatus" class="step active" style="margin:10px 0">ACCEPTED</div>
+<div id="trackingText" class="muted">Live location sharing starts during the active delivery.</div>
+<div class="statusline" style="margin:12px 0">
+ <span id="s1" class="step active">Accepted</span><span id="s2" class="step">Picked Up</span><span id="s3" class="step">Out for Delivery</span><span id="s4" class="step">Delivered</span>
+</div>
+<div class="grid">
+<button id="nextStatusBtn" class="gold" onclick="advanceStatus()">PICK UP</button><button class="dark" onclick="openMaps()">OPEN MAPS</button>
+</div>
+</div>
+
+<div class="card">
+<h3>🧭 Live Delivery Network</h3>
+<p class="muted">During an active delivery, the production app will send rider GPS updates to the secure Supabase backend. Customer and Restaurant Partner can receive assignment/status/location through role-authorized reads. Location sharing stops after delivery/cancellation.</p>
+</div>
+</section>
+
+<section id="profile" class="hidden">
+<div class="card"><h2>Registration & Verification</h2>
+<label>Full name</label><input id="name" placeholder="Delivery partner name">
+<label>Mobile number</label><input id="phone" inputmode="tel" placeholder="10-digit mobile number">
+<button class="gold" onclick="requestOtp()">SEND OTP</button>
+<div id="authMsg" class="muted" style="margin:8px 0">Enter your mobile number and request a real SMS OTP.</div>
+<div id="sessionText" class="muted">Not signed in</div>
+<div id="otpBox" class="hidden"><label>OTP</label><input id="otp" inputmode="numeric" maxlength="6" placeholder="6-digit OTP">
+<button class="success" onclick="verifyOtp()">VERIFY OTP</button></div>
+<p class="muted">Production: OTP must be issued by the authenticated backend/provider. The app must not trust a manually typed “verified” flag.</p>
+</div>
+
+<div class="card"><h3>KYC / Onboarding</h3>
+<label>Date of birth</label><input type="date" id="dob">
+<label>Address</label><textarea id="address" rows="3" placeholder="Residential address"></textarea>
+
+<label>Live Selfie — camera only</label>
+<div class="card" style="margin:8px 0;padding:12px">
+  <video id="selfieVideo" autoplay playsinline muted
+    style="width:100%;max-height:320px;border-radius:12px;background:#000;display:none;object-fit:cover"></video>
+  <canvas id="selfieCanvas" style="display:none;width:100%;border-radius:12px"></canvas>
+  <div class="grid">
+    <button type="button" class="dark" onclick="startSelfieCamera()">OPEN FRONT CAMERA</button>
+    <button type="button" class="gold" id="captureSelfieBtn" onclick="captureLiveSelfie()" disabled>CAPTURE LIVE SELFIE</button>
+  </div>
+  <button type="button" class="dark" id="retakeSelfieBtn" onclick="retakeLiveSelfie()" style="display:none;margin-top:8px;width:100%">RETAKE SELFIE</button>
+  <div id="selfieState" class="step" style="margin-top:8px">Live selfie: Not captured</div>
+  <p class="muted">Selfie must be captured from the device camera. Gallery/file selection is intentionally disabled for the selfie. V7 requests the camera directly from the button click and reports the exact browser camera error.</p>
+</div>
+
+<label>Aadhaar document</label><input id="aadhaarFile" type="file" accept="image/*,.pdf">
+<label>PAN document</label><input id="panFile" type="file" accept="image/*,.pdf">
+<label>Supporting document 1</label><input id="support1" type="file" accept="image/*,.pdf">
+<label>Supporting document 2</label><input id="support2" type="file" accept="image/*,.pdf">
+<button class="gold" onclick="submitKyc()">SUBMIT FOR REVIEW</button>
+<p class="muted">Documents are intended for private storage and admin review. This standalone demo does not upload them anywhere.</p>
+</div>
+</section>
+
+<section id="history" class="hidden">
+<div class="card"><h2>Delivery History</h2>
+<div class="card" style="margin:8px 0"><b>Today</b><div class="muted"><span id="todayCount">0</span> delivered • ₹<span id="todayEarn">0</span></div></div>
+<div id="earnings30" class="step" style="margin:8px 0">Last 30 days: 0 delivered × ₹50 = ₹0</div>
+<div class="card" style="margin:8px 0"><b>#JPT-1000</b><div class="muted">Delivered • JPT-001 • ₹—</div></div>
+<div class="card" style="margin:8px 0"><b>#JPT-0999</b><div class="muted">Delivered • JPT-001 • ₹—</div></div>
+</div>
+</section>
+
+<section id="tools" class="hidden">
+<div class="card"><h2>Partner Tools</h2>
+<div class="grid"><button class="dark" onclick="alert('Availability controls ready for production connection.')">Availability</button><button class="dark" onclick="alert('Notification settings ready for production connection.')">Alerts</button><button class="dark" onclick="alert('Performance dashboard ready for production connection.')">Performance</button><button class="dark" onclick="alert('Support flow ready for production connection.')">Support</button></div>
+</div>
+<div class="card"><h3>🎵 Custom Delivery Alert</h3>
+<input id="ringtone" type="file" accept="audio/*">
+<div class="grid"><button class="gold" onclick="testTone()">TEST</button><button class="dark" onclick="stopTone()">STOP</button></div>
+<p class="muted">Choose an audio file from the phone. In this demo it loops during a new offer. Production Android should additionally use a high-priority notification channel with a custom notification sound and vibration, subject to OS rules.</p>
+</div>
+<div class="warn">Production safety note: this file is a standalone UI/demo. It does not contain Supabase secrets, service-role keys, Aadhaar/PAN data, or live customer data.</div>
+</section>
+
+</main>
+<div class="nav">
+<button class="dark" onclick="show('home')">Home</button><button class="dark" onclick="show('profile')">Verify</button><button class="dark" onclick="show('history')">History</button><button class="dark" onclick="show('tools')">Tools</button>
+</div>
+<script>
+const SUPABASE_URL='https://qrkbhrmxejtpvheplath.supabase.co';
+const SUPABASE_KEY='sb_publishable_xySAr0cGnVCaC_sgtwk8Zw_IW_b5sgh';
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let online=false,accepted=false,status=0,phonePending='',selfieStream=null,selfieBlob=null,assignment=null,audio=null,offerPoll=null,locationTimer=null;
+const $=id=>document.getElementById(id);
+function show(id){['home','profile','history','tools'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
+function normalizePhone(v){let d=(v||'').replace(/\D/g,'');if(d.startsWith('91')&&d.length===12)d=d.slice(2);return d}
+async function requestOtp(){const p=normalizePhone($('phone').value);if(p.length!==10)return alert('Enter a valid 10-digit mobile number.');phonePending='+91'+p;$('authMsg').textContent='Sending real OTP…';const {error}=await sb.auth.signInWithOtp({phone:phonePending});if(error){$('authMsg').textContent='OTP error: '+error.message;return alert(error.message)}$('otpBox').classList.remove('hidden');$('authMsg').textContent='OTP sent to '+phonePending+'. Enter the code received on that same phone.'}
+async function verifyOtp(){const token=$('otp').value.trim();if(!phonePending||token.length!==6)return alert('Enter the 6-digit OTP.');const {error}=await sb.auth.verifyOtp({phone:phonePending,token,type:'sms'});if(error){$('authMsg').textContent='Verification failed: '+error.message;return alert(error.message)}$('authMsg').textContent='Phone verified. Secure session created.';await refreshSecurity()}
+async function refreshSecurity(){const {data:{session}}=await sb.auth.getSession();if(!session){if($('sessionText'))$('sessionText').textContent='Not signed in';return false}if($('sessionText'))$('sessionText').textContent='Signed in • '+(session.user.phone||'verified phone');$('phoneState').textContent='Phone OTP: Verified';$('phoneState').classList.add('active');const {data}=await sb.from('delivery_partners').select('id,status,is_active,onboarding_completed,verification_status,phone_verified_at').eq('user_id',session.user.id).maybeSingle();if(data){$('kycState').textContent='KYC: '+(data.onboarding_completed?'Completed':'Not submitted');$('approvalState').textContent='Admin: '+(data.verification_status||'Pending');renderStatus(data.status==='online');online=data.status==='online'}return true}
+async function prepareProfile(){const {data,error}=await sb.rpc('delivery_partner_prepare_profile',{p_full_name:($('name').value||'').trim()});if(error)throw error;return data}
+function safeName(n){return(n||'file').replace(/[^a-zA-Z0-9._-]/g,'_').slice(-80)}
+async function uploadPrivate(dpId,file,label){if(!file)return null;const path=dpId+'/'+label+'_'+Date.now()+'_'+safeName(file.name);const {error}=await sb.storage.from('delivery-partner-kyc').upload(path,file,{upsert:false});if(error)throw error;return path}
+async function submitKyc(){try{const {data:{session}}=await sb.auth.getSession();if(!session)return alert('Verify the phone first.');if(!selfieBlob)return alert('Capture the live selfie from the camera first.');if(!$('dob').value||!$('address').value.trim())return alert('Enter date of birth and address.');const dpId=await prepareProfile();$('kycState').textContent='KYC: Uploading…';const selfieFile=new File([selfieBlob],'live-selfie.jpg',{type:'image/jpeg'});const selfiePath=await uploadPrivate(dpId,selfieFile,'selfie');const aad=await uploadPrivate(dpId,$('aadhaarFile')?.files[0],'aadhaar');const pan=await uploadPrivate(dpId,$('panFile')?.files[0],'pan');const s1=await uploadPrivate(dpId,$('support1')?.files[0],'support1');const s2=await uploadPrivate(dpId,$('support2')?.files[0],'support2');const {error}=await sb.rpc('delivery_partner_submit_onboarding',{p_full_name:($('name').value||'').trim(),p_phone:session.user.phone,p_date_of_birth:$('dob').value,p_profile_photo_url:selfiePath,p_address:$('address').value.trim(),p_aadhaar_document_url:aad,p_pan_document_url:pan,p_support_document_1_url:s1,p_support_document_2_url:s2,p_live_selfie_url:selfiePath,p_selfie_captured_at:new Date().toISOString(),p_selfie_capture_method:'camera'});if(error)throw error;$('kycState').textContent='KYC: Under review';alert('KYC submitted securely. Admin approval is required before ONLINE.');await refreshSecurity()}catch(e){console.error(e);alert('KYC submission failed: '+(e.message||e));await refreshSecurity()}}
+async function startSelfieCamera(){try{if(selfieStream)selfieStream.getTracks().forEach(t=>t.stop());$('selfieState').textContent='Requesting camera…';if(!window.isSecureContext)throw new Error('Secure HTTPS page required.');if(!navigator.mediaDevices?.getUserMedia)throw new Error('Camera API unavailable.');selfieStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'user'},width:{ideal:720,min:320},height:{ideal:720,min:320}},audio:false});$('selfieVideo').srcObject=selfieStream;$('selfieVideo').style.display='block';await $('selfieVideo').play().catch(()=>{});$('captureSelfieBtn').disabled=false;$('selfieState').textContent='Live selfie: Camera ready — capture now'}catch(e){$('captureSelfieBtn').disabled=true;$('selfieState').textContent='Camera error: '+(e.name||'Error');alert('Camera could not be opened ('+(e.name||'Error')+'). '+(e.message||''))}}
+function captureLiveSelfie(){const v=$('selfieVideo'),c=$('selfieCanvas');if(!selfieStream||!v.videoWidth)return alert('Open the front camera first.');const size=Math.min(v.videoWidth,v.videoHeight);c.width=size;c.height=size;c.getContext('2d').drawImage(v,(v.videoWidth-size)/2,(v.videoHeight-size)/2,size,size,0,0,size,size);c.style.display='block';v.style.display='none';c.toBlob(b=>selfieBlob=b,'image/jpeg',.9);$('captureSelfieBtn').disabled=true;$('retakeSelfieBtn').style.display='block';$('selfieState').textContent='Live selfie: Captured from camera';if(selfieStream)selfieStream.getTracks().forEach(t=>t.stop());selfieStream=null}
+function retakeLiveSelfie(){selfieBlob=null;$('selfieCanvas').style.display='none';$('retakeSelfieBtn').style.display='none';$('selfieState').textContent='Live selfie: Not captured';startSelfieCamera()}
+function renderStatus(on){$('statusPill').textContent=on?'ONLINE':'OFFLINE';$('statusPill').className='pill '+(on?'online':'')}
+async function setOnline(desired){if(desired){const {error}=await sb.rpc('delivery_partner_set_status',{p_status:'online'});if(error)return alert('ONLINE blocked: '+error.message);online=true;renderStatus(true);startOfferPolling()}else{const {error}=await sb.rpc('delivery_partner_set_status',{p_status:'offline'});if(error)return alert(error.message);online=false;renderStatus(false);stopOfferPolling();}}
+$('onlineBtn').onclick=()=>setOnline(true);$('offlineBtn').onclick=()=>setOnline(false);
+async function pollOffer(){const {data,error}=await sb.rpc('delivery_partner_offer_snapshot');if(error||!data)return;const a=Array.isArray(data)?data[0]:data;if(!a?.id)return;if(assignment?.id===a.id)return;assignment=a;$('offer').classList.remove('hidden');$('offer').querySelector('.big').textContent='JPT Order #'+(a.order_id||'');const ps=$('offer').querySelectorAll('p');if(ps[0])ps[0].textContent='Restaurant: '+(a.outlet_id||'JPT-001');if(ps[1])ps[1].textContent='Pickup: '+(a.pickup_address||a.restaurant_address||'Restaurant pickup');playTone()}
+function startOfferPolling(){stopOfferPolling();pollOffer();offerPoll=setInterval(pollOffer,5000)}function stopOfferPolling(){if(offerPoll){clearInterval(offerPoll);offerPoll=null}stopTone();$('offer').classList.add('hidden')}
+async function respondOffer(accept){if(!assignment?.id)return;const {error}=await sb.rpc('delivery_assignment_respond',{p_assignment_id:assignment.id,p_accept:accept,p_reason:accept?null:'Rider rejected'});if(error)return alert(error.message);stopTone();if(accept){accepted=true;$('offer').classList.add('hidden');$('current').classList.remove('hidden');$('assignText').textContent='Assignment locked to this rider';$('assignmentStatus').textContent='ACCEPTED';$('nextStatusBtn').textContent='PICK UP';startLocationUpdates()}else{assignment=null;$('offer').classList.add('hidden');pollOffer()}}
+async function advanceStatus(){if(!assignment?.id)return;const cur=$('assignmentStatus').textContent.toLowerCase().replaceAll(' ','_');const next=cur==='accepted'?'picked_up':cur==='picked_up'?'out_for_delivery':cur==='out_for_delivery'?'delivered':null;if(!next)return;const {error}=await sb.rpc('delivery_assignment_status',{p_assignment_id:assignment.id,p_status:next});if(error)return alert(error.message);$('assignmentStatus').textContent=next.replaceAll('_',' ').toUpperCase();const map={accepted:0,picked_up:1,out_for_delivery:2,delivered:3};['s1','s2','s3','s4'].forEach((id,i)=>$(id).classList.toggle('active',i<=map[next]));$('nextStatusBtn').textContent=next==='picked_up'?'OUT FOR DELIVERY':next==='out_for_delivery'?'DELIVERED':'DONE';if(next==='delivered'){stopLocationUpdates();renderStatus(false);online=false;if($('trackingText'))$('trackingText').textContent='Delivery completed. Location sharing stopped.';loadEarnings()}}
+function startLocationUpdates(){stopLocationUpdates();sendLocation();locationTimer=setInterval(sendLocation,15000)}function stopLocationUpdates(){if(locationTimer){clearInterval(locationTimer);locationTimer=null}}
+function sendLocation(){if(!assignment?.id||!navigator.geolocation)return;navigator.geolocation.getCurrentPosition(async pos=>{await sb.rpc('delivery_partner_record_location',{p_assignment_id:assignment.id,p_lat:pos.coords.latitude,p_lng:pos.coords.longitude,p_accuracy_m:pos.coords.accuracy||null})},()=>{},{enableHighAccuracy:true,maximumAge:10000,timeout:10000})}
+async function loadEarnings(){const {data,error}=await sb.rpc('delivery_partner_earnings_summary',{p_days:30});if(error)return;const rows=Array.isArray(data)?data:[],today=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});let count=0,total=0;rows.forEach(r=>{if(r.day===today){count=Number(r.delivered_orders||0);total=Number(r.earning||0)}});$('todayCount').textContent=count;$('todayEarn').textContent=total.toFixed(0);const mc=rows.reduce((s,r)=>s+Number(r.delivered_orders||0),0),mt=rows.reduce((s,r)=>s+Number(r.earning||0),0);$('earnings30').textContent='Last 30 days: '+mc+' delivered × ₹50 = ₹'+mt.toFixed(0);$('historyBox').textContent='Last 30 days: '+mc+' delivered orders • ₹'+mt.toFixed(0)}
+function acceptOffer(){return respondOffer(true)}
+function rejectOffer(){return respondOffer(false)}
+function nextStatus(){return advanceStatus()}
+function testTone(){const f=$('ringtone').files[0];if(!f)return alert('Choose an audio file first.');stopTone();audio=new Audio(URL.createObjectURL(f));audio.loop=true;audio.play().catch(()=>{})}function playTone(){const f=$('ringtone').files[0];if(!f)return;stopTone();audio=new Audio(URL.createObjectURL(f));audio.loop=true;audio.play().catch(()=>{})}function stopTone(){if(audio){audio.pause();audio.currentTime=0;audio=null}}function openMaps(){window.open('https://www.google.com/maps','_blank')}
+sb.auth.onAuthStateChange(()=>refreshSecurity());refreshSecurity();loadEarnings();
+</script>
+</body>
+</html>
