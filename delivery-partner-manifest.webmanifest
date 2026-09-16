@@ -1,9 +1,9 @@
 {
   "name": "Jeet Punjabi Tadka — Delivery Partner",
   "short_name": "JPT Delivery",
-  "start_url": "./delivery-partner-app.html",
+  "start_url": "./delivery-partner-v11.html",
   "scope": "./",
-  "id": "./delivery-partner-app.html",
+  "id": "./delivery-partner-v11.html",
   "display": "standalone",
   "display_override": [
     "standalone"
