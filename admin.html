@@ -21,7 +21,7 @@
 </section></div>
 <script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
 const sb=window.supabase.createClient(window.JPT_SUPABASE_URL,window.JPT_SUPABASE_PUBLISHABLE_KEY);
-const OUTLET_KEY='jpt_admin_outlet';
+ window.sb=sb; const OUTLET_KEY='jpt_admin_outlet';
 let currentOutlet=localStorage.getItem(OUTLET_KEY)||'JPT-001', menuItems=[], categories=[], lastSeen=localStorage.getItem('jpt_admin_last_seen')||'', orderTimer=null, audioCtx=null, orderChannel=null, alarmLoop=null, alarmActive=false;
 const $=id=>document.getElementById(id);
 const BASE_MENU=[];
