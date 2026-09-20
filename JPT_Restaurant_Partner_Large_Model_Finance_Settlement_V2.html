@@ -205,8 +205,7 @@ body{
 
 <script src="supabase-config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
 window.sb = supabase.createClient(
   window.JPT_SUPABASE_URL,
@@ -214,8 +213,9 @@ window.sb = supabase.createClient(
 );
 </script>
 <script src="./jpt-partner-access-bridge-v2.js"></script>
+<script>
+const titles={
 
-const titles={home:'Central Operations',orders:'Orders & Notifications',menu:'Menu Manager',outlets:'Outlet Network',delivery:'Delivery Network',offers:'Offers & Campaigns',finance:'Finance & Settlement',partners:'Partner Access',reports:'Reports & Analytics',settings:'Settings & Controls'};
 function go(id){document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.s===id));document.getElementById('pageTitle').textContent=titles[id]||id}
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>go(b.dataset.s));
 function selectOutlet(id){document.getElementById('activeOutlet').textContent=id;go('home')}
