@@ -19,8 +19,8 @@
 <div id="offers" class="tabpane card hidden"><div class="row"><h2>Offers</h2><button class="btn primary" id="newOffer">＋ New Offer</button></div><div class="muted">Set start/end date & time. Offers automatically become inactive outside that window.</div><div class="field"><button class="btn primary" id="v106ScratchSetup" type="button">✨ Configure V106 Royal Gold 5 Scratch Slabs</button></div><div id="offerForm" class="hidden"></div><div id="offerList"></div></div>
 <div class="card"><button class="btn dark" id="logout">Log out</button> <a class="btn dark" href="./" style="text-decoration:none;display:inline-block">Open Live Menu</a></div>
 </section></div>
-<script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
- <script src="./jpt-partner-access-bridge-v2.js"></script>
+<script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./jpt-partner-access-bridge-v2.js"></script><script>
+ 
 const sb=window.supabase.createClient(window.JPT_SUPABASE_URL,window.JPT_SUPABASE_PUBLISHABLE_KEY);
  window.sb=sb; const OUTLET_KEY='jpt_admin_outlet';
 let currentOutlet=localStorage.getItem(OUTLET_KEY)||'JPT-001', menuItems=[], categories=[], lastSeen=localStorage.getItem('jpt_admin_last_seen')||'', orderTimer=null, audioCtx=null, orderChannel=null, alarmLoop=null, alarmActive=false;
