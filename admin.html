@@ -532,5 +532,191 @@ $('reloadBtn').onclick=reloadAll;
 reloadAll();
 setInterval(()=>{ if(document.visibilityState!=='hidden') loadOrders().catch(()=>{}); },15000);
 </script>
+ <style>
+#jptAuthGate{
+position:fixed;
+inset:0;
+z-index:99999;
+display:grid;
+place-items:center;
+background:#070707;
+padding:20px;
+}
+#jptAuthCard{
+width:min(420px,100%);
+background:#111;
+border:1px solid #5a461b;
+border-radius:18px;
+padding:22px;
+box-shadow:0 18px 60px #000;
+}
+#jptAuthCard h2{
+margin:0;
+color:#d8ae42;
+}
+#jptAuthCard p{
+color:#999;
+font-size:12px;
+margin:6px 0 16px;
+}
+#jptAuthCard input{
+width:100%;
+box-sizing:border-box;
+margin:7px 0;
+padding:12px;
+background:#181818;
+color:#fff;
+border:1px solid #444;
+border-radius:10px;
+}
+#jptAuthLogin{
+width:100%;
+margin-top:8px;
+padding:12px;
+background:#d8ae42;
+color:#111;
+border:0;
+border-radius:10px;
+font-weight:900;
+}
+#jptAuthMsg{
+min-height:20px;
+color:#ff9999;
+font-size:12px;
+margin-top:8px;
+}
+</style>
+
+<script>
+(function(){
+'use strict';
+
+const app=document.querySelector('.app');
+
+const gate=document.createElement('div');
+gate.id='jptAuthGate';
+
+gate.innerHTML=`
+<div id="jptAuthCard">
+<h2>Jeet Punjabi Tadka</h2>
+<p>Restaurant Partner Dashboard V107</p>
+
+<input
+id="jptAuthEmail"
+type="email"
+autocomplete="username"
+placeholder="Partner Email">
+
+<input
+id="jptAuthPassword"
+type="password"
+autocomplete="current-password"
+placeholder="Password">
+
+<button id="jptAuthLogin">🔐 Login</button>
+
+<div id="jptAuthMsg"></div>
+</div>
+`;
+
+document.body.appendChild(gate);
+
+function msg(text){
+document.getElementById('jptAuthMsg').textContent=String(text||'');
+}
+
+function showApp(){
+gate.style.display='none';
+if(app) app.style.display='';
+}
+
+function showLogin(){
+if(app) app.style.display='none';
+gate.style.display='grid';
+}
+
+async function checkSession(){
+try{
+const result=await sb.auth.getSession();
+
+if(result.data && result.data.session){
+showApp();
+
+if(typeof reloadAll==='function'){
+await reloadAll();
+}
+
+return;
+}
+
+showLogin();
+
+}catch(error){
+showLogin();
+msg(error.message||'Session check failed.');
+}
+}
+
+document.getElementById('jptAuthLogin').onclick=async function(){
+
+const email=document.getElementById('jptAuthEmail').value.trim();
+const password=document.getElementById('jptAuthPassword').value;
+
+if(!email || !password){
+msg('Email and password दोनों भरें.');
+return;
+}
+
+this.disabled=true;
+msg('Signing in...');
+
+try{
+
+const result=await sb.auth.signInWithPassword({
+email:email,
+password:password
+});
+
+if(result.error) throw result.error;
+
+msg('');
+showApp();
+
+if(typeof reloadAll==='function'){
+await reloadAll();
+}
+
+}catch(error){
+
+msg(error.message||'Login failed.');
+
+}finally{
+
+this.disabled=false;
+
+}
+};
+
+document.getElementById('jptAuthPassword')
+.addEventListener('keydown',function(event){
+
+if(event.key==='Enter'){
+document.getElementById('jptAuthLogin').click();
+}
+
+});
+
+sb.auth.onAuthStateChange(function(event){
+
+if(event==='SIGNED_OUT'){
+showLogin();
+}
+
+});
+
+checkSession();
+
+})();
+</script> 
 </body>
 </html>
