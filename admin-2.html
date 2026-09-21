@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#090909">
+<title>JPT Partner Dashboard V107</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;background:#070707;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+button,input,select,textarea{font:inherit}.app{min-height:100vh;background:#070707}
+.top{position:sticky;top:0;z-index:20;background:#0b0b0b;border-bottom:1px solid #292929;padding:12px}
+.brandrow{display:flex;align-items:center;gap:10px}.logo{width:46px;height:46px;border:1px solid #d8ae42;border-radius:12px;display:grid;place-items:center;color:#d8ae42;font-weight:1000;font-size:11px}
+.brand{font-size:18px;font-weight:950;color:#d8ae42}.sub{font-size:11px;color:#999;margin-top:2px}
+.controls{display:flex;gap:8px;margin-top:10px;overflow:auto}.controls>*{flex:0 0 auto}.select,.btn,.input,.area{background:#151515;color:#fff;border:1px solid #3a3a3a;border-radius:10px;padding:10px 12px}.btn{cursor:pointer}.btn.gold{background:#d8ae42;color:#111;border-color:#d8ae42;font-weight:950}.btn.red{border-color:#7b2828;color:#ff8b8b}.btn.green{border-color:#27733e;color:#79e39b}
+.shell{max-width:1100px;margin:auto;padding:12px 12px 90px}.hero{border:1px solid #3c3018;border-radius:18px;padding:16px;margin-bottom:12px;background:linear-gradient(135deg,#211707,#101010)}
+.hero h1{margin:0;color:#d8ae42;font-size:24px}.hero p{margin:4px 0;color:#bbb}.status{display:flex;align-items:center;gap:12px;margin-top:14px;padding:14px;border-radius:14px}.online{background:#092313;border:1px solid #2d8a4c}.offline{background:#260b0b;border:1px solid #8e3030}.store{width:74px;height:74px;border-radius:12px;background:#151515;border:1px solid #555;display:grid;place-items:center;text-align:center;font-weight:950;font-size:11px;color:#d8ae42}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.card{background:#111;border:1px solid #292929;border-radius:14px;padding:14px}.metric{font-size:25px;font-weight:950;color:#d8ae42}.muted{color:#999;font-size:12px}.tabs{display:flex;gap:7px;overflow:auto;margin:12px 0}.tabs button{white-space:nowrap}.panel{display:none}.panel.active{display:block}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.tablewrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:680px}.table th,.table td{padding:9px;border-bottom:1px solid #292929;text-align:left;font-size:12px}.table th{color:#d8ae42}.tag{display:inline-block;border:1px solid #444;border-radius:99px;padding:4px 8px;font-size:10px}.itemrow{display:flex;gap:10px;align-items:center;border-bottom:1px solid #252525;padding:10px 0}.thumb{width:58px;height:58px;border-radius:10px;background:#1a1a1a;object-fit:cover}.grow{flex:1;min-width:0}.rowactions{display:flex;gap:6px;flex-wrap:wrap}.field{margin:9px 0}.field label{display:block;font-size:11px;color:#aaa;margin-bottom:4px}.area{width:100%;min-height:70px}.input,.select{width:100%}.offerbox{border:1px solid #604d1c;border-radius:14px;padding:14px;background:#171207}.price{font-size:22px;font-weight:950;color:#d8ae42}.old{text-decoration:line-through;color:#777;margin-right:8px}.notice{padding:10px;border-radius:10px;background:#151515;border:1px solid #333;font-size:12px;margin:8px 0}.danger{color:#ff9292}.success{color:#79e39b}.modal{display:none;position:fixed;inset:0;background:#000b;z-index:100;padding:4vh 12px}.modal.show{display:grid;place-items:center}.modalbox{width:min(620px,100%);max-height:92vh;overflow:auto;background:#121212;border:1px solid #3a3a3a;border-radius:18px;padding:16px}.modalhead{display:flex;justify-content:space-between;align-items:center}.order-actions{display:flex;gap:5px;flex-wrap:wrap}.order-actions .btn{padding:7px 8px;font-size:11px}.alarmPulse{animation:alarmPulse .8s infinite alternate}@keyframes alarmPulse{from{box-shadow:0 0 0 rgba(216,174,66,0)}to{box-shadow:0 0 18px rgba(216,174,66,.5)}}
+.toast{position:fixed;left:50%;bottom:75px;transform:translateX(-50%);background:#d8ae42;color:#111;padding:10px 14px;border-radius:99px;font-weight:900;z-index:200;display:none}
+@media(max-width:760px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.two{grid-template-columns:1fr}.hero h1{font-size:20px}.shell{padding:10px 10px 90px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top">
+  <div class="brandrow">
+    <div class="logo" id="brandLogo">JPT</div>
+    <div><div class="brand" id="brandName">Jeet Punjabi Tadka</div><div class="sub" id="brandMeta">Partner Dashboard V107</div></div>
+  </div>
+  <div class="controls">
+    <select id="outletSelect" class="select" style="max-width:330px"></select>
+    <button class="btn" id="reloadBtn">↻ Refresh</button>
+    <button class="btn red" id="offlineBtn">Mark Offline</button>
+  </div>
+</header>
+
+<main class="shell">
+<section class="hero" id="hero">
+  <h1 id="heroName">Jeet Punjabi Tadka</h1>
+  <p id="heroId">JPT-001</p>
+  <div id="statusBox" class="status online">
+    <div class="store" id="storeSign">JPT</div>
+    <div class="grow"><b id="statusTitle">Restaurant is now Online!</b><div class="muted" id="statusText">Orders incoming</div></div>
+    <button class="btn red" id="statusToggle">Mark Offline</button>
+  </div>
+</section>
+
+<div class="grid">
+ <div class="card"><div class="metric" id="ordersCount">—</div><div class="muted">Orders</div></div>
+ <div class="card"><div class="metric" id="menuCount">—</div><div class="muted">Menu Items</div></div>
+ <div class="card"><div class="metric" id="offerCount">—</div><div class="muted">Active Offers</div></div>
+ <div class="card"><div class="metric" id="campaignCount">—</div><div class="muted">Campaigns</div></div>
+</div>
+
+<nav class="tabs">
+ <button class="btn gold" data-panel="home">Home</button>
+ <button class="btn" data-panel="orders">Orders</button>
+ <button class="btn" data-panel="menu">Menu Manager</button>
+ <button class="btn" data-panel="images">Images</button>
+ <button class="btn" data-panel="offers">Offers</button>
+ <button class="btn" data-panel="today">Today Offer</button>
+ <button class="btn" data-panel="campaigns">Campaigns</button>
+ <button class="btn" data-panel="finance">Finance</button>
+ <button class="btn" data-panel="reports">Reports</button>
+ <button class="btn" data-panel="settings">Settings</button>
+</nav>
+
+<section id="home" class="panel active">
+ <div class="two">
+  <div class="card"><h3>Outlet Identity</h3><p><b id="homeName">—</b></p><p class="muted">Outlet ID: <span id="homeId">—</span></p><p class="muted">Status source: outlets.accepting_orders</p></div>
+  <div class="card"><h3>Operations</h3><div id="homeMessage" class="notice">Loading live outlet state…</div><button class="btn gold" onclick="showPanel('orders')">Open Orders</button></div>
+ </div>
+</section>
+
+<section id="orders" class="panel">
+ <div class="card"><div class="rowactions"><button class="btn" id="ordersRefresh">↻ Refresh Orders</button><button class="btn gold" id="enableAlarm">🔔 Enable Order Alarm</button></div><div id="ordersNotice" class="notice">Loading…</div><div id="orderAlarm" class="notice" style="display:none;border-color:#d8ae42;background:#211706"><b>🔔 NEW ORDER</b><div id="orderAlarmText" class="muted" style="color:#fff;margin-top:4px"></div><button class="btn gold" id="stopAlarm" style="margin-top:8px">Acknowledge</button></div><div class="tablewrap"><table class="table"><thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Total</th><th>Time</th><th>Timer</th><th>Actions</th></tr></thead><tbody id="ordersBody"></tbody></table></div></div>
+</section>
+
+<section id="menu" class="panel">
+ <div class="card"><div class="rowactions"><button class="btn gold" id="addItemBtn">＋ Add Menu Item</button><button class="btn" id="menuRefresh">↻ Refresh</button></div><div id="menuNotice" class="notice">Loading…</div><div id="menuList"></div></div>
+</section>
+
+<section id="offers" class="panel">
+ <div class="card"><h3>Offers & Promotions</h3><div class="rowactions"><button class="btn gold" id="scratchSetup">✨ Configure V106 Royal Gold Scratch</button></div><div id="offersNotice" class="notice">Loading…</div><div id="offersList"></div><div id="scratchNotice" class="notice"></div></div>
+</section>
+
+<section id="images" class="panel">
+ <div class="card"><h3>🖼️ Menu Image Manager</h3><div class="notice">Select a dish → choose photo → crop/adjust → save. Image is mapped to the exact outlet + menu item.</div><div id="imageList"></div></div>
+</section>
+
+<section id="today" class="panel">
+ <div class="card">
+  <h3 style="color:#d8ae42">🔥 Today Offer</h3>
+  <div class="notice">Original menu price is never changed. Customer price = Today Offer price + ₹40 included delivery. The ₹40 is not shown as a separate delivery line.</div>
+  <div class="field"><label>Menu Item</label><select id="todayItem" class="select"></select></div>
+  <div class="two">
+   <div class="field"><label>Original Price</label><input id="todayOriginal" class="input" readonly></div>
+   <div class="field"><label>Today Offer Price</label><input id="todayPrice" class="input" type="number" min="0" step="1"></div>
+  </div>
+  <div class="field"><label>Customer Final Price (Offer + ₹40 included)</label><input id="todayCustomer" class="input" readonly></div>
+  <div class="two">
+   <div class="field"><label>Start</label><input id="todayStart" class="input" type="datetime-local"></div>
+   <div class="field"><label>End</label><input id="todayEnd" class="input" type="datetime-local"></div>
+  </div>
+  <div class="field"><label><input id="todayEnabled" type="checkbox"> Enable Today Offer</label></div>
+  <div id="todayExisting" class="notice">No active Today Offer loaded.</div>
+  <button class="btn gold" id="todaySave">Save Today Offer</button>
+  <button class="btn" id="todayDisable">Disable Today Offer</button>
+ </div>
+</section>
+
+<section id="campaigns" class="panel">
+ <div class="card"><h3>Campaigns / Media</h3><div class="notice">Existing campaign architecture remains additive. Today Offer is stored in campaigns.schedule_json.</div><div id="campaignList"></div></div>
+</section>
+
+<section id="finance" class="panel"><div class="card"><h3>Finance & Settlement</h3><div class="notice">Live figures below are calculated only from this outlet's orders. No financial figures are fabricated and no cross-outlet rows are loaded.</div><div class="grid"><div class="card"><div class="metric" id="finOrders">—</div><div class="muted">Orders in loaded period</div></div><div class="card"><div class="metric" id="finGross">—</div><div class="muted">Gross order value</div></div><div class="card"><div class="metric" id="finDiscount">—</div><div class="muted">Discounts</div></div><div class="card"><div class="metric" id="finNet">—</div><div class="muted">Net after discounts</div></div></div><div id="financeNotice" class="notice">Loading finance summary…</div></div></section>
+<section id="reports" class="panel"><div class="card"><h3>Reports</h3><div class="notice">Outlet-scoped operational report from the same live order rows.</div><div class="grid"><div class="card"><div class="metric" id="repNew">—</div><div class="muted">New</div></div><div class="card"><div class="metric" id="repActive">—</div><div class="muted">In progress</div></div><div class="card"><div class="metric" id="repDone">—</div><div class="muted">Completed</div></div><div class="card"><div class="metric" id="repCancelled">—</div><div class="muted">Cancelled</div></div></div><div id="reportsNotice" class="notice">Loading report…</div></div></section>
+<section id="settings" class="panel"><div class="card"><h3>Settings</h3><p class="muted">Outlet settings are read from Supabase. Destructive schema changes are intentionally not performed by this dashboard.</p></div></section>
+</main>
+</div>
+
+<div id="modal" class="modal"><div class="modalbox"><div class="modalhead"><h3 id="modalTitle">Edit</h3><button class="btn" onclick="closeModal()">✕</button></div><div id="modalBody"></div></div></div>
+<div id="toast" class="toast"></div>
+
+<script src="./supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* JPT Partner Dynamic Outlet Access Bridge V2 — RPC column compatible */
+(function(){
+  'use strict';
+  const SELECTOR_ID='outletSelect';
+  const OUTLET_KEY='jpt_admin_outlet';
+  let authorized=[]; let loading=false;
+  function getSelect(){return document.getElementById(SELECTOR_ID)}
+  function normalize(rows){return (Array.isArray(rows)?rows:[]).filter(r=>r&&(r.outlet_id||r.code)).map(r=>({
+    outlet_id:String(r.outlet_id||r.code),
+    outlet_name:String(r.outlet_name||r.name||r.outlet_id||r.code),
+    access_level:String(r.access_level||'view')
+  }))}
+  function render(rows){const select=getSelect(); if(!select)return false; authorized=normalize(rows); if(!authorized.length)return false;
+    const saved=localStorage.getItem(OUTLET_KEY)||'', current=select.value||'';
+    const selected=authorized.some(x=>x.outlet_id===saved)?saved:authorized.some(x=>x.outlet_id===current)?current:authorized[0].outlet_id;
+    select.replaceChildren(); authorized.forEach(o=>{const op=document.createElement('option');op.value=o.outlet_id;op.textContent=o.outlet_name+' ('+o.outlet_id+')'+(o.access_level==='view'?' — VIEW':'');op.dataset.accessLevel=o.access_level;select.appendChild(op)});
+    select.value=selected; if(typeof select.onchange==='function')select.dispatchEvent(new Event('change',{bubbles:true}));
+    window.JPT_PARTNER_OUTLETS=authorized.slice(); window.JPTPartnerAccess={version:'v2.1',authorizedOutlets:authorized.slice(),canAccess:id=>authorized.some(x=>x.outlet_id===id),getOutlets:()=>authorized.slice(),reload:load}; return true}
+  async function load(){if(loading)return authorized.slice(); loading=true; try{if(!window.sb||typeof window.sb.rpc!=='function')throw new Error('Supabase client not ready'); const {data,error}=await window.sb.rpc('partner_my_outlets'); if(error)throw error; render(data||[]); return authorized.slice()}catch(e){console.warn('[JPT Partner Access] reload failed safely:',e);return authorized.slice()}finally{loading=false}}
+  window.JPTPartnerAccess={version:'v2.1',authorizedOutlets:[],canAccess:()=>false,getOutlets:()=>[],reload:load};
+})();
+
+</script>
+<script>
+'use strict';
+const sb=window.supabase.createClient(window.JPT_SUPABASE_URL,window.JPT_SUPABASE_PUBLISHABLE_KEY);
+window.sb=sb;
+let activeOutlet='';
+let authorized=[];
+let menuItems=[];
+let currentOffers=[];
+let currentCampaigns=[];
+let currentOutletRow=null;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
+function toast(s){$('toast').textContent=s;$('toast').style.display='block';clearTimeout(window.__toast);window.__toast=setTimeout(()=>$('toast').style.display='none',2400)}
+function showPanel(id){document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active',x.id===id));document.querySelectorAll('.tabs .btn').forEach(x=>x.classList.toggle('gold',x.dataset.panel===id))}
+document.querySelectorAll('.tabs .btn').forEach(b=>b.onclick=()=>showPanel(b.dataset.panel));
+
+function outletIdValue(row){return String(row?.code||row?.outlet_id||row?.id||'')}
+function outletNameValue(row){return String(row?.name||row?.outlet_name||row?.code||row?.outlet_id||'Outlet')}
+
+async function loadAccess(){
+  // Direct RPC is the source of truth. It also supports the current RPC shape
+  // (code/name) as well as the newer outlet_id/outlet_name shape.
+  const r=await sb.rpc('partner_my_outlets');
+  if(r.error) throw r.error;
+  authorized=(r.data||[]).map(x=>({
+    outlet_id:String(x.outlet_id||x.code||x.id||''),
+    outlet_name:String(x.outlet_name||x.name||x.code||x.outlet_id||'Outlet'),
+    access_level:String(x.access_level||'view')
+  })).filter(x=>x.outlet_id);
+  if(!authorized.length && window.JPTPartnerAccess){
+    await window.JPTPartnerAccess.reload();
+    authorized=window.JPTPartnerAccess.getOutlets().map(x=>({
+      outlet_id:String(x.outlet_id||x.code||''),
+      outlet_name:String(x.outlet_name||x.name||x.outlet_id||'Outlet'),
+      access_level:String(x.access_level||'view')
+    })).filter(x=>x.outlet_id);
+  }
+  if(!authorized.length) throw new Error('No authorized outlets found for this account');
+  const saved=localStorage.getItem('jpt_admin_outlet')||'';
+  activeOutlet=authorized.some(x=>x.outlet_id===saved)?saved:authorized[0].outlet_id;
+  $('outletSelect').value=activeOutlet;
+}
+
+async function loadOutlet(){
+  if(!activeOutlet) return;
+  const r=await sb.from('outlets').select('*').eq('code',activeOutlet).maybeSingle();
+  if(r.error) throw r.error;
+  currentOutletRow=r.data;
+  if(!currentOutletRow){
+    const r2=await sb.from('outlets').select('*').eq('outlet_id',activeOutlet).maybeSingle();
+    if(r2.error) throw r2.error;
+    currentOutletRow=r2.data;
+  }
+  const name=outletNameValue(currentOutletRow);
+  const id=outletIdValue(currentOutletRow)||activeOutlet;
+  $('brandName').textContent=name;$('heroName').textContent=name;$('homeName').textContent=name;
+  $('heroId').textContent=id;$('homeId').textContent=id;$('brandMeta').textContent=(currentOutletRow?.phone||'')+' • Partner Dashboard V107';
+  $('brandLogo').textContent=id.slice(-3);$('storeSign').textContent=id.slice(-6);
+  const logo=currentOutletRow?.logo_url||'';
+  if(logo){ $('brandLogo').innerHTML='<img src="'+esc(logo)+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px">'; $('storeSign').innerHTML='<img src="'+esc(logo)+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px">'; }
+  const banner=currentOutletRow?.banner_url||'';
+  $('hero').style.backgroundImage=banner?'linear-gradient(90deg,rgba(0,0,0,.88),rgba(0,0,0,.45)),url(\"'+esc(banner)+'\")':'';
+  setStatus(Boolean(currentOutletRow?.accepting_orders && currentOutletRow?.is_active));
+}
+
+function setStatus(on){
+  const box=$('statusBox');box.className='status '+(on?'online':'offline');
+  $('statusTitle').textContent=on?'Restaurant is now Online!':'Restaurant marked Offline';
+  $('statusText').textContent=on?'Orders incoming':'Not receiving orders';
+  $('statusToggle').textContent=on?'Mark Offline':'Mark Online';
+  $('statusToggle').className='btn '+(on?'red':'green');
+  $('homeMessage').innerHTML=on?'<span class="success">● ONLINE — accepting new orders</span>':'<span class="danger">● OFFLINE — new orders are not being accepted</span>';
+  $('offlineBtn').textContent=on?'Mark Offline':'Mark Online';
+  $('offlineBtn').className='btn '+(on?'red':'green');
+}
+
+async function toggleStatus(){
+  const on=!(Boolean(currentOutletRow?.accepting_orders) && Boolean(currentOutletRow?.is_active));
+  if(!currentOutletRow) return;
+  const key=currentOutletRow.code||currentOutletRow.outlet_id;
+  let r=await sb.from('outlets').update({accepting_orders:on,is_active:on}).eq('code',key);
+  if(r.error) r=await sb.from('outlets').update({accepting_orders:on,is_active:on}).eq('outlet_id',key);
+  if(r.error){toast('Status update failed: '+r.error.message);return}
+  currentOutletRow.accepting_orders=on;currentOutletRow.is_active=on;setStatus(on);toast(on?'Outlet is ONLINE':'Outlet is OFFLINE');
+}
+$('statusToggle').onclick=toggleStatus;$('offlineBtn').onclick=toggleStatus;
+
+async function loadMenu(){
+  const r=await sb.from('menu_items').select('*').eq('outlet_id',activeOutlet).order('sort_order').order('name');
+  if(r.error){$('menuNotice').innerHTML='<span class="danger">'+esc(r.error.message)+'</span>';return}
+  menuItems=(r.data||[]).filter(x=>x.is_deleted!==true);
+  const ir=await sb.from('menu_item_images').select('menu_item_id,item_name,image_url').eq('outlet_id',activeOutlet);
+  const imageMap={}; if(!ir.error)(ir.data||[]).forEach(v=>imageMap[v.menu_item_id||v.item_name]=v.image_url);
+  menuItems.forEach(x=>x.image_url=imageMap[x.id]||x.image_url||'');
+  $('menuCount').textContent=menuItems.length;$('menuNotice').textContent='Live menu: '+menuItems.length+' items';
+  $('menuList').innerHTML=menuItems.map(x=>`<div class="itemrow">
+    ${x.image_url?`<img class="thumb" src="${esc(x.image_url)}" alt="">`:`<div class="thumb" style="display:grid;place-items:center;color:#777">IMG</div>`}<div class="grow"><b>${esc(x.name)}</b><div class="muted">${esc(x.category||'Uncategorised')} • ${money(x.price)}</div><div class="muted">${x.available===false?'OFF':'ON'}${x.featured?' • FEATURED':''}</div></div>
+    <div class="rowactions"><button class="btn" onclick="editItem('${esc(x.id)}')">Edit</button><button class="btn" onclick="toggleItem('${esc(x.id)}')">${x.available===false?'Turn ON':'Turn OFF'}</button></div>
+  </div>`).join('')||'<div class="notice">No menu items found.</div>';
+  populateTodayItems();
+}
+
+async function toggleItem(id){
+  const item=menuItems.find(x=>String(x.id)===String(id));if(!item)return;
+  const r=await sb.from('menu_items').update({available:!Boolean(item.available),updated_at:new Date().toISOString()}).eq('id',item.id).eq('outlet_id',activeOutlet);
+  if(r.error){toast(r.error.message);return}await loadMenu();toast('Menu item updated');
+}
+
+function editItem(id){
+  const item=menuItems.find(x=>String(x.id)===String(id));if(!item)return;
+  $('modalTitle').textContent='Edit Menu Item';
+  $('modalBody').innerHTML=`<div class="field"><label>Name</label><input id="miName" class="input" value="${esc(item.name)}"></div>
+  <div class="field"><label>Description</label><textarea id="miDesc" class="area">${esc(item.description||'')}</textarea></div>
+  <div class="field"><label>Price</label><input id="miPrice" class="input" type="number" value="${Number(item.price||0)}"></div>
+  <div class="field"><label>Category</label><input id="miCat" class="input" value="${esc(item.category||'')}"></div>
+  <div class="field"><label><input id="miAvail" type="checkbox" ${item.available!==false?'checked':''}> Available</label></div>
+  <div class="field"><label><input id="miFeatured" type="checkbox" ${item.featured===true?'checked':''}> Featured / Special</label></div>
+  <div class="field"><label>Dish Image</label><input id="miImage" class="input" type="file" accept="image/*" capture="environment"></div>
+  ${item.image_url?`<img class="thumb" style="width:110px;height:110px" src="${esc(item.image_url)}" alt="">`:''}
+  <button class="btn gold" onclick="saveItem('${esc(item.id)}')">Save</button>`;
+  $('modal').classList.add('show');
+}
+async function saveItem(id){
+  const item=menuItems.find(x=>String(x.id)===String(id));if(!item)return;
+  const r=await sb.from('menu_items').update({name:$('miName').value.trim(),description:$('miDesc').value.trim(),price:Number($('miPrice').value),category:$('miCat').value.trim(),available:$('miAvail').checked,featured:$('miFeatured').checked,updated_at:new Date().toISOString()}).eq('id',id).eq('outlet_id',activeOutlet);
+  if(r.error){toast(r.error.message);return}
+  const file=$('miImage')?.files?.[0];
+  if(file){
+    if(file.size>5*1024*1024){toast('Image must be under 5MB');return}
+    const safe=(item.name||$('miName').value).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'menu-item';
+    const path=activeOutlet+'/'+safe+'-'+Date.now()+'.jpg';
+    const up=await sb.storage.from('menu-images').upload(path,file,{contentType:file.type||'image/jpeg',upsert:false});
+    if(up.error){toast('Image upload failed: '+up.error.message);return}
+    const url=sb.storage.from('menu-images').getPublicUrl(path).data.publicUrl;
+    const map=await sb.from('menu_item_images').upsert({outlet_id:activeOutlet,menu_item_id:id,item_name:$('miName').value.trim(),image_url:url,updated_at:new Date().toISOString()},{onConflict:'outlet_id,item_name'});
+    if(map.error){toast('Image mapping failed: '+map.error.message);return}
+    const sync=await sb.from('menu_items').update({image_url:url,updated_at:new Date().toISOString()}).eq('id',id).eq('outlet_id',activeOutlet);
+    if(sync.error && !/image_url/i.test(sync.error.message)){toast('Image saved, but menu sync failed: '+sync.error.message);return}
+  }
+  closeModal();await loadMenu();toast('Menu item saved');
+}
+function addItem(){
+  $('modalTitle').textContent='Add Menu Item';
+  $('modalBody').innerHTML=`<div class="field"><label>Name</label><input id="miName" class="input"></div><div class="field"><label>Description</label><textarea id="miDesc" class="area"></textarea></div><div class="field"><label>Price</label><input id="miPrice" class="input" type="number" min="0"></div><div class="field"><label>Category</label><input id="miCat" class="input"></div><button class="btn gold" onclick="createItem()">Create Item</button>`;
+  $('modal').classList.add('show');
+}
+async function createItem(){
+  const r=await sb.from('menu_items').insert({outlet_id:activeOutlet,name:$('miName').value.trim(),description:$('miDesc').value.trim(),price:Number($('miPrice').value||0),category:$('miCat').value.trim(),available:true,is_deleted:false,updated_at:new Date().toISOString()});
+  if(r.error){toast(r.error.message);return}closeModal();await loadMenu();toast('Menu item created');
+}
+$('addItemBtn').onclick=addItem;$('menuRefresh').onclick=loadMenu;
+
+async function saveImageForItem(item,file){
+  if(!item||!file)return;
+  if(file.size>8*1024*1024){toast('Image must be under 8MB');return}
+  const safe=(item.name||'menu-item').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'menu-item';
+  const path=activeOutlet+'/'+safe+'-'+Date.now()+'.jpg';
+  const up=await sb.storage.from('menu-images').upload(path,file,{contentType:'image/jpeg',upsert:false});
+  if(up.error){toast('Image upload failed: '+up.error.message);return}
+  const url=sb.storage.from('menu-images').getPublicUrl(path).data.publicUrl;
+  const map=await sb.from('menu_item_images').upsert({outlet_id:activeOutlet,menu_item_id:item.id,item_name:item.name,image_url:url,updated_at:new Date().toISOString()},{onConflict:'outlet_id,item_name'});
+  if(map.error){toast('Image mapping failed: '+map.error.message);return}
+  const sync=await sb.from('menu_items').update({image_url:url,updated_at:new Date().toISOString()}).eq('id',item.id).eq('outlet_id',activeOutlet);
+  if(sync.error && !/image_url/i.test(sync.error.message)){toast('Image saved, but menu sync failed: '+sync.error.message);return}
+  await loadMenu(); await loadImages(); toast('Image saved and mapped to '+item.name);
+}
+
+function openCropper(file,done){
+  const reader=new FileReader();
+  reader.onload=()=>{
+    $('modalTitle').textContent='Crop / Adjust Dish Image';
+    $('modalBody').innerHTML=`<div class="notice">Drag the crop box, then save. A square JPEG is generated for consistent menu cards.</div><div style="position:relative;max-width:100%;background:#050505;border-radius:14px;overflow:hidden"><img id="cropSource" src="${reader.result}" style="display:block;max-width:100%;max-height:55vh;margin:auto"></div><div class="rowactions"><button class="btn gold" id="cropSave">Crop & Save</button><button class="btn" onclick="closeModal()">Cancel</button></div>`;
+    $('modal').classList.add('show');
+    const img=$('cropSource'); img.onload=()=>{
+      const max=420, scale=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
+      img.style.width=Math.round(img.naturalWidth*scale)+'px';
+      img.style.height=Math.round(img.naturalHeight*scale)+'px';
+    };
+    $('cropSave').onclick=()=>{
+      const img=$('cropSource'),canvas=document.createElement('canvas'),size=900;canvas.width=size;canvas.height=size;
+      const ctx=canvas.getContext('2d');
+      const sw=img.naturalWidth,sh=img.naturalHeight,side=Math.min(sw,sh),sx=(sw-side)/2,sy=(sh-side)/2;
+      ctx.drawImage(img,sx,sy,side,side,0,0,size,size);
+      canvas.toBlob(blob=>{if(!blob){toast('Image crop failed');return}closeModal();done(new File([blob],'menu-item.jpg',{type:'image/jpeg'}));},'image/jpeg',0.9);
+    };
+  };reader.readAsDataURL(file);
+}
+
+async function loadImages(){
+  const items=menuItems.length?menuItems:await (async()=>{const r=await sb.from('menu_items').select('*').eq('outlet_id',activeOutlet).order('sort_order').order('name');return (r.data||[]).filter(x=>!x.is_deleted)})();
+  const r=await sb.from('menu_item_images').select('menu_item_id,item_name,image_url').eq('outlet_id',activeOutlet);
+  if(r.error){$('imageList').innerHTML='<span class="danger">'+esc(r.error.message)+'</span>';return}
+  const map=Object.fromEntries((r.data||[]).map(x=>[x.menu_item_id||x.item_name,x.image_url]));
+  $('imageList').innerHTML=items.map(x=>`<div class="itemrow"><img class="thumb" src="${esc(map[x.id]||x.image_url||'')}" onerror="this.style.visibility='hidden'" style="${map[x.id]||x.image_url?'':'visibility:hidden'}"><div class="grow"><b>${esc(x.name)}</b><div class="muted">${money(x.price)} • ${esc(x.category||'')}</div></div><label class="btn gold">🖼️ ${map[x.id]?'Replace':'Add'}<input type="file" accept="image/*" style="display:none" data-image-pick="${esc(x.id)}"></label></div>`).join('')||'<div class="notice">No menu items found.</div>';
+  document.querySelectorAll('[data-image-pick]').forEach(inp=>inp.onchange=()=>{const item=items.find(x=>String(x.id)===String(inp.dataset.imagePick));const f=inp.files?.[0];if(!item||!f)return;openCropper(f,cropped=>saveImageForItem(item,cropped));inp.value=''});
+}
+
+async function configureScratchSlabs(){
+  const slabs=[[20,40,'V106 Scratch Card — 20%'],[30,60,'V106 Scratch Card — 30%'],[40,80,'V106 Scratch Card — 40%'],[50,100,'V106 Scratch Card — 50%'],[60,120,'V106 Scratch Card — 60%']];
+  for(const [pct,cap,title] of slabs){
+    const row={outlet_id:activeOutlet,title,description:'Royal Gold Scratch & Reveal',offer_type:'percent',value:pct,max_discount:cap,scratch_enabled:true,active:true,min_order:0,updated_at:new Date().toISOString()};
+    const q=await sb.from('offers').select('id').eq('outlet_id',activeOutlet).eq('title',title).maybeSingle();
+    if(q.error){toast('Scratch lookup failed: '+q.error.message);return}
+    if(q.data?.id){const u=await sb.from('offers').update(row).eq('id',q.data.id).eq('outlet_id',activeOutlet);if(u.error){toast('Scratch save failed: '+u.error.message);return}}
+    else {const u=await sb.from('offers').insert(row);if(u.error){toast('Scratch save failed: '+u.error.message);return}}
+  }
+  $('scratchNotice').textContent='✅ V106 Royal Gold 5 scratch slabs configured for '+activeOutlet+'.';
+  await loadOffers();
+}
+
+async function loadOffers(){
+  const r=await sb.from('offers').select('*').eq('outlet_id',activeOutlet).order('created_at',{ascending:false});
+  if(r.error){$('offersNotice').innerHTML='<span class="danger">'+esc(r.error.message)+'</span>';return}
+  currentOffers=r.data||[];$('offerCount').textContent=currentOffers.filter(x=>x.active||x.is_active).length;
+  $('offersNotice').textContent=currentOffers.length+' offer records';
+  $('offersList').innerHTML=currentOffers.map(x=>`<div class="itemrow"><div class="grow"><b>${esc(x.title||'Offer')}</b><div class="muted">${esc(x.code||'')} • ${x.active||x.is_active?'ON':'OFF'}</div></div><span class="tag">${x.discount_type?esc(x.discount_type):'Configured'}</span><button class="btn ${x.active||x.is_active?'red':'green'}" data-offer-toggle="${esc(x.id)}">${x.active||x.is_active?'Turn OFF':'Turn ON'}</button></div>`).join('')||'<div class="notice">No offers found.</div>';
+  document.querySelectorAll('[data-offer-toggle]').forEach(btn=>btn.onclick=async()=>{
+    const id=btn.dataset.offerToggle; const row=currentOffers.find(x=>String(x.id)===String(id)); if(!row)return;
+    const next=!(Boolean(row.active) || Boolean(row.is_active));
+    let r=await sb.from('offers').update({active:next,is_active:next,updated_at:new Date().toISOString()}).eq('id',id).eq('outlet_id',activeOutlet);
+    if(r.error){r=await sb.from('offers').update({active:next}).eq('id',id).eq('outlet_id',activeOutlet)}
+    if(r.error){toast('Offer update failed: '+r.error.message);return}
+    await loadOffers(); toast(next?'Offer turned ON':'Offer turned OFF');
+  });
+}
+
+function activeToday(c){
+  const s=c?.schedule_json;
+  return s && typeof s==='object' && s.type==='today_offer';
+}
+async function loadCampaigns(){
+  const r=await sb.from('campaigns').select('*').eq('outlet_id',activeOutlet).order('priority',{ascending:false}).order('created_at',{ascending:false});
+  if(r.error){$('campaignList').innerHTML='<span class="danger">'+esc(r.error.message)+'</span>';return}
+  currentCampaigns=r.data||[];$('campaignCount').textContent=currentCampaigns.length;
+  $('campaignList').innerHTML=currentCampaigns.map(c=>`<div class="itemrow"><div class="grow"><b>${esc(c.title||'Campaign')}</b><div class="muted">${c.active?'ON':'OFF'} • priority ${Number(c.priority||0)}</div>${activeToday(c)?'<span class="tag">TODAY OFFER</span>':''}</div></div>`).join('')||'<div class="notice">No campaigns found.</div>';
+  loadTodayExisting();
+}
+
+function populateTodayItems(){
+  $('todayItem').innerHTML=menuItems.map(x=>`<option value="${esc(x.id)}">${esc(x.name)} — ${money(x.price)}</option>`).join('');
+  updateTodayPrice();
+}
+function updateTodayPrice(){
+  const x=menuItems.find(i=>String(i.id)===String($('todayItem').value));
+  $('todayOriginal').value=x?money(x.price):'';
+  const p=Number($('todayPrice').value||0);$('todayCustomer').value=p?money(p+40):'';
+}
+$('todayItem').onchange=updateTodayPrice;$('todayPrice').oninput=updateTodayPrice;
+
+function loadTodayExisting(){
+  const c=currentCampaigns.find(activeToday);
+  if(!c){$('todayExisting').textContent='No Today Offer currently stored for this outlet.';return}
+  const s=c.schedule_json||{};
+  if(s.menu_item_id && menuItems.some(x=>String(x.id)===String(s.menu_item_id))) $('todayItem').value=s.menu_item_id;
+  $('todayPrice').value=Number(s.offer_price||0);
+  $('todayEnabled').checked=Boolean(s.enabled && c.active);
+  $('todayStart').value=toLocalInput(s.start_at||c.start_at);
+  $('todayEnd').value=toLocalInput(s.end_at||c.end_at);
+  updateTodayPrice();
+  $('todayExisting').innerHTML=`<span class="success">Existing Today Offer: ${esc(s.menu_name||'Item')} • offer ${money(s.offer_price)} • customer ${money(s.customer_price||Number(s.offer_price||0)+40)}</span>`;
+}
+function toLocalInput(v){if(!v)return'';const d=new Date(v);if(isNaN(d))return'';const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes())}
+function iso(v){return v?new Date(v).toISOString():null}
+
+async function saveTodayOffer(){
+  const item=menuItems.find(x=>String(x.id)===String($('todayItem').value));if(!item){toast('Select a menu item');return}
+  const offer=Number($('todayPrice').value||0);if(offer<=0){toast('Enter a valid offer price');return}
+  const start=iso($('todayStart').value),end=iso($('todayEnd').value);
+  const enabled=$('todayEnabled').checked;
+  const payload={type:'today_offer',menu_item_id:String(item.id),menu_name:item.name,original_price:Number(item.price),offer_price:offer,delivery_component:40,customer_price:offer+40,enabled,start_at:start,end_at:end};
+  const existing=currentCampaigns.find(activeToday);
+  if(existing){
+    const r=await sb.from('campaigns').update({title:'Today Offer — '+item.name,message:'Today Offer',active:enabled,start_at:start,end_at:end,priority:100,schedule_json:payload}).eq('id',existing.id).eq('outlet_id',activeOutlet);
+    if(r.error){toast('Save failed: '+r.error.message);return}
+  }else{
+    const r=await sb.from('campaigns').insert({outlet_id:activeOutlet,title:'Today Offer — '+item.name,message:'Today Offer',active:enabled,start_at:start,end_at:end,priority:100,schedule_json:payload});
+    if(r.error){toast('Save failed: '+r.error.message);return}
+  }
+  await loadCampaigns();toast(enabled?'Today Offer saved and enabled':'Today Offer saved OFF');
+}
+async function disableToday(){
+  const existing=currentCampaigns.find(activeToday);if(!existing){toast('No Today Offer found');return}
+  const s=existing.schedule_json||{};s.enabled=false;
+  const r=await sb.from('campaigns').update({active:false,schedule_json:s}).eq('id',existing.id).eq('outlet_id',activeOutlet);
+  if(r.error){toast(r.error.message);return}await loadCampaigns();$('todayEnabled').checked=false;toast('Today Offer disabled');
+}
+$('todaySave').onclick=saveTodayOffer;$('todayDisable').onclick=disableToday;
+
+function renderOrderSummaries(rows){
+  const gross=rows.reduce((s,x)=>s+Number(x.subtotal??x.total??x.grand_total??x.amount??0),0);
+  const discount=rows.reduce((s,x)=>s+Number(x.discount??0),0);
+  const net=rows.reduce((s,x)=>s+Number(x.total??x.grand_total??x.amount??0),0);
+  const counts={new:0,accepted:0,preparing:0,ready:0,completed:0,cancelled:0};
+  rows.forEach(x=>{const k=String(x.status||'new').toLowerCase();if(k in counts)counts[k]++;});
+  $('finOrders').textContent=String(rows.length);$('finGross').textContent=money(gross);$('finDiscount').textContent=money(discount);$('finNet').textContent=money(net);
+  $('repNew').textContent=String(counts.new);$('repActive').textContent=String(counts.accepted+counts.preparing+counts.ready);$('repDone').textContent=String(counts.completed);$('repCancelled').textContent=String(counts.cancelled);
+  $('financeNotice').textContent='Calculated from '+rows.length+' latest outlet-scoped order rows. Delivery/settlement payout is not invented or estimated.';
+  $('reportsNotice').textContent='Operational counts are for the selected outlet only and use the current order status values.';
+}
+
+let orderChannel=null;
+let orderAlarmTimer=null;
+let lastOrderStamp=localStorage.getItem('jpt_v107_last_order_'+activeOutlet)||'';
+function orderItemsText(x){
+  const a=Array.isArray(x.items)?x.items:[];
+  return a.map(i=>`${i.name||i.item_name||'Item'} × ${Number(i.qty??i.quantity??1)}`).join(', ');
+}
+function showOrderAlarm(order){
+  $('orderAlarmText').textContent='New order '+(order?.order_no||'')+' received for '+(currentOutletRow?.name||activeOutlet)+'.';
+  $('orderAlarm').style.display='block';$('orderAlarm').classList.add('alarmPulse');
+  try{navigator.vibrate?.([300,120,300]);}catch(e){}
+  try{if('Notification' in window && Notification.permission==='granted') new Notification('JPT — NEW ORDER',{body:$('orderAlarmText').textContent});}catch(e){}
+  clearTimeout(orderAlarmTimer);orderAlarmTimer=setTimeout(()=>stopOrderAlarm(),12000);
+}
+function stopOrderAlarm(){clearTimeout(orderAlarmTimer);$('orderAlarm').style.display='none';$('orderAlarm').classList.remove('alarmPulse');try{navigator.vibrate?.(0)}catch(e){}}
+async function enableOrderAlarm(){
+  try{if('Notification' in window && Notification.permission==='default') await Notification.requestPermission();}catch(e){}
+  localStorage.setItem('jpt_v107_alarm_enabled','1');toast('Order alarm enabled');
+}
+$('enableAlarm').onclick=enableOrderAlarm;$('stopAlarm').onclick=stopOrderAlarm;
+async function orderAction(id,status,extra={}){
+  const patch={status,updated_at:new Date().toISOString(),...extra};
+  const r=await sb.from('orders').update(patch).eq('id',id).eq('outlet_id',activeOutlet);
+  if(r.error){toast('Order update failed: '+r.error.message);return false}
+  await loadOrders();return true;
+}
+async function acceptOrder(id,minutes){
+  const m=[30,40,50,60].includes(Number(minutes))?Number(minutes):30;
+  const now=new Date(),deadline=new Date(now.getTime()+m*60000);
+  return orderAction(id,'accepted',{target_minutes:m,accepted_at:now.toISOString(),deadline_at:deadline.toISOString(),eta_minutes:m+20});
+}
+async function loadOrders(){
+  const r=await sb.from('orders').select('*').eq('outlet_id',activeOutlet).order('created_at',{ascending:false}).limit(50);
+  if(r.error){$('ordersNotice').innerHTML='<span class="danger">'+esc(r.error.message)+'</span>';return}
+  const rows=r.data||[];
+  renderOrderSummaries(rows);$('ordersCount').textContent=rows.length;$('ordersNotice').textContent='Showing latest '+rows.length+' outlet-scoped orders';
+  $('ordersBody').innerHTML=rows.map(x=>{
+    const order=x.order_no||x.order_number||x.id||'—', customer=x.customer_name||x.name||x.customer_phone||'Customer', status=String(x.status||'new').toLowerCase(), total=x.total??x.grand_total??x.amount??'—', time=x.created_at?new Date(x.created_at).toLocaleString('en-IN'):'—';
+    const target=[30,40,50,60].includes(Number(x.target_minutes))?Number(x.target_minutes):30;
+    const deadline=x.deadline_at||(x.created_at?new Date(new Date(x.created_at).getTime()+target*60000).toISOString():'');
+    const left=deadline?Math.max(0,new Date(deadline).getTime()-Date.now()):0, secs=Math.floor(left/1000),mm=Math.floor(secs/60),ss=secs%60;
+    let actions='';
+    if(status==='new') actions=`<div class="order-actions"><select class="input acceptMinutes" data-order-id="${esc(x.id||'')}" style="width:auto;padding:6px 8px"><option>30</option><option>40</option><option>50</option><option>60</option></select><button class="btn gold acceptBtn" data-order-id="${esc(x.id||'')}">ACCEPT</button><button class="btn red rejectBtn" data-order-id="${esc(x.id||'')}">REJECT</button></div>`;
+    else if(status==='accepted') actions='<div class="order-actions"><button class="btn gold prepBtn" data-order-id="'+esc(x.id||'')+'">START PREPARING</button></div>';
+    else if(status==='preparing') actions='<div class="order-actions"><button class="btn green readyBtn" data-order-id="'+esc(x.id||'')+'">READY</button></div>';
+    else if(status==='ready') actions='<div class="order-actions"><button class="btn gold outBtn" data-order-id="'+esc(x.id||'')+'">OUT FOR DELIVERY</button></div>';
+    return `<tr><td><b>${esc(order)}</b><div class="muted">${esc(orderItemsText(x))}</div></td><td>${esc(customer)}<div class="muted">${esc(x.customer_phone||x.phone||'')}</div></td><td><span class="tag">${esc(status.toUpperCase())}</span></td><td>${typeof total==='number'?money(total):esc(total)}</td><td>${esc(time)}</td><td><span class="tag countdown" data-deadline="${esc(deadline)}">${left?String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0'):(status==='preparing'?'TIME OVER':'—')}</span></td><td>${actions}</td></tr>`;
+  }).join('')||'<tr><td colspan="7">No orders found.</td></tr>';
+  document.querySelectorAll('.acceptBtn').forEach(b=>b.onclick=async()=>{const sel=b.parentElement.querySelector('.acceptMinutes');await acceptOrder(b.dataset.orderId,sel?.value||30);toast('Order accepted');});
+  document.querySelectorAll('.rejectBtn').forEach(b=>b.onclick=async()=>{if(confirm('Reject this customer order?')){await orderAction(b.dataset.orderId,'cancelled',{rejection_reason:'Rejected by restaurant'});toast('Order rejected');}});
+  document.querySelectorAll('.prepBtn').forEach(b=>b.onclick=async()=>{await orderAction(b.dataset.orderId,'preparing');toast('Order is PREPARING');});
+  document.querySelectorAll('.readyBtn').forEach(b=>b.onclick=async()=>{await orderAction(b.dataset.orderId,'ready');toast('Order marked READY');});
+  document.querySelectorAll('.outBtn').forEach(b=>b.onclick=async()=>{await orderAction(b.dataset.orderId,'out_for_delivery');toast('Order moved to OUT FOR DELIVERY');});
+  document.querySelectorAll('.orderStatus').forEach(sel=>sel.onchange=async()=>{await orderAction(sel.dataset.orderId,sel.value);});
+  const newest=rows[0];
+  if(newest){const stamp=String(newest.created_at||'')+'|'+String(newest.id||'');if(lastOrderStamp && stamp!==lastOrderStamp && String(newest.status).toLowerCase()==='new' && localStorage.getItem('jpt_v107_alarm_enabled')==='1')showOrderAlarm(newest);lastOrderStamp=stamp;localStorage.setItem('jpt_v107_last_order_'+activeOutlet,stamp)}
+}
+async function bindOrderRealtime(){
+  try{if(orderChannel) await sb.removeChannel(orderChannel);orderChannel=sb.channel('jpt-v107-orders-'+activeOutlet+'-'+Date.now()).on('postgres_changes',{event:'INSERT',schema:'public',table:'orders',filter:'outlet_id=eq.'+activeOutlet},p=>{if(p?.new?.status==='new'){showOrderAlarm(p.new)}loadOrders().catch(()=>{})}).on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders',filter:'outlet_id=eq.'+activeOutlet},()=>loadOrders().catch(()=>{})).subscribe();}catch(e){console.warn('Order realtime unavailable',e)}
+}
+$('ordersRefresh').onclick=loadOrders;
+
+$('scratchSetup').onclick=configureScratchSlabs;
+
+
+function closeModal(){$('modal').classList.remove('show')}$('modal').onclick=e=>{if(e.target.id==='modal')closeModal()};
+
+function refreshOrderCountdowns(){document.querySelectorAll('.countdown[data-deadline]').forEach(el=>{const d=el.dataset.deadline;if(!d)return;const left=Math.max(0,new Date(d).getTime()-Date.now());const secs=Math.floor(left/1000),mm=Math.floor(secs/60),ss=secs%60;el.textContent=left?String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0'):'TIME OVER'});} setInterval(refreshOrderCountdowns,1000);
+async function reloadAll(){
+  try{
+    await loadAccess();
+    localStorage.setItem('jpt_admin_outlet',activeOutlet);
+    await loadOutlet();
+    await bindOrderRealtime();
+    await Promise.all([loadMenu(),loadOffers(),loadCampaigns(),loadOrders(),loadImages()]);
+    loadTodayExisting();
+  }catch(e){console.error(e);toast('Dashboard load error: '+(e.message||e))}
+}
+$('outletSelect').onchange=async function(){activeOutlet=this.value;localStorage.setItem('jpt_admin_outlet',activeOutlet);await reloadAll()};
+$('reloadBtn').onclick=reloadAll;
+
+reloadAll();
+setInterval(()=>{ if(document.visibilityState!=='hidden') loadOrders().catch(()=>{}); },15000);
+</script>
+</body>
+</html>
