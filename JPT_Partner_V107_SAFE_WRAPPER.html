@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#090909">
+<title>Jeet Punjabi Tadka — Restaurant Partner App V107</title>
+<style>
+html,body{margin:0;width:100%;height:100%;background:#090909;overflow:hidden}
+#partnerFrame{width:100%;height:100%;border:0;display:block}
+#boot{position:fixed;inset:0;display:grid;place-items:center;background:#090909;color:#f4d77a;font:700 16px system-ui;z-index:10}
+</style>
+</head>
+<body>
+<div id="boot">Loading Restaurant Partner App…</div>
+
+<!-- V107 SAFE WRAPPER
+     IMPORTANT: V106 overlay modules are intentionally NOT injected here.
+     V107 admin.html already contains its own Orders, realtime, timer,
+     outlet access and dashboard logic. The old scroll-root module expected
+     #ordersList and could force a reload loop because V107 uses #ordersBody.
+-->
+<iframe id="partnerFrame"
+        src="./admin.html?v=107-safe"
+        title="Jeet Punjabi Tadka Restaurant Partner App"></iframe>
+
+<script>
+(function(){
+  'use strict';
+
+  const frame=document.getElementById('partnerFrame');
+  const boot=document.getElementById('boot');
+
+  function hideBoot(){
+    if(boot) boot.style.display='none';
+  }
+
+  frame.addEventListener('load',hideBoot,{once:true});
+
+  // Never leave the launcher covering the dashboard indefinitely.
+  setTimeout(hideBoot,3000);
+})();
+</script>
+</body>
+</html>
