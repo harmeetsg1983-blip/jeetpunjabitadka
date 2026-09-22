@@ -55,6 +55,7 @@ button,input,select,textarea{font:inherit}.app{min-height:100vh;background:#0707
  <button class="btn gold" data-panel="home">Home</button>
  <button class="btn" data-panel="orders">Orders</button>
  <button class="btn" data-panel="menu">Menu Manager</button>
+ <button class="btn" data-panel="categories">Categories</button>
  <button class="btn" data-panel="images">Images</button>
  <button class="btn" data-panel="offers">Offers</button>
  <button class="btn" data-panel="today">Today Offer</button>
@@ -77,6 +78,10 @@ button,input,select,textarea{font:inherit}.app{min-height:100vh;background:#0707
 
 <section id="menu" class="panel">
  <div class="card"><div class="rowactions"><button class="btn gold" id="addItemBtn">＋ Add Menu Item</button><button class="btn" id="menuRefresh">↻ Refresh</button></div><div id="menuNotice" class="notice">Loading…</div><div id="menuList"></div></div>
+</section>
+
+<section id="categories" class="panel">
+ <div class="card"><div class="rowactions"><button class="btn gold" id="addCategoryBtn">＋ Add Category</button><button class="btn" id="categoriesRefresh">↻ Refresh</button></div><div id="categoriesNotice" class="notice">Loading…</div><div id="categoriesList"></div></div>
 </section>
 
 <section id="offers" class="panel">
@@ -154,6 +159,7 @@ window.sb=sb;
 let activeOutlet='';
 let authorized=[];
 let menuItems=[];
+let categoryRows=[];
 let currentOffers=[];
 let currentCampaigns=[];
 let currentOutletRow=null;
@@ -299,6 +305,71 @@ async function createItem(){
   if(r.error){toast(r.error.message);return}closeModal();await loadMenu();toast('Menu item created');
 }
 $('addItemBtn').onclick=addItem;$('menuRefresh').onclick=loadMenu;
+
+async function loadCategories(){
+  const r=await sb.from('categories').select('id,name,sort_order,is_active').eq('outlet_id',activeOutlet).order('sort_order').order('name');
+  if(r.error){$('categoriesNotice').innerHTML='<span class="danger">'+esc(r.error.message)+'</span>';return}
+  categoryRows=r.data||[];
+  $('categoriesNotice').textContent=categoryRows.length+' category records for this outlet';
+  $('categoriesList').innerHTML=categoryRows.map(c=>`<div class="itemrow"><div class="grow"><b>${esc(c.name||'Unnamed category')}</b><div class="muted">Sort order: ${Number(c.sort_order||0)} • ${c.is_active===false?'INACTIVE':'ACTIVE'}</div></div><div class="rowactions"><button class="btn" onclick="editCategory('${esc(c.id)}')">Edit</button><button class="btn ${c.is_active===false?'green':'red'}" onclick="toggleCategory('${esc(c.id)}')">${c.is_active===false?'Activate':'Deactivate'}</button></div></div>`).join('')||'<div class="notice">No categories found for this outlet.</div>';
+}
+
+function openCategoryModal(category=null){
+  const c=category||{};
+  const isNew=!c.id;
+  const fallbackOrder=categoryRows.reduce((max,row)=>Math.max(max,Number(row.sort_order)||0),0)+10;
+  $('modalTitle').textContent=isNew?'Add Category':'Edit Category';
+  $('modalBody').innerHTML=`<div class="field"><label>Category name</label><input id="categoryName" class="input" value="${esc(c.name||'')}"></div><div class="field"><label>Sort order</label><input id="categorySortOrder" class="input" type="number" step="1" value="${Number(c.sort_order??fallbackOrder)}"></div><div class="field"><label><input id="categoryActive" type="checkbox" ${c.is_active!==false?'checked':''}> Active</label></div><div class="notice">Renaming updates only menu items in this same outlet that use the current category name. Categories are never permanently deleted here.</div><button class="btn gold" id="saveCategoryBtn">Save Category</button>`;
+  $('saveCategoryBtn').onclick=()=>saveCategory(c.id||null);
+  $('modal').classList.add('show');
+}
+
+function editCategory(id){
+  const category=categoryRows.find(row=>String(row.id)===String(id));
+  if(category) openCategoryModal(category);
+}
+
+async function saveCategory(id){
+  const name=$('categoryName').value.trim();
+  const sortOrder=Number($('categorySortOrder').value);
+  const isActive=$('categoryActive').checked;
+  if(!name){toast('Category name is required');return}
+  if(!Number.isFinite(sortOrder)){toast('Enter a valid sort order');return}
+  const existing=categoryRows.find(row=>String(row.id)!==String(id||'')&&String(row.name||'').trim().toLowerCase()===name.toLowerCase());
+  if(existing){toast('A category with this name already exists for this outlet');return}
+  if(!id){
+    const r=await sb.from('categories').insert({outlet_id:activeOutlet,name,sort_order:sortOrder,is_active:isActive,updated_at:new Date().toISOString()});
+    if(r.error){toast('Category save failed: '+r.error.message);return}
+    closeModal();await loadCategories();toast('Category added');return;
+  }
+  const category=categoryRows.find(row=>String(row.id)===String(id));
+  if(!category)return;
+  const oldName=String(category.name||'');
+  const row={name,sort_order:sortOrder,is_active:isActive,updated_at:new Date().toISOString()};
+  const r=await sb.from('categories').update(row).eq('id',id).eq('outlet_id',activeOutlet);
+  if(r.error){toast('Category save failed: '+r.error.message);return}
+  if(oldName!==name){
+    const menuUpdate=await sb.from('menu_items').update({category:name,updated_at:new Date().toISOString()}).eq('outlet_id',activeOutlet).eq('category',oldName);
+    if(menuUpdate.error){
+      const rollback=await sb.from('categories').update({name:oldName,sort_order:category.sort_order,is_active:category.is_active,updated_at:new Date().toISOString()}).eq('id',id).eq('outlet_id',activeOutlet);
+      await loadCategories();
+      toast(rollback.error?'Rename failed and category rollback also failed: '+rollback.error.message:'Rename failed; category name was restored: '+menuUpdate.error.message);
+      return;
+    }
+    await loadMenu();
+  }
+  closeModal();await loadCategories();toast('Category saved');
+}
+
+async function toggleCategory(id){
+  const category=categoryRows.find(row=>String(row.id)===String(id));
+  if(!category)return;
+  const r=await sb.from('categories').update({is_active:category.is_active===false,updated_at:new Date().toISOString()}).eq('id',id).eq('outlet_id',activeOutlet);
+  if(r.error){toast('Category update failed: '+r.error.message);return}
+  await loadCategories();toast(category.is_active===false?'Category activated':'Category deactivated');
+}
+
+$('addCategoryBtn').onclick=()=>openCategoryModal();$('categoriesRefresh').onclick=loadCategories;
 
 async function saveImageForItem(item,file){
   if(!item||!file)return;
@@ -524,7 +595,7 @@ async function reloadAll(){
     localStorage.setItem('jpt_admin_outlet',activeOutlet);
     await loadOutlet();
     await bindOrderRealtime();
-    await Promise.all([loadMenu(),loadOffers(),loadCampaigns(),loadOrders(),loadImages()]);
+    await Promise.all([loadMenu(),loadCategories(),loadOffers(),loadCampaigns(),loadOrders(),loadImages()]);
     loadTodayExisting();
   }catch(e){console.error(e);toast('Dashboard load error: '+(e.message||e))}
 }
