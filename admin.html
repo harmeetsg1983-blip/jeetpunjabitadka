@@ -494,6 +494,7 @@ async function loadOrders(){
     else if(status==='accepted') actions='<div class="order-actions"><button class="btn gold prepBtn" data-order-id="'+esc(x.id||'')+'">START PREPARING</button></div>';
     else if(status==='preparing') actions='<div class="order-actions"><button class="btn green readyBtn" data-order-id="'+esc(x.id||'')+'">READY</button></div>';
     else if(status==='ready') actions='<div class="order-actions"><button class="btn gold outBtn" data-order-id="'+esc(x.id||'')+'">OUT FOR DELIVERY</button></div>';
+    else if(status==='out_for_delivery') actions='<div class="order-actions"><button class="btn green completeBtn" data-order-id="'+esc(x.id||'')+'">DELIVERED / COMPLETED</button></div>';
     return `<tr><td><b>${esc(order)}</b><div class="muted">${esc(orderItemsText(x))}</div></td><td>${esc(customer)}<div class="muted">${esc(x.customer_phone||x.phone||'')}</div></td><td><span class="tag">${esc(status.toUpperCase())}</span></td><td>${typeof total==='number'?money(total):esc(total)}</td><td>${esc(time)}</td><td><span class="tag countdown" data-deadline="${esc(deadline)}">${left?String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0'):(status==='preparing'?'TIME OVER':'—')}</span></td><td>${actions}</td></tr>`;
   }).join('')||'<tr><td colspan="7">No orders found.</td></tr>';
   document.querySelectorAll('.acceptBtn').forEach(b=>b.onclick=async()=>{const sel=b.parentElement.querySelector('.acceptMinutes');await acceptOrder(b.dataset.orderId,sel?.value||30);toast('Order accepted');});
@@ -501,6 +502,7 @@ async function loadOrders(){
   document.querySelectorAll('.prepBtn').forEach(b=>b.onclick=async()=>{await orderAction(b.dataset.orderId,'preparing');toast('Order is PREPARING');});
   document.querySelectorAll('.readyBtn').forEach(b=>b.onclick=async()=>{await orderAction(b.dataset.orderId,'ready');toast('Order marked READY');});
   document.querySelectorAll('.outBtn').forEach(b=>b.onclick=async()=>{await orderAction(b.dataset.orderId,'out_for_delivery');toast('Order moved to OUT FOR DELIVERY');});
+  document.querySelectorAll('.completeBtn').forEach(b=>b.onclick=async()=>{await orderAction(b.dataset.orderId,'completed');toast('Order marked DELIVERED / COMPLETED');});
   document.querySelectorAll('.orderStatus').forEach(sel=>sel.onchange=async()=>{await orderAction(sel.dataset.orderId,sel.value);});
   const newest=rows[0];
   if(newest){const stamp=String(newest.created_at||'')+'|'+String(newest.id||'');if(lastOrderStamp && stamp!==lastOrderStamp && String(newest.status).toLowerCase()==='new' && localStorage.getItem('jpt_v107_alarm_enabled')==='1')showOrderAlarm(newest);lastOrderStamp=stamp;localStorage.setItem('jpt_v107_last_order_'+activeOutlet,stamp)}
