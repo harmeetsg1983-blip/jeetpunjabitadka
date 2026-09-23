@@ -36,4 +36,6 @@ window.addEventListener('appinstalled',()=>{const b=document.getElementById('ins
 document.addEventListener('click',async e=>{if(e.target&&e.target.id==='installApp'&&jptInstallPrompt){jptInstallPrompt.prompt();await jptInstallPrompt.userChoice;jptInstallPrompt=null;e.target.style.display='none';}});
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./delivery-partner-sw.js',{scope:'./'}).catch(()=>{}));}
 </script>
-</body></html>
+<script src="./jpt-delivery-sponsor-connector-v2.js?v=2"></script>
+</body>
+</html>
