@@ -312,7 +312,7 @@
     document.getElementById('jptV9Prev').onclick=()=>{posterIndex=(posterIndex+POSTERS.length-1)%POSTERS.length;show()};
     document.getElementById('jptV9Next').onclick=()=>{posterIndex=(posterIndex+1)%POSTERS.length;show()};
     clearInterval(window.__jptV9PosterTimer);
-    window.__jptV9PosterTimer=setInterval(()=>{posterIndex=(posterIndex+1)%POSTERS.length;show()},5000);
+    window.__jptV9PosterTimer=null;
   }
 
   function sync(){
@@ -343,7 +343,7 @@
     document.body.classList.add('jpt-v9-active');
     addStyle();
     setTimeout(refresh,1200);
-    setInterval(sync,1200);
+    // Stable mode: sync is event-driven below; no repeating DOM rewrite.
     window.addEventListener('jpt:outlet-changed',()=>setTimeout(refresh,500));
     window.addEventListener('jpt:outlet-data-refreshed',()=>setTimeout(refresh,500));
     window.addEventListener('jpt:branding-updated',()=>setTimeout(refresh,700));
@@ -396,7 +396,7 @@
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>setTimeout(apply,1500));
   else setTimeout(apply,1500);
-  setInterval(apply,2500);
+  // One-time correction only; no repeating DOM rewrite.
 })();
 
 /* V7: single bottom navigation border only. No changes to green status/metric lighting. */
@@ -426,7 +426,7 @@
   }else{
     setTimeout(finalBottomLine,1200);
   }
-  setInterval(finalBottomLine,2500);
+  // One-time correction only; no repeating DOM rewrite.
 })();
 
 /* V8 final visual correction:
@@ -475,5 +475,5 @@
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>setTimeout(apply,1200));
   else setTimeout(apply,1200);
-  setInterval(apply,2200);
+  // One-time correction only; no repeating DOM rewrite.
 })();
