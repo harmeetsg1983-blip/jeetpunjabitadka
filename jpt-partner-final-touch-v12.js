@@ -1,9 +1,6 @@
-/* JPT PARTNER FINAL TOUCH V12 — CONSOLIDATED FINAL CORRECTION
-   Only fixes:
-   1) 8 Quick Action tiles = dark yellow/gold.
-   2) Bottom navigation = one physical gold border, no duplicate/old nav layers.
-   3) Central/multi-outlet users = visible existing outlet selector.
-   No business, Supabase, order, menu or customer logic changes.
+/* JPT PARTNER FINAL TOUCH V12 — ANTI-FLICKER CORRECTION
+   Keeps the V12 visual fixes but removes the repeating 1.2s DOM rewrite
+   that can cause visible blinking/flicker on mobile.
 */
 (function(){
   'use strict';
@@ -25,20 +22,19 @@
     document.querySelectorAll('[id^="jptV"][id$="Bottom"]').forEach(el=>{
       if(el.id!==BOTTOM) el.remove();
     });
-
     document.getElementById('jptMasterBottomNav')?.remove();
     document.getElementById('jptMasterSubNav')?.remove();
-
     document.querySelectorAll(
-      'nav[class*="jpt-v"], .jpt-v2-bottom,.jpt-v3-bottom,.jpt-v4-bottom,' +
+      'nav[class*="jpt-v"], .jpt-v2-bottom,.jpt-v3-bottom,.jpt-v4-bottom,'+
       '.jpt-v5-bottom,.jpt-v6-bottom,.jpt-v7-bottom,.jpt-v8-bottom,.jpt-v9-bottom'
     ).forEach(el=>{
       if(el.id!==BOTTOM) el.remove();
     });
   }
 
-  function apply(root){
-    if(!root) return;
+  function apply(){
+    const root=document.getElementById(ROOT);
+    if(!root) return false;
 
     root.querySelectorAll('.jpt-v9-action').forEach(el=>{
       el.style.setProperty('background','linear-gradient(145deg,#241b05,#0b0904)','important');
@@ -68,19 +64,16 @@
 
     const original=document.getElementById('outletSelect');
     const wrap=document.getElementById('jptV10OutletWrap');
-    if(!original || !wrap) return;
+    if(!original || !wrap) return true;
 
     const rows=outlets();
-
     if(rows.length<=1){
       wrap.classList.remove('show');
       wrap.style.setProperty('display','none','important');
       original.style.setProperty('display','none','important');
-      return;
+      return true;
     }
 
-    // Remove the unused V10 placeholder selector, then move the REAL selector
-    // into the new header. Its original onchange handler remains intact.
     const fake=document.getElementById('jptV10OutletSelect');
     if(fake && fake!==original) fake.remove();
 
@@ -99,24 +92,23 @@
     original.style.setProperty('background','#070707','important');
     original.style.setProperty('color','#f4c84e','important');
     original.style.setProperty('font-weight','900','important');
+    return true;
   }
 
-  function boot(){
-    const run=()=>apply(document.getElementById(ROOT));
+  async function boot(){
+    try{
+      if(window.JPTPartnerAccess?.reload) await window.JPTPartnerAccess.reload();
+    }catch(e){
+      console.warn('[JPT V12 anti-flicker] access sync skipped:',e);
+    }
 
-    const syncAccess=async()=>{
-      try{
-        if(window.JPTPartnerAccess?.reload) await window.JPTPartnerAccess.reload();
-      }catch(e){
-        console.warn('[JPT V12] outlet access sync skipped:',e);
-      }
-      run();
-    };
+    // Run only a few startup checks, then STOP. No repeating DOM rewrite.
+    [0,500,1200,2000].forEach(ms=>{
+      setTimeout(apply,ms);
+    });
 
-    setTimeout(syncAccess,700);
-    setInterval(run,1200);
-    window.addEventListener('jpt:outlet-changed',()=>setTimeout(run,300));
-    window.addEventListener('jpt:outlet-data-refreshed',()=>setTimeout(run,300));
+    window.addEventListener('jpt:outlet-changed',()=>setTimeout(apply,300));
+    window.addEventListener('jpt:outlet-data-refreshed',()=>setTimeout(apply,300));
   }
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot);
