@@ -1,12 +1,34 @@
-/* JPT Customer Tracking Sponsor Connector V2 */
+ /* JPT Customer Tracking Sponsor Connector V3 */
 (function(){
 'use strict';
-if(window.__JPT_CUSTOMER_TRACKING_SPONSOR_CONNECTOR_V2__)return;
-window.__JPT_CUSTOMER_TRACKING_SPONSOR_CONNECTOR_V2__=true;
-function boot(){
- const src='./jpt-customer-tracking-sponsor-slider-v2.js?v=2';
- if(document.querySelector('script[data-jpt-customer-sponsor-v2]'))return;
- const s=document.createElement('script');s.src=src;s.dataset.jptCustomerSponsorV2='1';document.body.appendChild(s);
+
+if(window.__JPT_CUSTOMER_TRACKING_SPONSOR_CONNECTOR_V3__)return;
+window.__JPT_CUSTOMER_TRACKING_SPONSOR_CONNECTOR_V3__=true;
+
+function load(src,attr){
+  return new Promise((resolve)=>{
+    if(document.querySelector('script['+attr+']'))return resolve();
+
+    const s=document.createElement('script');
+    s.src=src;
+    s.setAttribute(attr,'1');
+    s.onload=resolve;
+    s.onerror=resolve;
+    document.body.appendChild(s);
+  });
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+
+async function boot(){
+  await load(
+    './jpt-customer-tracking-sponsor-slider-v3.js?v=3',
+    'data-jpt-customer-sponsor-v3'
+  );
+}
+
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',boot);
+}else{
+  boot();
+}
+
 })();
