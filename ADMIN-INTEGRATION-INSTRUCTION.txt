@@ -1,0 +1,16 @@
+JPT ADMIN INTEGRATION — CONTROLLED V1
+
+Current admin.html SHA verified before this package:
+eaddff91753791b0fde553e3fe74b0dcc8fbfa80
+
+ONE change only:
+Immediately before </body>, after the existing Partner V1–V3 script lines, add:
+
+<script src="./jpt-partner-build-loader-v1.js?v=1"></script>
+
+Do NOT replace or rewrite admin.html.
+Do NOT remove any existing script.
+Do NOT change customer index.html.
+Do NOT change Supabase SQL.
+
+The loader then sequentially loads exactly 25 pending V4–V8 files.
