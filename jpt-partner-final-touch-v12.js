@@ -2,7 +2,7 @@
    Only fixes:
    1) 8 Quick Action tiles = dark yellow/gold.
    2) Bottom navigation = one physical gold border, no duplicate/old nav layers.
-   3) Central/multi-outlet users = visible outlet selector; single-outlet users = hidden.
+   3) Central/multi-outlet users = visible existing outlet selector.
    No business, Supabase, order, menu or customer logic changes.
 */
 (function(){
@@ -25,10 +25,14 @@
     document.querySelectorAll('[id^="jptV"][id$="Bottom"]').forEach(el=>{
       if(el.id!==BOTTOM) el.remove();
     });
-    // Master UI V5 also creates a mobile bottom nav; remove it so only one nav remains.
+
     document.getElementById('jptMasterBottomNav')?.remove();
     document.getElementById('jptMasterSubNav')?.remove();
-    document.querySelectorAll('nav[class*="jpt-v"], .jpt-v2-bottom,.jpt-v3-bottom,.jpt-v4-bottom,.jpt-v5-bottom,.jpt-v6-bottom,.jpt-v7-bottom,.jpt-v8-bottom,.jpt-v9-bottom').forEach(el=>{
+
+    document.querySelectorAll(
+      'nav[class*="jpt-v"], .jpt-v2-bottom,.jpt-v3-bottom,.jpt-v4-bottom,' +
+      '.jpt-v5-bottom,.jpt-v6-bottom,.jpt-v7-bottom,.jpt-v8-bottom,.jpt-v9-bottom'
+    ).forEach(el=>{
       if(el.id!==BOTTOM) el.remove();
     });
   }
@@ -36,7 +40,6 @@
   function apply(root){
     if(!root) return;
 
-    // 8 Quick Action tiles — dark yellow/gold only.
     root.querySelectorAll('.jpt-v9-action').forEach(el=>{
       el.style.setProperty('background','linear-gradient(145deg,#241b05,#0b0904)','important');
       el.style.setProperty('border','1.5px solid #e8b82f','important');
@@ -48,7 +51,6 @@
 
     const bottom=document.getElementById(BOTTOM);
     if(bottom){
-      // No shadow/outline that can visually read as a second border.
       bottom.style.setProperty('border','1.5px solid #d9a92b','important');
       bottom.style.setProperty('outline','none','important');
       bottom.style.setProperty('box-shadow','none','important');
@@ -64,24 +66,30 @@
     const open=root.querySelector('.jpt-v9-open');
     if(open) open.style.setProperty('margin-bottom','34px','important');
 
-    // Use the real existing #outletSelect so the existing access/reload flow remains authoritative.
     const original=document.getElementById('outletSelect');
     const wrap=document.getElementById('jptV10OutletWrap');
     if(!original || !wrap) return;
+
     const rows=outlets();
+
     if(rows.length<=1){
-      original.style.removeProperty('display');
-      original.closest('.jpt-v9-controls')?.style?.setProperty('display','none','important');
       wrap.classList.remove('show');
+      wrap.style.setProperty('display','none','important');
+      original.style.setProperty('display','none','important');
       return;
     }
-    // Keep the existing authorized selector visible in the new header.
-    const controls=original.closest('.jpt-v9-controls');
-    if(controls){
-      controls.style.setProperty('display','flex','important');
-      controls.style.setProperty('width','100%','important');
-      controls.style.setProperty('margin','8px 0 0','important');
-    }
+
+    // Remove the unused V10 placeholder selector, then move the REAL selector
+    // into the new header. Its original onchange handler remains intact.
+    const fake=document.getElementById('jptV10OutletSelect');
+    if(fake && fake!==original) fake.remove();
+
+    wrap.classList.add('show');
+    wrap.style.setProperty('display','block','important');
+    wrap.style.setProperty('width','100%','important');
+
+    if(original.parentElement!==wrap) wrap.appendChild(original);
+
     original.style.setProperty('display','block','important');
     original.style.setProperty('width','100%','important');
     original.style.setProperty('max-width','100%','important');
@@ -91,13 +99,21 @@
     original.style.setProperty('background','#070707','important');
     original.style.setProperty('color','#f4c84e','important');
     original.style.setProperty('font-weight','900','important');
-    wrap.classList.remove('show');
-    wrap.style.setProperty('display','none','important');
   }
 
   function boot(){
     const run=()=>apply(document.getElementById(ROOT));
-    setTimeout(run,700);
+
+    const syncAccess=async()=>{
+      try{
+        if(window.JPTPartnerAccess?.reload) await window.JPTPartnerAccess.reload();
+      }catch(e){
+        console.warn('[JPT V12] outlet access sync skipped:',e);
+      }
+      run();
+    };
+
+    setTimeout(syncAccess,700);
     setInterval(run,1200);
     window.addEventListener('jpt:outlet-changed',()=>setTimeout(run,300));
     window.addEventListener('jpt:outlet-data-refreshed',()=>setTimeout(run,300));
