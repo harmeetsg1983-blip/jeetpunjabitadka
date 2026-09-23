@@ -396,31 +396,32 @@
   setInterval(apply,2500);
 })();
 
-/* V7 FINAL BOTTOM NAV FINISH */
+/* V7: single bottom navigation border only. No changes to green status/metric lighting. */
 (function(){
   'use strict';
-  function finish(){
-    const root=document.getElementById('jptFinalTouchHomeV7');
-    const bottom=document.getElementById('jptV7Bottom');
-    if(!root || !bottom) return;
-
-    bottom.style.border='2px solid #b8871f';
-    bottom.style.outline='none';
-    bottom.style.boxShadow='0 0 8px rgba(184,135,31,.45), inset 0 0 10px rgba(184,135,31,.06)';
-    bottom.style.background='rgba(3,3,3,.985)';
-    bottom.style.borderRadius='20px';
-
-    // Prevent any nested button/active-state border from becoming a
-    // second outer-looking line.
-    bottom.querySelectorAll('button').forEach(btn=>{
-      btn.style.outline='none';
-      btn.style.border='0';
+  function finalBottomLine(){
+    const roots=document.querySelectorAll('#jptFinalTouchHomeV7');
+    roots.forEach(root=>{
+      document.querySelectorAll('.jpt-v7-bottom').forEach((el,i)=>{
+        if(i>0) el.remove();
+      });
+      const bottom=document.getElementById('jptV7Bottom');
+      if(!bottom) return;
+      bottom.style.border='1.5px solid #9f781c';
+      bottom.style.outline='none';
+      bottom.style.boxShadow='0 0 16px rgba(159,120,28,.18)';
+      bottom.style.background='#050505';
+      bottom.style.borderRadius='20px';
+      bottom.querySelectorAll('button').forEach(btn=>{
+        btn.style.outline='none';
+        btn.style.border='0';
+      });
     });
   }
   if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',()=>setTimeout(finish,1600));
+    document.addEventListener('DOMContentLoaded',()=>setTimeout(finalBottomLine,1200));
   }else{
-    setTimeout(finish,1600);
+    setTimeout(finalBottomLine,1200);
   }
-  setInterval(finish,2500);
+  setInterval(finalBottomLine,2500);
 })();
