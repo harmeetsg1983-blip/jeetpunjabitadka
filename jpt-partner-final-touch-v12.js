@@ -233,6 +233,7 @@
 
     const select=document.getElementById('outletSelect');
     const oldWrap=document.getElementById('jptV10OutletWrap');
+   oldWrap.style.setProperty('display','block','important');  
     const rows=getOutlets();
 
     if(!select || !oldWrap || rows.length===0){
