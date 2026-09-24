@@ -283,19 +283,34 @@
       if(oldText) window.__JPT_V3_STATUS_TEXT=oldText;
     }
 
-    root.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{ if(typeof window.showPanel==='function')window.showPanel(b.dataset.p); });
-    document.getElementById('jptV9Bell').onclick=()=>{ if(typeof window.showPanel==='function')window.showPanel('orders'); };
-    document.querySelectorAll('.jpt-v9-bottom').forEach((el,i)=>{if(i>0)el.remove()});
-    let bottom=document.getElementById('jptV10Bottom');
-    if(!bottom){
-      bottom=document.createElement('nav');bottom.id='jptV10Bottom';bottom.className='jpt-v9-bottom';
-      bottom.innerHTML='<button class="active" data-p="home"><b>⌂</b>Home</button><button data-p="orders"><b>🧾</b>Orders</button><button data-p="menu"><b>☰</b>Menu</button><button data-p="offers"><b>🏷️</b>Offers</button><button data-p="settings"><b>⚙️</b>Settings</button>';
-      document.body.appendChild(bottom);
-      bottom.querySelectorAll('button').forEach(b=>b.onclick=()=>{
-        bottom.querySelectorAll('button').forEach(x=>x.classList.remove('active'));b.classList.add('active');
-        if(b.dataset.p==='home')window.scrollTo({top:0,behavior:'smooth'});
-        else if(typeof window.showPanel==='function')window.showPanel(b.dataset.p);
-      });
+    root.querySelectorAll('[data-p]').forEach(b=>b.onclick=async()=>{
+  const panel=b.dataset.p;
+  if(typeof window.showPanel==='function')window.showPanel(panel);
+  try{
+    const fn={
+      orders:window.loadOrders,
+      menu:window.loadMenu,
+      images:window.loadImages,
+      offers:window.loadOffers,
+      campaigns:window.loadCampaigns
+    }[panel];
+    if(typeof fn==='function') await fn();
+  }catch(e){
+    console.warn('[JPT V10] panel refresh skipped:',e);
+  }
+});
+
+document.getElementById('jptV9Bell')?.addEventListener('click',()=>{
+  if(typeof window.showPanel==='function')window.showPanel('orders');
+});
+
+document.querySelectorAll('.jpt-v9-bottom button').forEach(b=>{
+  b.onclick=()=>{
+    const p=b.dataset.p;
+    if(p==='home')window.scrollTo({top:0,behavior:'smooth'});
+    else if(typeof window.showPanel==='function')window.showPanel(p);
+  };
+});
     }
 
     const select=document.getElementById('outletSelect');
