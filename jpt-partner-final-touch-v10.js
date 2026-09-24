@@ -357,6 +357,7 @@ document.querySelectorAll('.jpt-v9-bottom button').forEach(b=>{
 
   function boot(){
     document.body.classList.add('jpt-v9-active');
+     installNavigationBridge();
     addStyle();
     refresh();
     // Stable mode: sync is event-driven below; no repeating DOM rewrite.
