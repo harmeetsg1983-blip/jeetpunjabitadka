@@ -1,0 +1,148 @@
+name: JPT Technical Control V2 - Diagnosis Gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "Use JPT-DIAGNOSE"
+        required: true
+        default: "JPT-DIAGNOSE"
+        type: string
+      target:
+        description: "ALL, PARTNER, or CUSTOMER"
+        required: true
+        default: "ALL"
+        type: string
+
+# V2 is intentionally READ-ONLY.
+# It diagnoses and records evidence. It does not edit, commit, deploy, or run SQL.
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  diagnose:
+    if: ${{ inputs.command == 'JPT-DIAGNOSE' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Protected diagnosis
+        shell: bash
+        env:
+          TARGET: ${{ inputs.target }}
+        run: |
+          set -euo pipefail
+
+          echo "=========================================="
+          echo " JPT TECHNICAL CONTROL V2"
+          echo " MODE: DIAGNOSIS ONLY"
+          echo " TARGET: ${TARGET}"
+          echo "=========================================="
+
+          report=0
+
+          green() { echo "GREEN  $1"; }
+          yellow() { echo "YELLOW $1"; }
+          red() { echo "RED    $1"; }
+
+          file_check() {
+            if [ -f "$1" ]; then
+              green "File present: $1"
+            else
+              red "File missing: $1"
+              report=1
+            fi
+          }
+
+          text_check() {
+            if [ ! -f "$1" ]; then
+              return
+            fi
+            if grep -Fq "$2" "$1"; then
+              green "$3"
+            else
+              red "$3"
+              report=1
+            fi
+          }
+
+          echo
+          echo "--- CORE FILES ---"
+          file_check "index.html"
+          file_check "admin.html"
+          file_check "jpt-partner-final-touch-v10.js"
+
+          echo
+          echo "--- CUSTOMER FLOW ---"
+          text_check "index.html" "supabase" "Customer Supabase wiring detected"
+          text_check "index.html" "cart" "Customer cart wiring detected"
+          text_check "index.html" "checkout" "Customer checkout marker detected"
+          text_check "index.html" "order" "Customer order marker detected"
+
+          echo
+          echo "--- PARTNER FLOW ---"
+          text_check "admin.html" "supabase" "Partner Supabase wiring detected"
+          text_check "admin.html" "Orders" "Partner Orders UI marker detected"
+          text_check "admin.html" "Offers" "Partner Offers UI marker detected"
+          text_check "admin.html" "Menu" "Partner Menu UI marker detected"
+
+          echo
+          echo "--- APPROVED V10 PRESERVATION ---"
+          text_check "admin.html" "jpt-partner-final-touch-v10.js" "Admin loads approved V10"
+          text_check "jpt-partner-final-touch-v10.js" "data:image/png;base64" "V10 embedded visual asset detected"
+
+          echo
+          echo "--- REJECTED VISUAL LAYERS ---"
+          if grep -Fq "jpt-partner-visual-layer-final-v1.js" admin.html 2>/dev/null; then
+            red "Rejected visual-layer-final-v1 is still referenced"
+            report=1
+          else
+            green "Rejected visual-layer-final-v1 is not referenced"
+          fi
+
+          if grep -Fq "jpt-partner-visual-skin-v2.js" admin.html 2>/dev/null; then
+            if [ -f "jpt-partner-visual-skin-v2.js" ]; then
+              yellow "visual-skin-v2 is referenced and file exists"
+            else
+              yellow "visual-skin-v2 is referenced but file is missing (404 risk)"
+            fi
+          else
+            green "visual-skin-v2 is not referenced"
+          fi
+
+          echo
+          echo "--- GITHUB WORKFLOW SAFETY ---"
+          file_check ".github/workflows/jpt-v106-royal-gold.yml"
+          if [ -f ".github/workflows/jpt-v106-royal-gold.yml" ]; then
+            text_check ".github/workflows/jpt-v106-royal-gold.yml" "workflow_dispatch" "Existing V106 workflow is manual-dispatch"
+          fi
+
+          echo
+          echo "--- DIAGNOSIS FINGERPRINT ---"
+          echo "Branch: main"
+          echo "Commit: $(git rev-parse --short HEAD)"
+          echo "Admin SHA-256: $(sha256sum admin.html 2>/dev/null | cut -d' ' -f1 || echo missing)"
+          echo "Customer SHA-256: $(sha256sum index.html 2>/dev/null | cut -d' ' -f1 || echo missing)"
+          echo "V10 SHA-256: $(sha256sum jpt-partner-final-touch-v10.js 2>/dev/null | cut -d' ' -f1 || echo missing)"
+
+          echo
+          echo "--- IMPORTANT ---"
+          echo "This V2 workflow makes NO source changes."
+          echo "It does NOT run Supabase SQL."
+          echo "It does NOT deploy."
+          echo "It does NOT create or approve pull requests."
+
+          if [ "$report" -eq 0 ]; then
+            echo
+            echo "JPT V2 DIAGNOSIS: PASS"
+          else
+            echo
+            echo "JPT V2 DIAGNOSIS: ATTENTION REQUIRED"
+            exit 1
+          fi

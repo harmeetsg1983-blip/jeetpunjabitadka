@@ -1,0 +1,120 @@
+name: JPT Technical Control V1
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "Allowed command: JPT-CHECK or JPT-AUDIT"
+        required: true
+        default: "JPT-CHECK"
+        type: string
+      target:
+        description: "Target: ALL, PARTNER, or CUSTOMER"
+        required: true
+        default: "ALL"
+        type: string
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  technical-control:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request == null &&
+       (github.event.comment.body == 'JPT-CHECK' || github.event.comment.body == 'JPT-AUDIT'))
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout production branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Resolve command
+        id: command
+        shell: bash
+        env:
+          DISPATCH_COMMAND: ${{ inputs.command }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            CMD="${DISPATCH_COMMAND}"
+          else
+            CMD="${COMMENT_BODY}"
+          fi
+          case "${CMD}" in
+            JPT-CHECK|JPT-AUDIT) echo "command=${CMD}" >> "${GITHUB_OUTPUT}" ;;
+            *) echo "Unsupported command: ${CMD}"; exit 1 ;;
+          esac
+
+      - name: Run protected production audit
+        shell: bash
+        env:
+          CMD: ${{ steps.command.outputs.command }}
+        run: |
+          set -euo pipefail
+          echo "========================================"
+          echo " JPT TECHNICAL CONTROL V1"
+          echo " Command: ${CMD}"
+          echo " Branch: main"
+          echo " READ-ONLY MODE: NO SOURCE CHANGES"
+          echo "========================================"
+          fail=0
+          check_file() {
+            if [ -f "$1" ]; then echo "GREEN  file exists: $1"; else echo "RED    missing file: $1"; fail=1; fi
+          }
+          check_text() {
+            file="$1"; needle="$2"; label="$3"
+            if grep -Fq "$needle" "$file"; then echo "GREEN  $label"; else echo "RED    $label"; fail=1; fi
+          }
+          check_file "index.html"
+          check_file "admin.html"
+          check_file "jpt-partner-final-touch-v10.js"
+          check_file ".github/workflows/jpt-v106-royal-gold.yml"
+          if [ -f "index.html" ]; then
+            check_text "index.html" "supabase" "customer app contains Supabase wiring"
+            check_text "index.html" "cart" "customer app contains cart wiring"
+          fi
+          if [ -f "admin.html" ]; then
+            check_text "admin.html" "supabase" "partner app contains Supabase wiring"
+            check_text "admin.html" "jpt-partner-final-touch-v10.js" "admin loads approved V10 touch"
+          fi
+          if [ -f "jpt-partner-final-touch-v10.js" ]; then
+            check_text "jpt-partner-final-touch-v10.js" "data:image/png;base64" "V10 contains embedded visual asset"
+          fi
+          if grep -Fq "jpt-partner-visual-layer-final-v1.js" admin.html 2>/dev/null; then
+            echo "RED    rejected visual-layer-final-v1 is still referenced"; fail=1
+          else
+            echo "GREEN  rejected visual-layer-final-v1 is not referenced"
+          fi
+          if grep -Fq "jpt-partner-visual-skin-v2.js" admin.html 2>/dev/null; then
+            if [ -f "jpt-partner-visual-skin-v2.js" ]; then echo "YELLOW admin references visual-skin-v2 and file exists"; else echo "YELLOW admin references visual-skin-v2 but file is missing (404 risk)"; fi
+          else
+            echo "GREEN  visual-skin-v2 is not referenced"
+          fi
+          if [ -d "supabase" ]; then echo "GREEN  supabase directory exists"; else echo "YELLOW supabase directory not found"; fi
+          echo "----------------------------------------"
+          echo "Git status:"
+          git status --short
+          echo "----------------------------------------"
+          if [ "${CMD}" = "JPT-AUDIT" ]; then
+            echo "AUDIT: repository tree summary"
+            find . -maxdepth 2 -type f | sort | sed 's#^./##' | head -200
+          fi
+          echo "----------------------------------------"
+          if [ "${fail}" -eq 0 ]; then echo "JPT TECHNICAL CONTROL: PASS"; else echo "JPT TECHNICAL CONTROL: ATTENTION REQUIRED"; exit 1; fi
+
+      - name: Preservation gate
+        shell: bash
+        run: |
+          echo "PRESERVATION GATE"
+          echo "No source file was modified by this workflow."
+          echo "No Supabase SQL was executed."
+          echo "No deployment was triggered."
+          echo "No pull request was created or approved."
