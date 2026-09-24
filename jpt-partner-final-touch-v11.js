@@ -97,7 +97,7 @@
 
   function boot(){
     setTimeout(apply,800);
-    setInterval(apply,1200);
+    
     window.addEventListener('jpt:outlet-changed',()=>setTimeout(apply,500));
     window.addEventListener('jpt:outlet-data-refreshed',()=>setTimeout(apply,500));
   }
