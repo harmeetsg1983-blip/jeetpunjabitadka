@@ -46,7 +46,12 @@
       el.style.setProperty('box-shadow','inset 0 0 16px rgba(232,184,47,.12),0 0 10px rgba(232,184,47,.18)','important');
       el.style.setProperty('outline','none','important');
     });
-
+    root?.querySelectorAll('.jpt-v9-metric').forEach(el=>{
+      el.style.setProperty('background','linear-gradient(145deg,#06150b,#030705)','important');
+      el.style.setProperty('border','1px solid rgba(0,255,98,.34)','important');
+      el.style.setProperty('box-shadow','inset 0 0 16px rgba(0,255,98,.045),0 0 9px rgba(0,255,98,.08)','important');
+      el.style.setProperty('outline','none','important');
+    });
     cleanupOldNav();
 
     const bottom=document.getElementById(BOTTOM);
@@ -201,7 +206,10 @@
       else open();
     });
 
-    select.addEventListener('change',refreshTrigger);
+    if(select.dataset.jptV13Bound!=='1'){
+  select.dataset.jptV13Bound='1';
+  select.addEventListener('change',refreshTrigger);
+    }
     select.style.setProperty('display','none','important');
     select.setAttribute('aria-hidden','true');
 
@@ -227,7 +235,7 @@
     const oldWrap=document.getElementById('jptV10OutletWrap');
     const rows=getOutlets();
 
-    if(!select || !oldWrap || rows.length<=1){
+    if(!select || !oldWrap || rows.length===0){
       if(oldWrap) oldWrap.style.setProperty('display','none','important');
       if(select) select.style.setProperty('display','none','important');
       return;
