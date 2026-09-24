@@ -247,9 +247,15 @@
     buildPicker(select,oldWrap,rows);
   }
 
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',boot,{once:true});
-  }else{
-    boot();
-  }
+if(!window.__JPT_V13_EVENTS_BOUND__){
+  window.__JPT_V13_EVENTS_BOUND__=true;
+  window.addEventListener('jpt:outlet-data-refreshed',()=>setTimeout(boot,250));
+  window.addEventListener('jpt:outlet-changed',()=>setTimeout(boot,250));
+}
+
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',boot,{once:true});
+}else{
+  boot();
+}
 })();
