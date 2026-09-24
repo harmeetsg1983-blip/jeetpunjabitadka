@@ -345,9 +345,9 @@
     addStyle();
     refresh();
     // Stable mode: sync is event-driven below; no repeating DOM rewrite.
-    window.addEventListener('jpt:outlet-changed',()=>refresh());
-window.addEventListener('jpt:outlet-data-refreshed',()=>refresh());
-window.addEventListener('jpt:branding-updated',()=>refresh());
+    window.addEventListener('jpt:outlet-changed',()=>sync());
+window.addEventListener('jpt:outlet-data-refreshed',()=>sync());
+window.addEventListener('jpt:branding-updated',()=>sync());
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
