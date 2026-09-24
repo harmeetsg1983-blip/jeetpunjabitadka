@@ -357,7 +357,24 @@ document.querySelectorAll('.jpt-v9-bottom button').forEach(b=>{
 
   function boot(){
     document.body.classList.add('jpt-v9-active');
-     installNavigationBridge();
+     function installNavigationBridge(){
+  if(window.__JPT_V10_NAV_BRIDGE__) return;
+  const originalShowPanel=window.showPanel;
+  if(typeof originalShowPanel!=='function') return;
+  window.__JPT_V10_NAV_BRIDGE__=true;
+
+  window.showPanel=function(id){
+    const root=document.getElementById(ROOT);
+    if(id==='home'){
+      document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+      if(root) root.style.display='';
+      return;
+    }
+    if(root) root.style.display='none';
+    return originalShowPanel(id);
+  };
+}
+installNavigationBridge();
     addStyle();
     refresh();
     // Stable mode: sync is event-driven below; no repeating DOM rewrite.
