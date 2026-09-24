@@ -302,6 +302,7 @@
     
     bindPoster();
     sync();
+     window.dispatchEvent(new CustomEvent('jpt:final-touch-ready'));
   }
 
   let posterIndex=0;
