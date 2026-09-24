@@ -117,8 +117,26 @@ function syncVisibility(){
 function removeOldVisualOnly(){
  document.querySelectorAll('#jptFinalTouchHomeV10,#jptV10Bottom,#jptV13OutletWrap,#jptV13OutletPopup,#jptV13OutletBackdrop,[class*="jpt-v9-bottom"],[class*="jpt-v10-bottom"]').forEach(e=>e.remove());
 }
+function installNavigationBridge(){
+ const original=window.showPanel;
+ if(typeof original!=='function'||window.__JPT_FINAL_V1_NAV__) return;
+ window.__JPT_FINAL_V1_NAV__=true;
+ window.showPanel=function(id){
+   const r=document.getElementById(ROOT);
+   if(id==='home'){
+     document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+     if(r) r.style.display='block';
+     syncVisibility();
+     return;
+   }
+   if(r) r.style.display='none';
+   const result=original(id);
+   setTimeout(syncVisibility,40);
+   return result;
+ };
+}
 function boot(){
- addStyle();removeOldVisualOnly();build();syncVisibility();
+ addStyle();removeOldVisualOnly();build();installNavigationBridge();syncVisibility();
  setTimeout(syncVisibility,1800);setTimeout(syncVisibility,3500);setInterval(sync,1200);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
