@@ -778,6 +778,12 @@
   ){
 
     window.__JPT_V13_EVENTS_BOUND_FINAL__=true;
+     window.addEventListener(
+  'jpt:final-touch-ready',
+  function(){
+    boot();
+  }
+);
 
     window.addEventListener(
       'jpt:outlet-data-refreshed',
