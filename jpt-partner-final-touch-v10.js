@@ -299,7 +299,7 @@
     }
 
     const select=document.getElementById('outletSelect');
-    if(select)select.addEventListener('change',()=>setTimeout(refresh,700),{once:false});
+    
     bindPoster();
     sync();
   }
@@ -342,138 +342,17 @@
   function boot(){
     document.body.classList.add('jpt-v9-active');
     addStyle();
-    setTimeout(refresh,1200);
+    refresh();
     // Stable mode: sync is event-driven below; no repeating DOM rewrite.
-    window.addEventListener('jpt:outlet-changed',()=>setTimeout(refresh,500));
-    window.addEventListener('jpt:outlet-data-refreshed',()=>setTimeout(refresh,500));
-    window.addEventListener('jpt:branding-updated',()=>setTimeout(refresh,700));
+    window.addEventListener('jpt:outlet-changed',()=>refresh());
+window.addEventListener('jpt:outlet-data-refreshed',()=>refresh());
+window.addEventListener('jpt:branding-updated',()=>refresh());
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
 
-/* V6 final visual corrections: single poster + single borders + dark green metric cards */
-(function(){
-  'use strict';
-  function apply(){
-    const root=document.getElementById('jptFinalTouchHomeV10');
-    if(!root) return;
 
-    const poster=root.querySelector('.jpt-v9-poster');
-    if(poster){
-      poster.style.border='2px solid #b88d22';
-      poster.style.boxShadow='0 0 20px rgba(184,141,34,.22)';
-      poster.style.padding='0';
-      poster.style.outline='none';
-      poster.querySelectorAll('button,.jpt-v9-dots').forEach(x=>x.style.display='none');
-      const img=poster.querySelector('img');
-      if(img){
-        img.style.display='block';
-        img.style.width='100%';
-        img.style.height='100%';
-        img.style.objectFit='cover';
-        img.style.objectPosition='center';
-        img.style.border='0';
-        img.style.outline='0';
-      }
-    }
 
-    // Four live metric cards: subtle dark green treatment, not bright neon.
-    root.querySelectorAll('.jpt-v9-metric').forEach(card=>{
-      card.style.background='linear-gradient(145deg,#07150d,#050805)';
-      card.style.border='1px solid rgba(0,255,98,.42)';
-      card.style.boxShadow='inset 0 0 18px rgba(0,255,98,.055),0 0 10px rgba(0,255,98,.10)';
-      card.style.outline='none';
-    });
 
-    // One clean bottom navigation frame; remove nested outlines/shadows.
-    const bottom=document.getElementById('jptV10Bottom');
-    if(bottom){
-      bottom.style.border='1px solid #8f6c1d';
-      bottom.style.outline='none';
-      bottom.style.boxShadow='0 0 22px rgba(0,0,0,.85)';
-      bottom.style.background='rgba(4,4,4,.98)';
-    }
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>setTimeout(apply,1500));
-  else setTimeout(apply,1500);
-  // One-time correction only; no repeating DOM rewrite.
-})();
 
-/* V7: single bottom navigation border only. No changes to green status/metric lighting. */
-(function(){
-  'use strict';
-  function finalBottomLine(){
-    const roots=document.querySelectorAll('#jptFinalTouchHomeV10');
-    roots.forEach(root=>{
-      document.querySelectorAll('.jpt-v9-bottom').forEach((el,i)=>{
-        if(i>0) el.remove();
-      });
-      const bottom=document.getElementById('jptV10Bottom');
-      if(!bottom) return;
-      bottom.style.border='1.5px solid #9f781c';
-      bottom.style.outline='none';
-      bottom.style.boxShadow='0 0 16px rgba(159,120,28,.18)';
-      bottom.style.background='#050505';
-      bottom.style.borderRadius='20px';
-      bottom.querySelectorAll('button').forEach(btn=>{
-        btn.style.outline='none';
-        btn.style.border='0';
-      });
-    });
-  }
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',()=>setTimeout(finalBottomLine,1200));
-  }else{
-    setTimeout(finalBottomLine,1200);
-  }
-  // One-time correction only; no repeating DOM rewrite.
-})();
 
-/* V8 final visual correction:
-   - remove every older visual root/nav so no duplicate bottom line
-   - add subtle dark-green glow to all 8 Quick Action tiles
-   - deepen the 4 metric cards
-   - keep the approved poster and status green/red lighting unchanged
-   - make bottom border a single, clearly visible dark-gold line
-*/
-(function(){
-  'use strict';
-  function apply(){
-    document.querySelectorAll('#jptFinalTouchHomeV1,#jptFinalTouchHomeV2,#jptFinalTouchHomeV3,#jptFinalTouchHomeV4,#jptFinalTouchHomeV5,#jptFinalTouchHomeV6,#jptFinalTouchHomeV7,#jptFinalTouchHomeV8,#jptFinalTouchHomeV9').forEach(el=>el.remove());
-    document.querySelectorAll('#jptV2Bottom,#jptV3Bottom,#jptV4Bottom,#jptV5Bottom,#jptV6Bottom,#jptV7Bottom,.jpt-v2-bottom,.jpt-v3-bottom,.jpt-v4-bottom,.jpt-v5-bottom,.jpt-v6-bottom,.jpt-v7-bottom,.jpt-v8-bottom').forEach(el=>el.remove());
-
-    const root=document.getElementById('jptFinalTouchHomeV10');
-    if(!root) return;
-
-    root.querySelectorAll('.jpt-v9-metric').forEach(card=>{
-      card.style.background='linear-gradient(145deg,#06150b,#030705)';
-      card.style.border='1px solid rgba(0,255,98,.46)';
-      card.style.boxShadow='inset 0 0 18px rgba(0,255,98,.07),0 0 9px rgba(0,255,98,.12)';
-      card.style.outline='none';
-    });
-
-    root.querySelectorAll('.jpt-v9-action').forEach(card=>{
-      card.style.background='linear-gradient(145deg,#07170d,#030805)';
-      card.style.border='1px solid rgba(0,255,98,.42)';
-      card.style.boxShadow='inset 0 0 16px rgba(0,255,98,.06),0 0 8px rgba(0,255,98,.10)';
-      card.style.outline='none';
-    });
-
-    const bottom=document.getElementById('jptV10Bottom');
-    if(bottom){
-      bottom.style.background='#050505';
-      bottom.style.border='1.5px solid #a67b1c';
-      bottom.style.outline='none';
-      bottom.style.boxShadow='0 0 18px rgba(166,123,28,.24)';
-      bottom.style.borderRadius='20px';
-      bottom.style.padding='7px';
-      bottom.querySelectorAll('button').forEach(btn=>{
-        btn.style.border='0';
-        btn.style.outline='none';
-      });
-    }
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>setTimeout(apply,1200));
-  else setTimeout(apply,1200);
-  // One-time correction only; no repeating DOM rewrite.
-})();
