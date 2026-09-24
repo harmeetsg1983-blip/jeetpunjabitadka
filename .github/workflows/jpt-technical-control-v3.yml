@@ -6,14 +6,14 @@ on:
       command:
         description: "JPT command"
         required: true
-        default: "JPT-CHECK"
+        default: "JPT-DIAGNOSE"
         type: string
 
   issue_comment:
     types: [created]
 
 permissions:
-  contents: write
+  contents: read
   issues: read
 
 jobs:
@@ -54,21 +54,14 @@ jobs:
           echo "command=$COMMAND" >> "$GITHUB_OUTPUT"
 
       - name: Allowlist gate
-        shell: bash
         env:
           COMMAND: ${{ steps.command.outputs.command }}
         run: |
           set -euo pipefail
 
           case "$COMMAND" in
-            "JPT-CHECK")
-              echo "GREEN: JPT-CHECK allowed"
-              ;;
-            "JPT-DIAGNOSE")
-              echo "GREEN: JPT-DIAGNOSE allowed"
-              ;;
-            "JPT-REPAIR REMOVE_STALE_VISUAL_SKIN_V2")
-              echo "GREEN: approved repair allowed"
+            "JPT-CHECK"|"JPT-DIAGNOSE")
+              echo "GREEN: command allowed"
               ;;
             *)
               echo "FAIL: command is not allowlisted"
@@ -87,71 +80,209 @@ jobs:
           grep -q 'jpt-partner-final-touch-v10.js?v=10-bridge-20260924' admin.html
 
           ! grep -q 'jpt-partner-visual-layer-final-v1.js' admin.html
+          ! grep -q 'jpt-partner-visual-skin-v2.js' admin.html
 
           echo "GREEN: protected baseline passed"
 
-      - name: Execute command
-        shell: bash
+      - name: Full repository diagnosis
         env:
           COMMAND: ${{ steps.command.outputs.command }}
+        shell: bash
         run: |
           set -euo pipefail
 
-          case "$COMMAND" in
+          echo "========================================"
+          echo "JPT FULL SYSTEM DIAGNOSIS"
+          echo "========================================"
 
-            "JPT-CHECK")
-              echo "=== JPT CHECK ==="
-              test -f admin.html
-              test -f jpt-partner-final-touch-v10.js
+          echo ""
+          echo "===== 1. CORE FILES ====="
 
-              if grep -q 'jpt-partner-visual-skin-v2.js' admin.html; then
-                echo "YELLOW: stale visual-skin-v2 reference exists"
-              else
-                echo "GREEN: no stale visual-skin-v2 reference"
-              fi
+          for f in \
+            admin.html \
+            index.html \
+            jpt-partner-final-touch-v10.js \
+            jpt-sponsor-manager-v2.js \
+            jpt-customer-tracking-sponsor-connector-v2.js \
+            jpt-customer-tracking-sponsor-slider-v3.js \
+            jpt-delivery-sponsor-connector-v2.js \
+            jpt-delivery-sponsor-slider-v3.js
+          do
+            if [[ -f "$f" ]]; then
+              echo "GREEN: $f"
+            else
+              echo "YELLOW: missing $f"
+            fi
+          done
 
-              echo "GREEN: check completed"
-              ;;
+          echo ""
+          echo "===== 2. APPROVED V10 ====="
 
-            "JPT-DIAGNOSE")
-              echo "=== JPT DIAGNOSE ==="
+          if grep -q 'jpt-partner-final-touch-v10.js?v=10-bridge-20260924' admin.html; then
+            echo "GREEN: approved V10 loaded"
+          else
+            echo "FAIL: approved V10 load marker missing"
+          fi
 
-              echo "--- V10 ---"
-              grep -q 'jpt-partner-final-touch-v10.js?v=10-bridge-20260924' admin.html
-              echo "GREEN: V10 preserved"
+          if grep -q 'const LOGO=' jpt-partner-final-touch-v10.js; then
+            echo "GREEN: embedded V10 logo artwork detected"
+          else
+            echo "YELLOW: embedded V10 logo marker not detected"
+          fi
 
-              echo "--- Rejected visual layer ---"
-              if grep -q 'jpt-partner-visual-layer-final-v1.js' admin.html; then
-                echo "FAIL: rejected visual layer referenced"
-                exit 1
-              else
-                echo "GREEN: rejected visual layer not referenced"
-              fi
+          echo ""
+          echo "===== 3. REJECTED VISUAL LAYERS ====="
 
-              echo "--- Stale visual skin ---"
-              if grep -q 'jpt-partner-visual-skin-v2.js' admin.html; then
-                echo "YELLOW: stale visual-skin-v2 reference exists"
-              else
-                echo "GREEN: stale visual-skin-v2 reference absent"
-              fi
+          if grep -R -n \
+            -e 'jpt-partner-visual-layer-final-v1.js' \
+            -e 'jpt-partner-visual-skin-v2.js' \
+            --include='*.html' --include='*.js' . 2>/dev/null; then
+            echo "FAIL: rejected visual reference found"
+          else
+            echo "GREEN: rejected visual references absent"
+          fi
 
-              echo "GREEN: diagnosis completed"
-              ;;
+          echo ""
+          echo "===== 4. OUTLET / ID / PARTNER CONTROLS ====="
 
-            "JPT-REPAIR REMOVE_STALE_VISUAL_SKIN_V2")
-              echo "=== JPT REPAIR ==="
+          if grep -Ein \
+            'outlet|outlet.?id|partner.?id|switch.?outlet|change.?id|select.?outlet' \
+            admin.html | head -40; then
+            echo "GREEN: outlet/ID control code detected"
+          else
+            echo "YELLOW: outlet/ID control code not detected by static scan"
+          fi
 
-              if grep -q 'jpt-partner-visual-skin-v2.js' admin.html; then
-                sed -i '/jpt-partner-visual-skin-v2\.js/d' admin.html
-                echo "GREEN: stale reference removed"
-              else
-                echo "GREEN: nothing to repair"
-              fi
-              ;;
+          echo ""
+          echo "===== 5. BOTTOM NAVIGATION / BUTTONS ====="
 
-          esac
+          if grep -Ein \
+            'bottom|nav|navigation|menu|orders|offers|settings|button|onclick' \
+            admin.html | head -80; then
+            echo "GREEN: partner navigation/button code detected"
+          else
+            echo "YELLOW: navigation/button markers not detected"
+          fi
 
-      - name: Validate
+          echo ""
+          echo "===== 6. COLOR / LIGHTING BOARD ====="
+
+          if grep -Ein \
+            'gold|lighting|glow|theme|color|board|premium|black' \
+            admin.html jpt-partner-final-touch-v10.js 2>/dev/null | head -100; then
+            echo "GREEN: color/lighting visual code detected"
+          else
+            echo "YELLOW: color/lighting markers not detected"
+          fi
+
+          echo ""
+          echo "===== 7. SPONSOR MANAGEMENT ====="
+
+          if grep -Ein \
+            'sponsor|advert|carousel|slider|checkout_sponsor_ads|delivery_partner_sponsor_ads' \
+            admin.html jpt-sponsor-manager-v2.js 2>/dev/null | head -120; then
+            echo "GREEN: sponsor management wiring detected"
+          else
+            echo "YELLOW: sponsor management wiring not detected"
+          fi
+
+          echo ""
+          echo "===== 8. CUSTOMER CHECKOUT SPONSOR ====="
+
+          if grep -R -Ein \
+            'checkout_sponsor_ads|checkout.*sponsor|sponsor.*checkout' \
+            --include='*.html' --include='*.js' . 2>/dev/null | head -100; then
+            echo "GREEN: checkout sponsor wiring detected"
+          else
+            echo "YELLOW: checkout sponsor wiring not detected"
+          fi
+
+          echo ""
+          echo "===== 9. CUSTOMER TRACKING SPONSOR ====="
+
+          if [[ -f jpt-customer-tracking-sponsor-connector-v2.js ]] &&
+             [[ -f jpt-customer-tracking-sponsor-slider-v3.js ]]; then
+            echo "GREEN: customer tracking sponsor components present"
+          else
+            echo "YELLOW: customer tracking sponsor components incomplete"
+          fi
+
+          echo ""
+          echo "===== 10. DELIVERY PARTNER SPONSOR ====="
+
+          if grep -R -Ein \
+            'delivery_partner_sponsor_ads|delivery.*sponsor|sponsor.*delivery' \
+            --include='*.html' --include='*.js' . 2>/dev/null | head -100; then
+            echo "GREEN: delivery partner sponsor wiring detected"
+          else
+            echo "YELLOW: delivery partner sponsor wiring not detected"
+          fi
+
+          echo ""
+          echo "===== 11. DELIVERY PARTNER WORKFLOW ====="
+
+          if grep -R -Ein \
+            'delivery.?partner|rider|driver|GO ONLINE|GO OFFLINE|ACCEPT|REJECT|pickup|location|GPS' \
+            --include='*.html' --include='*.js' . 2>/dev/null | head -150; then
+            echo "GREEN: delivery partner workflow markers detected"
+          else
+            echo "YELLOW: delivery partner workflow markers not detected"
+          fi
+
+          echo ""
+          echo "===== 12. JAVASCRIPT SYNTAX CHECK ====="
+
+          JS_ERRORS=0
+
+          while IFS= read -r file; do
+            if ! node --check "$file" >/tmp/jpt-js-error 2>&1; then
+              echo "FAIL: JavaScript syntax error: $file"
+              cat /tmp/jpt-js-error
+              JS_ERRORS=$((JS_ERRORS + 1))
+            fi
+          done < <(find . -type f -name '*.js' \
+            -not -path './.git/*' \
+            -not -path './node_modules/*')
+
+          if [[ "$JS_ERRORS" -eq 0 ]]; then
+            echo "GREEN: JavaScript syntax scan passed"
+          else
+            echo "FAIL: $JS_ERRORS JavaScript file(s) have syntax errors"
+          fi
+
+          echo ""
+          echo "===== 13. BROKEN / STALE VISUAL REFERENCES ====="
+
+          if grep -R -Ein \
+            'visual-skin-v2|visual-layer-final-v1' \
+            --include='*.html' --include='*.js' . 2>/dev/null; then
+            echo "FAIL: stale/rejected visual reference detected"
+          else
+            echo "GREEN: stale/rejected visual references absent"
+          fi
+
+          echo ""
+          echo "===== 14. CUSTOMER / PARTNER / DELIVERY FILE MAP ====="
+
+          echo "--- HTML files ---"
+          find . -maxdepth 2 -type f -name '*.html' \
+            -not -path './.git/*' | sort
+
+          echo ""
+          echo "--- Relevant JS files ---"
+          find . -maxdepth 2 -type f -name '*.js' \
+            -not -path './.git/*' \
+            | grep -Ei \
+            'partner|customer|delivery|sponsor|tracking|admin|menu|order|checkout' \
+            | sort || true
+
+          echo ""
+          echo "========================================"
+          echo "JPT DIAGNOSIS COMPLETE"
+          echo "NO SOURCE FILES WERE MODIFIED"
+          echo "========================================"
+
+      - name: Final validation
         shell: bash
         run: |
           set -euo pipefail
@@ -162,32 +293,6 @@ jobs:
           grep -q 'jpt-partner-final-touch-v10.js?v=10-bridge-20260924' admin.html
 
           ! grep -q 'jpt-partner-visual-layer-final-v1.js' admin.html
+          ! grep -q 'jpt-partner-visual-skin-v2.js' admin.html
 
-          if grep -q 'jpt-partner-visual-skin-v2.js' admin.html; then
-            echo "FAIL: stale reference remains"
-            exit 1
-          fi
-
-          echo "GREEN: validation passed"
-
-      - name: Commit approved repair
-        if: >
-          success() &&
-          steps.command.outputs.command == 'JPT-REPAIR REMOVE_STALE_VISUAL_SKIN_V2'
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if git diff --quiet -- admin.html; then
-            echo "GREEN: no source change required"
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add admin.html
-          git commit -m "JPT V3 command router: approved repair"
-          git push origin HEAD:main
-
-          echo "GREEN: approved repair committed"
+          echo "GREEN: protected validation passed"
