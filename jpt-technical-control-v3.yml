@@ -1,0 +1,105 @@
+name: JPT Technical Control V3 - Controlled Repair Gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "Allowed command: JPT-REPAIR"
+        required: true
+        default: "JPT-REPAIR"
+        type: string
+      target:
+        description: "Target: PARTNER or CUSTOMER"
+        required: true
+        default: "PARTNER"
+        type: string
+      issue:
+        description: "Allowed issue: STALE_VISUAL_REFERENCE"
+        required: true
+        default: "STALE_VISUAL_REFERENCE"
+        type: string
+      dry_run:
+        description: "true = diagnose only; false = apply allowlisted repair"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  controlled-repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Safety gate
+        shell: bash
+        env:
+          COMMAND: ${{ inputs.command }}
+          TARGET: ${{ inputs.target }}
+          ISSUE: ${{ inputs.issue }}
+        run: |
+          set -euo pipefail
+          [[ "$COMMAND" == "JPT-REPAIR" ]]
+          [[ "$TARGET" == "PARTNER" ]]
+          [[ "$ISSUE" == "STALE_VISUAL_REFERENCE" ]]
+          test -f admin.html
+          test -f jpt-partner-final-touch-v10.js
+          grep -q 'jpt-partner-final-touch-v10.js?v=10-bridge-20260924' admin.html
+          ! grep -q 'jpt-partner-visual-layer-final-v1.js' admin.html
+          echo "GREEN: safety gate passed"
+
+      - name: Dry run
+        if: ${{ inputs.dry_run == true }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "JPT V3 / DRY RUN"
+          if grep -q 'jpt-partner-visual-skin-v2.js' admin.html; then
+            echo "YELLOW: stale visual-skin-v2 reference exists"
+          else
+            echo "GREEN: no stale visual-skin-v2 reference; nothing to repair"
+          fi
+          echo "NO SOURCE CHANGES"
+
+      - name: Apply allowlisted repair
+        if: ${{ inputs.dry_run == false }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -q 'jpt-partner-visual-skin-v2.js' admin.html; then
+            sed -i '/jpt-partner-visual-skin-v2\.js/d' admin.html
+            echo "GREEN: stale reference removed"
+          else
+            echo "GREEN: nothing to repair"
+          fi
+
+      - name: Validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f admin.html
+          test -f jpt-partner-final-touch-v10.js
+          grep -q 'jpt-partner-final-touch-v10.js?v=10-bridge-20260924' admin.html
+          ! grep -q 'jpt-partner-visual-layer-final-v1.js' admin.html
+          if grep -q 'jpt-partner-visual-skin-v2.js' admin.html; then
+            echo "FAIL: stale reference remains"
+            exit 1
+          fi
+          echo "GREEN: validation passed"
+
+      - name: Commit exact repair
+        if: ${{ inputs.dry_run == false && success() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- admin.html; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add admin.html
+          git commit -m "JPT V3 controlled repair: remove stale visual reference"
+          git push origin HEAD:main
