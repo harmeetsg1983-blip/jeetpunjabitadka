@@ -602,7 +602,7 @@ async function reloadAll(){
 $('outletSelect').onchange=async function(){activeOutlet=this.value;localStorage.setItem('jpt_admin_outlet',activeOutlet);await reloadAll()};
 $('reloadBtn').onclick=reloadAll;
 
-reloadAll();
+
 setInterval(()=>{ if(document.visibilityState!=='hidden') loadOrders().catch(()=>{}); },15000);
 </script>
  <style>
