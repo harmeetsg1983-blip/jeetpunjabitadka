@@ -656,21 +656,7 @@
 
   async function boot(){
 
-    try{
-
-      if(
-        window.JPTPartnerAccess?.reload
-      ){
-        await window.JPTPartnerAccess.reload();
-      }
-
-    }catch(e){
-
-      console.warn(
-        '[JPT V13] access sync skipped:',
-        e
-      );
-    }
+   
 
     const root=document.getElementById(
       ROOT
