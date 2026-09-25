@@ -1,1 +1,60 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="manifest" href="./customer-manifest.webmanifest?v=110"><meta name="theme-color" content="#d8ae42"><title>Jeet Punjabi Tadka — Customer App</title><style>body{margin:0;background:#090909;color:#f7f2e7;font-family:system-ui;text-align:center}main{max-width:430px;margin:7vh auto;padding:22px}.logo{width:150px;height:150px;margin:0 auto;border:2px solid #d8ae42;border-radius:30px;box-shadow:0 0 30px #d8ae4240;background:#090909;display:flex;align-items:center;justify-content:center}.logo svg{width:100%;height:100%}h1{color:#f4d77a;font-family:Georgia,serif}p{color:#aaa}a,button{display:block;width:100%;box-sizing:border-box;margin:12px 0;padding:14px;border-radius:12px;font-weight:900;font-size:16px}a{background:#f4d77a;color:#111;text-decoration:none}button{background:#17130a;color:#f4d77a;border:1px solid #d8ae42}#install{display:none;background:#f4d77a;color:#111;border:0}.hint{font-size:12px;line-height:1.4;color:#888}</style></head><body><main><div class="logo" aria-label="Jeet Punjabi Tadka Customer App"><svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg"><rect width="300" height="300" rx="45" fill="#090909"/><circle cx="150" cy="130" r="112" fill="none" stroke="#d8ae42" stroke-width="5"/><text x="150" y="98" text-anchor="middle" fill="#f4d77a" font-size="22" font-weight="900" font-family="Georgia">JEET</text><text x="150" y="125" text-anchor="middle" fill="#f4d77a" font-size="17" font-weight="900" font-family="Georgia">PUNJABI TADKA</text><text x="150" y="148" text-anchor="middle" fill="#f4d77a" font-size="9" letter-spacing="3" font-weight="700">RESTAURANT</text><path d="M95 172h110" stroke="#d8ae42" stroke-width="2"/><text x="150" y="190" text-anchor="middle" fill="#f4d77a" font-size="8" letter-spacing="2">TASTE BEYOND BORDERS</text><rect x="45" y="214" width="210" height="58" rx="29" fill="#d8ae42"/><text x="150" y="236" text-anchor="middle" fill="#111" font-size="12" font-weight="900">CUSTOMER APP</text><path d="M120 250h8l5 12h39l7-25h-48" fill="none" stroke="#111" stroke-width="4"/><circle cx="139" cy="268" r="4" fill="#111"/><circle cx="169" cy="268" r="4" fill="#111"/></svg></div><h1>Jeet Punjabi Tadka — Customer App</h1><p>Browse • Order • Enjoy</p><a href="./index.html">OPEN APP</a><button id="install" onclick="installApp()">⬇ INSTALL APP ON HOME SCREEN</button><button onclick="shareApp()">↗ SHARE APP</button><p id="msg"></p><p class="hint">If Install does not appear, open Chrome ⋮ and choose “Add to Home screen” or “Install app”.</p></main><script>if('serviceWorker'in navigator)navigator.serviceWorker.register('./jpt-app-sw.js?v=110').catch(()=>{});let deferredPrompt=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.getElementById('install').style.display='block'});window.addEventListener('appinstalled',()=>{deferredPrompt=null;document.getElementById('install').style.display='none';document.getElementById('msg').textContent='✅ Customer App installed on your home screen.'});async function installApp(){if(!deferredPrompt){document.getElementById('msg').textContent='Chrome menu ⋮ → Add to Home screen / Install app';return}deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null}async function shareApp(){const data={title:'Jeet Punjabi Tadka — Customer App',text:'Browse • Order • Enjoy',url:location.href};try{if(navigator.share)await navigator.share(data);else{await navigator.clipboard.writeText(location.href);document.getElementById('msg').textContent='Link copied. Share it with your family.'}}catch(e){}}</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#090909">
+<link rel="manifest" href="./customer-manifest.webmanifest?v=1">
+<link rel="icon" href="./jpt-customer-icon-512.png" type="image/png">
+<title>Jeet Punjabi Tadka — Customer App</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:#090909;overflow:hidden}
+#app{position:fixed;inset:0;border:0;width:100%;height:100%;background:#090909}
+#gate{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:radial-gradient(circle at 50% 25%,#3a2a0b 0,#090909 48%,#050505 100%);padding:24px}
+.card{width:min(430px,94vw);border:1px solid #d8ae42;border-radius:26px;padding:24px 20px;text-align:center;background:linear-gradient(145deg,#1b1509,#090909);box-shadow:0 20px 70px #000}
+.logo{width:min(270px,75vw);aspect-ratio:1;margin:auto;border-radius:28px;object-fit:cover;border:2px solid #d8ae42;box-shadow:0 0 35px #d8ae4255}
+h1{font:900 22px system-ui;color:#f4d77a;margin:17px 0 6px}.sub{color:#bbb;font:500 13px system-ui;margin-bottom:16px}
+button{width:100%;border:1px solid #d8ae42;border-radius:13px;padding:13px 16px;font:900 15px system-ui;cursor:pointer}
+#install{background:#d8ae42;color:#111}#open{background:#17130a;color:#f4d77a;margin-top:9px}
+#share{position:fixed;right:14px;bottom:78px;z-index:15;width:auto;padding:11px 14px;background:#151515;color:#f4d77a;box-shadow:0 8px 24px #0008}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<iframe id="app" src="./index.html?v=customer-shell-1" title="Jeet Punjabi Tadka Customer App"></iframe>
+<div id="gate">
+  <div class="card">
+    <img class="logo" src="./jpt-customer-icon-512.png" alt="Jeet Punjabi Tadka">
+    <h1>JEET PUNJABI TADKA</h1>
+    <div class="sub">Customer App • Direct Ordering</div>
+    <button id="install">INSTALL APP</button>
+    <button id="open">OPEN APP</button>
+  </div>
+</div>
+<button id="share" class="hidden" type="button">↗ SHARE APP</button>
+<script>
+(function(){
+'use strict';
+var gate=document.getElementById('gate'),install=document.getElementById('install'),open=document.getElementById('open'),share=document.getElementById('share');
+var deferred=null;
+function hideGate(){gate.classList.add('hidden');share.classList.remove('hidden');}
+open.addEventListener('click',hideGate);
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferred=e;install.classList.remove('hidden');});
+install.addEventListener('click',async function(){
+  if(!deferred){hideGate();return;}
+  deferred.prompt();
+  try{await deferred.userChoice;}catch(_){}
+  deferred=null;
+  hideGate();
+});
+share.addEventListener('click',async function(){
+  var data={title:'Jeet Punjabi Tadka — Customer App',text:'Open Jeet Punjabi Tadka Customer App',url:new URL('./customer-app.html',location.href).href};
+  if(navigator.share){try{await navigator.share(data);}catch(_){}}
+  else if(navigator.clipboard){try{await navigator.clipboard.writeText(data.url);share.textContent='✓ LINK COPIED';setTimeout(()=>share.textContent='↗ SHARE APP',1600);}catch(_){}}
+});
+window.addEventListener('appinstalled',function(){hideGate();});
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./customer-app-sw.js?v=1',{scope:'./'}).catch(function(){});});}
+})();
+</script>
+</body>
+</html>
