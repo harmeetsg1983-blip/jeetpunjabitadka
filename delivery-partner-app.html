@@ -37,5 +37,6 @@ document.addEventListener('click',async e=>{if(e.target&&e.target.id==='installA
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./delivery-partner-sw.js',{scope:'./'}).catch(()=>{}));}
 </script>
 <script src="./jpt-delivery-sponsor-connector-v2.js?v=2"></script>
+<script src="./jpt-delivery-approval-sync-v1.js?v=1"></script>
 </body>
 </html>
