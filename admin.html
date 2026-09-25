@@ -477,17 +477,6 @@ async function configureScratchSlabs(){
 
   await loadOffers();
     }
-  const slabs=[[20,40,'V106 Scratch Card — 20%'],[30,60,'V106 Scratch Card — 30%'],[40,80,'V106 Scratch Card — 40%'],[50,100,'V106 Scratch Card — 50%'],[60,120,'V106 Scratch Card — 60%']];
-  for(const [pct,cap,title] of slabs){
-    const row={outlet_id:activeOutlet,title,description:'Royal Gold Scratch & Reveal',offer_type:'percent',value:pct,max_discount:cap,scratch_enabled:true,active:true,min_order:0,updated_at:new Date().toISOString()};
-    const q=await sb.from('offers').select('id').eq('outlet_id',activeOutlet).eq('title',title).maybeSingle();
-    if(q.error){toast('Scratch lookup failed: '+q.error.message);return}
-    if(q.data?.id){const u=await sb.from('offers').update(row).eq('id',q.data.id).eq('outlet_id',activeOutlet);if(u.error){toast('Scratch save failed: '+u.error.message);return}}
-    else {const u=await sb.from('offers').insert(row);if(u.error){toast('Scratch save failed: '+u.error.message);return}}
-  }
-  $('scratchNotice').textContent='✅ V106 Royal Gold 5 scratch slabs configured for '+activeOutlet+'.';
-  await loadOffers();
-}
 
 async function loadOffers(){
   const r=await sb.from('offers').select('*').eq('outlet_id',activeOutlet).order('created_at',{ascending:false});
