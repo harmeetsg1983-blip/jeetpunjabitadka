@@ -311,7 +311,7 @@ document.querySelectorAll('.jpt-v9-bottom button').forEach(b=>{
     else if(typeof window.showPanel==='function')window.showPanel(p);
   };
 });
-    }
+    
 
     const select=document.getElementById('outletSelect');
     
