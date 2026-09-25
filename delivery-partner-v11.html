@@ -29,6 +29,6 @@ function startLocation(){if(locationTimer)return;locationTimer=setInterval(async
 async function loadEarnings(){try{let {data,error}=await sb.rpc('delivery_partner_earnings_summary',{p_days:30});if(error)throw error;let rows=Array.isArray(data)?data:[];let delivered=rows.reduce((a,x)=>a+Number(x.delivered_count||0),0),earn=rows.reduce((a,x)=>a+Number(x.earnings||0),0);$('earnings').textContent='Last 30 days: '+delivered+' delivered × ₹50 = ₹'+earn}catch(e){$('earnings').textContent='Earnings unavailable until a verified rider has deliveries.'}}
 function toneFile(){return $('ringtone').files[0]}function startTone(){stopTone();let f=toneFile();if(!f)return;audio=new Audio(URL.createObjectURL(f));audio.loop=true;audio.play().catch(()=>{})}function stopTone(){if(audio){audio.pause();audio.currentTime=0;audio=null}}function testTone(){startTone();setTimeout(stopTone,5000)}
 window.addEventListener('load',async()=>{await refresh();await loadActive();});
-  </script>
-  <script src="./JPT_Delivery_Partner_Onboarding_Persistence_Fix_V1.js"></script>
+<script src="./JPT_Delivery_Partner_Onboarding_Persistence_Fix_V1.js"></script>
+<script src="./jpt-delivery-final-ui-v1.js?v=1"></script>
 </body></html>
