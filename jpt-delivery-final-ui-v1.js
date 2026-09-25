@@ -29,11 +29,14 @@ function css(){
  .jpt-slide img{width:100%;height:100%;display:block;object-fit:cover}
  .jpt-dots{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:5px;z-index:4}
  .jpt-dot{width:7px;height:7px;border-radius:50%;background:#777}.jpt-dot.on{background:#f5d477;box-shadow:0 0 9px #f5d477}
- .jpt-online{border:1px solid #1cff7a;border-radius:20px;padding:16px;
-   background:linear-gradient(145deg,#061b10,#07110b);box-shadow:0 0 14px rgba(28,255,122,.65),0 0 32px rgba(28,255,122,.20);margin-bottom:14px}
- .jpt-online-row{display:flex;align-items:center;gap:12px}.jpt-online strong{font-size:23px;color:#35ff8b}
+  .jpt-online{border:1px solid #1cff7a;border-radius:20px;padding:16px;
+   background:linear-gradient(145deg,#061b10,#07110b);box-shadow:0 0 14px rgba(28,255,122,.65),0 0 32px rgba(28,255,122,.20);margin-bottom:14px;transition:border-color .25s ease,background .25s ease,box-shadow .25s ease}
+ .jpt-online-row{display:flex;align-items:center;gap:12px}.jpt-online strong{font-size:23px;color:#35ff8b;transition:color .25s ease}
  .jpt-online small{display:block;color:#aaa;margin-top:3px}
- .jpt-toggle{margin-left:auto;min-width:118px;padding:12px 14px;border-radius:13px;border:1px solid #1cff7a;background:#103d25;color:#70ffa8;font-weight:900}
+ .jpt-toggle{margin-left:auto;min-width:118px;padding:12px 14px;border-radius:13px;border:1px solid #1cff7a;background:#103d25;color:#70ffa8;font-weight:900;transition:border-color .25s ease,background .25s ease,color .25s ease}
+ .jpt-online.offline{border-color:#ff3b3b;background:linear-gradient(145deg,#210707,#110606);box-shadow:0 0 14px rgba(255,59,59,.70),0 0 32px rgba(255,59,59,.24)}
+ .jpt-online.offline strong{color:#ff5252}
+ .jpt-online.offline .jpt-toggle{border-color:#ff3b3b;background:#3d1010;color:#ff8b8b}
  .jpt-card{background:linear-gradient(145deg,#121212,#090909);border:1px solid #3e3019;border-radius:18px;padding:14px;margin:12px 0}
  .jpt-title{font-size:18px;font-weight:900;color:#f5d477;margin-bottom:10px}
  .jpt-order{border:1px solid #4d3a19;border-radius:15px;padding:13px;background:#0c0c0c}
@@ -126,6 +129,8 @@ function build(){
 }
 
 function setOnlineVisual(on){
+ const box=document.querySelector('#jptFinalUI .jpt-online');
+ if(box) box.classList.toggle('offline',!on);
  document.getElementById('jptOnlineText').textContent=on?'ONLINE':'OFFLINE';
  document.getElementById('jptOnlineSub').textContent=on?'Orders incoming':'You are offline';
  document.getElementById('jptOnlineBtn').textContent=on?'GO OFFLINE':'GO ONLINE';
