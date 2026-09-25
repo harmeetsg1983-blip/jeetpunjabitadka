@@ -63,8 +63,7 @@ jobs:
           set -euo pipefail
 
           case "$COMMAND" in
-            "JPT-CHECK"|"JPT-DIAGNOSE"|"JPT-REPAIR CUSTOMER_SPONSOR_PLACEMENT")
-              echo "GREEN: command allowed"
+                   "JPT-CHECK"|"JPT-DIAGNOSE"|"JPT-REPAIR CUSTOMER_SPONSOR_PLACEMENT"|"JPT-SAFE-REPAIR PARTNER NAV + BACK")  echo "GREEN: command allowed"
               ;;
             *)
               echo "FAIL: command is not allowlisted"
