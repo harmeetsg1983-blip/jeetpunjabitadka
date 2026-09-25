@@ -20,7 +20,7 @@ function css(){
  #jptFinalUI *{box-sizing:border-box}
  .jpt-head{display:flex;align-items:center;gap:12px;padding:8px 0 12px}
  .jpt-avatar{width:58px;height:58px;border-radius:50%;border:1px solid #d8ae42;object-fit:cover;background:#111}
- .jpt-brand{flex:1}.jpt-brand b{display:block;font-size:20px;color:#f5d477}.jpt-brand small{color:#aaa}
+ .jpt-brand{flex:1;text-align:center}.jpt-brand b{display:block;font-size:18px;color:#f5d477;letter-spacing:.4px}.jpt-brand small{color:#aaa;letter-spacing:2px}.jpt-sardar-logo{width:34px;height:34px;margin:0 auto 2px;filter:drop-shadow(0 0 7px rgba(245,212,119,.55))}.jpt-sardar-logo svg{width:100%;height:100%;display:block}
  .jpt-icon{width:48px;height:48px;border-radius:14px;border:1px solid #4d3a19;background:#101010;color:#f5d477;font-size:24px}
  .jpt-banner{position:relative;margin:8px 0 15px;padding:1px;border-radius:20px;background:#e0b33f;
    box-shadow:0 0 10px rgba(224,179,63,.82),0 0 25px rgba(224,179,63,.48),0 0 44px rgba(224,179,63,.20)}
@@ -63,7 +63,18 @@ function build(){
  root.innerHTML=`
  <div class="jpt-head">
    <button class="jpt-icon" id="jptMenu">☰</button>
-   <div class="jpt-brand"><b>DELIVERY PARTNER</b><small>Restaurant Delivery Network</small></div>
+   <div class="jpt-brand">
+     <div class="jpt-sardar-logo" aria-label="Sardar silhouette logo">
+       <svg viewBox="0 0 64 64" role="img" aria-hidden="true">
+         <path d="M32 8c-10 0-18 7-18 16 0 4 1 7 3 10-4 3-7 8-8 14h46c-1-6-4-11-8-14 2-3 3-6 3-10 0-9-8-16-18-16z" fill="none" stroke="#f5d477" stroke-width="3"/>
+         <path d="M17 24c2-8 8-12 15-12s13 4 15 12M22 28c3 3 6 4 10 4s7-1 10-4M27 37h10M20 48c4-4 8-6 12-6s8 2 12 6" fill="none" stroke="#f5d477" stroke-width="3" stroke-linecap="round"/>
+         <circle cx="27" cy="25" r="1.7" fill="#f5d477"/>
+         <circle cx="37" cy="25" r="1.7" fill="#f5d477"/>
+       </svg>
+     </div>
+     <b>JEET PUNJABI TADKA</b>
+     <small>DELIVERY PARTNER</small>
+   </div>
    <button class="jpt-icon" id="jptBell">🔔</button>
  </div>
  <div class="jpt-banner"><div class="jpt-banner-in"><div id="jptSlides"></div><div id="jptDots" class="jpt-dots"></div></div></div>
