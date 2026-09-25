@@ -33,13 +33,7 @@
 
         const gate = document.getElementById('gate');
         if(gate){
-          const note = gate.querySelector('.jptApprovalLiveNote');
-          if(!note){
-            const p = document.createElement('p');
-            p.className = 'muted jptApprovalLiveNote';
-            p.textContent = '✓ Admin approved — Rider Dashboard unlocked. You can now go ONLINE.';
-            gate.appendChild(p);
-          }
+          gate.style.display = 'none';
         }
       }
     }catch(e){
