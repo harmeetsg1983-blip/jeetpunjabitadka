@@ -1,21 +1,16 @@
 {
-  "name": "Jeet Punjabi Tadka — Customer App",
-  "short_name": "JPT Customer",
-  "start_url": "./index.html",
-  "scope": "./",
-  "id": "./index.html",
-  "display": "standalone",
-  "display_override": [
-    "standalone"
-  ],
-  "background_color": "#090909",
-  "theme_color": "#d8ae42",
-  "icons": [
-    {
-      "src": "./jpt-customer-icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+  "id":"./customer-app.html",
+  "name":"Jeet Punjabi Tadka — Customer App",
+  "short_name":"JPT Customer",
+  "start_url":"./customer-app.html",
+  "scope":"./",
+  "display":"standalone",
+  "orientation":"portrait",
+  "background_color":"#090909",
+  "theme_color":"#d8ae42",
+  "description":"Jeet Punjabi Tadka customer ordering app",
+  "icons":[
+    {"src":"./jpt-customer-icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"./jpt-customer-icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
   ]
 }
