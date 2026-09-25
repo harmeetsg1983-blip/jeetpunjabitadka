@@ -677,13 +677,9 @@
       }
     });
 
-    document.getElementById(
-      'jptMasterBottomNav'
-    )?.remove();
+   
 
-    document.getElementById(
-      'jptMasterSubNav'
-    )?.remove();
+    
 
     /*
       Apply visual layers.
