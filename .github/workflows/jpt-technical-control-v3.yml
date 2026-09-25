@@ -13,7 +13,7 @@ on:
     types: [created]
 
 permissions:
-  contents: read
+  contents: write
   issues: read
 
 jobs:
@@ -29,10 +29,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout main
         uses: actions/checkout@v4
         with:
           ref: main
+          fetch-depth: 0
 
       - name: Resolve command
         id: command
@@ -56,37 +58,159 @@ jobs:
       - name: Allowlist gate
         env:
           COMMAND: ${{ steps.command.outputs.command }}
-        run: |
-          set -euo pipefail
-
-          case "$COMMAND" in
-            "JPT-CHECK"|"JPT-DIAGNOSE")
-              echo "GREEN: command allowed"
-              ;;
-            *)
-              echo "FAIL: command is not allowlisted"
-              exit 1
-              ;;
-          esac
-
-      - name: Protected baseline
         shell: bash
         run: |
           set -euo pipefail
 
+          case "$COMMAND" in
+            "JPT-CHECK"|"JPT-DIAGNOSE"|"JPT-REPAIR CUSTOMER_SPONSOR_PLACEMENT")
+              echo "GREEN: command allowed"
+              ;;
+            *)
+              echo "FAIL: command is not allowlisted"
+              echo "COMMAND=$COMMAND"
+              exit 1
+              ;;
+          esac
+
+      - name: Protected baseline before any repair
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "========================================"
+          echo "PROTECTED BASELINE"
+          echo "========================================"
+
           test -f admin.html
+          test -f index.html
           test -f jpt-partner-final-touch-v10.js
+          test -f customer-order-tracking-v106-v2.js
+          test -f jpt-customer-tracking-sponsor-slider-v3.js
+          test -f delivery-partner-app.html
+          test -f jpt-delivery-sponsor-slider-v3.js
+          test -f jpt-sponsor-manager-v2.js
 
           grep -q 'jpt-partner-final-touch-v10.js?v=10-bridge-20260924' admin.html
 
           ! grep -q 'jpt-partner-visual-layer-final-v1.js' admin.html
           ! grep -q 'jpt-partner-visual-skin-v2.js' admin.html
 
-          echo "GREEN: protected baseline passed"
+          echo "GREEN: core files present"
+          echo "GREEN: approved V10 reference present"
+          echo "GREEN: rejected visual references absent"
+
+      - name: Controlled customer sponsor repair
+        if: steps.command.outputs.command == 'JPT-REPAIR CUSTOMER_SPONSOR_PLACEMENT'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "========================================"
+          echo "JPT CONTROLLED CUSTOMER SPONSOR REPAIR"
+          echo "========================================"
+
+          python3 <<'PY'
+          from pathlib import Path
+
+          index = Path("index.html")
+          sponsor = Path("jpt-customer-tracking-sponsor-slider-v3.js")
+
+          index_text = index.read_text(encoding="utf-8")
+          sponsor_text = sponsor.read_text(encoding="utf-8")
+
+          # ------------------------------------------------------------
+          # 1. Customer order tracking bridge must be loaded.
+          #    It is an existing file. No new file is created.
+          # ------------------------------------------------------------
+
+          tracking_script = '<script src="./customer-order-tracking-v106-v2.js?v=v106-tracking-v3"></script>'
+          sponsor_connector = '<script src="./jpt-customer-tracking-sponsor-connector-v2.js?v=2"></script>'
+
+          if tracking_script not in index_text:
+              if sponsor_connector not in index_text:
+                  raise SystemExit(
+                      "FAIL: expected existing customer sponsor connector was not found"
+                  )
+
+              index_text = index_text.replace(
+                  sponsor_connector,
+                  tracking_script + "\n" + sponsor_connector,
+                  1
+              )
+
+          # ------------------------------------------------------------
+          # 2. Replace ONLY the known bad sponsor placement logic.
+          #    The old logic places the sponsor before videoBanner/main,
+          #    which causes it to appear on the customer home page.
+          # ------------------------------------------------------------
+
+          old_mount = """const anchor=document.getElementById('jptOrderTracker')||document.getElementById('videoBanner')||document.querySelector('main')||document.body.firstElementChild;if(anchor?.parentNode)anchor.parentNode.insertBefore(e,anchor);else document.body.appendChild(e)"""
+
+          new_mount = """document.body.appendChild(e);e.style.display='none';const place=()=>{const modal=document.getElementById('modal'),tracker=document.getElementById('jptOrderTracker'),checkout=!!modal?.classList.contains('show'),tracking=!!tracker?.classList.contains('show');e.classList.toggle('jpt-cs-in-tracker',tracking&&!checkout);e.style.display=(checkout||tracking)?'block':'none';if(checkout){const sheet=modal?.querySelector('.sheet'),box=sheet?.querySelector('.box');if(sheet&&box&&e.parentNode!==sheet)sheet.insertBefore(e,box)}else if(tracking){const top=tracker?.querySelector('.jpt-track-top');if(tracker&&top&&e.parentNode!==tracker)top.insertAdjacentElement('afterend',e)}};new MutationObserver(place).observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']});setInterval(place,1000);place()}"""
+
+          if old_mount in sponsor_text:
+              sponsor_text = sponsor_text.replace(old_mount, new_mount, 1)
+          elif "jpt-cs-in-tracker" not in sponsor_text:
+              raise SystemExit(
+                  "FAIL: expected old customer sponsor placement block was not found; "
+                  "repair stopped without modifying the sponsor file"
+              )
+
+          # ------------------------------------------------------------
+          # 3. Add tracker-specific sizing without changing the
+          #    existing sponsor artwork/content logic.
+          # ------------------------------------------------------------
+
+          css_old = """@media(max-width:520px){.jpt-cs-inner{height:190px}}'"""
+
+          css_new = """@media(max-width:520px){.jpt-cs-inner{height:190px}}.jpt-cs-in-tracker{width:100%;margin:10px 0 0;box-sizing:border-box}.jpt-cs-in-tracker .jpt-cs-inner{height:150px}'"""
+
+          if "jpt-cs-in-tracker{width:100%" not in sponsor_text:
+              if css_old not in sponsor_text:
+                  raise SystemExit(
+                      "FAIL: expected sponsor CSS anchor was not found; "
+                      "repair stopped"
+                  )
+              sponsor_text = sponsor_text.replace(css_old, css_new, 1)
+
+          # ------------------------------------------------------------
+          # 4. Write only the two intended source files.
+          # ------------------------------------------------------------
+
+          index.write_text(index_text, encoding="utf-8")
+          sponsor.write_text(sponsor_text, encoding="utf-8")
+
+          print("GREEN: customer tracking script wiring verified")
+          print("GREEN: customer sponsor home-page fallback removed")
+          print("GREEN: checkout/tracking placement logic installed")
+          print("GREEN: no new source file created")
+          PY
+
+      - name: Validate controlled repair scope
+        if: steps.command.outputs.command == 'JPT-REPAIR CUSTOMER_SPONSOR_PLACEMENT'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "========================================"
+          echo "REPAIR SCOPE VALIDATION"
+          echo "========================================"
+
+          grep -q 'customer-order-tracking-v106-v2.js?v=v106-tracking-v3' index.html
+          grep -q 'jpt-customer-tracking-sponsor-connector-v2.js?v=2' index.html
+
+          ! grep -q "getElementById('videoBanner')" jpt-customer-tracking-sponsor-slider-v3.js
+          ! grep -q 'querySelector('\''main'\'')' jpt-customer-tracking-sponsor-slider-v3.js
+
+          grep -q 'jpt-cs-in-tracker' jpt-customer-tracking-sponsor-slider-v3.js
+          grep -q 'getElementById('\''modal'\'')' jpt-customer-tracking-sponsor-slider-v3.js
+          grep -q 'getElementById('\''jptOrderTracker'\'')' jpt-customer-tracking-sponsor-slider-v3.js
+
+          echo "GREEN: customer sponsor placement is restricted"
+          echo "GREEN: customer home fallback is absent"
 
       - name: Full repository diagnosis
-        env:
-          COMMAND: ${{ steps.command.outputs.command }}
         shell: bash
         run: |
           set -euo pipefail
@@ -95,199 +219,146 @@ jobs:
           echo "JPT FULL SYSTEM DIAGNOSIS"
           echo "========================================"
 
-          echo ""
-          echo "===== 1. CORE FILES ====="
-
+          echo "---- CORE FILES ----"
           for f in \
             admin.html \
             index.html \
+            delivery-partner-app.html \
             jpt-partner-final-touch-v10.js \
             jpt-sponsor-manager-v2.js \
+            customer-order-tracking-v106-v2.js \
             jpt-customer-tracking-sponsor-connector-v2.js \
             jpt-customer-tracking-sponsor-slider-v3.js \
             jpt-delivery-sponsor-connector-v2.js \
             jpt-delivery-sponsor-slider-v3.js
           do
-            if [[ -f "$f" ]]; then
-              echo "GREEN: $f"
-            else
-              echo "YELLOW: missing $f"
-            fi
+            test -f "$f"
+            echo "GREEN: $f"
           done
 
-          echo ""
-          echo "===== 2. APPROVED V10 ====="
+          echo "---- V10 PROTECTION ----"
+          grep -q 'jpt-partner-final-touch-v10.js?v=10-bridge-20260924' admin.html
+          test -f jpt-partner-final-touch-v10.js
+          echo "GREEN: approved V10 preserved"
 
-          if grep -q 'jpt-partner-final-touch-v10.js?v=10-bridge-20260924' admin.html; then
-            echo "GREEN: approved V10 loaded"
-          else
-            echo "FAIL: approved V10 load marker missing"
+          echo "---- REJECTED VISUAL LAYERS ----"
+          ! grep -q 'jpt-partner-visual-layer-final-v1.js' admin.html
+          ! grep -q 'jpt-partner-visual-skin-v2.js' admin.html
+          echo "GREEN: rejected visual references absent"
+
+          echo "---- CUSTOMER APP ----"
+          grep -q 'videoBanner' index.html
+          grep -q 'PLACE ORDER' index.html
+          grep -q 'jpt-customer-tracking-sponsor-connector-v2.js' index.html
+          grep -q 'customer-order-tracking-v106-v2.js' index.html
+          echo "GREEN: customer core and tracking wiring present"
+
+          echo "---- PARTNER APP ----"
+          grep -q 'Menu' admin.html
+          grep -q 'Orders' admin.html
+          grep -q 'Offers' admin.html
+          grep -q 'Settings' admin.html
+          echo "GREEN: partner dashboard core markers present"
+
+          echo "---- DELIVERY PARTNER ----"
+          grep -q 'GO ONLINE' delivery-partner-app.html
+          grep -q 'jpt-delivery-sponsor-connector-v2.js' delivery-partner-app.html
+          grep -q 'delivery_partner_sponsor_ads' jpt-delivery-sponsor-slider-v3.js
+          echo "GREEN: delivery partner workflow markers present"
+
+          echo "---- CENTRAL SPONSOR MANAGER ----"
+          grep -q 'delivery_partner_sponsor_ads' jpt-sponsor-manager-v2.js
+          grep -q 'checkout_sponsor_ads' jpt-sponsor-manager-v2.js
+          echo "GREEN: sponsor manager markers present"
+
+          echo "---- CUSTOMER SPONSOR ----"
+          grep -q 'checkout_sponsor_ads' jpt-customer-tracking-sponsor-slider-v3.js
+          grep -q 'jptCustomerSponsor' jpt-customer-tracking-sponsor-slider-v3.js
+
+          if grep -q "getElementById('videoBanner')" jpt-customer-tracking-sponsor-slider-v3.js; then
+            echo "FAIL: customer sponsor still has videoBanner placement fallback"
+            exit 1
           fi
 
-          if grep -q 'const LOGO=' jpt-partner-final-touch-v10.js; then
-            echo "GREEN: embedded V10 logo artwork detected"
-          else
-            echo "YELLOW: embedded V10 logo marker not detected"
+          if grep -q "querySelector('main')" jpt-customer-tracking-sponsor-slider-v3.js; then
+            echo "FAIL: customer sponsor still has main placement fallback"
+            exit 1
           fi
 
-          echo ""
-          echo "===== 3. REJECTED VISUAL LAYERS ====="
+          echo "GREEN: customer sponsor is not wired to home-page fallback"
 
-          if grep -R -n \
-            -e 'jpt-partner-visual-layer-final-v1.js' \
-            -e 'jpt-partner-visual-skin-v2.js' \
-            --include='*.html' --include='*.js' . 2>/dev/null; then
-            echo "FAIL: rejected visual reference found"
-          else
-            echo "GREEN: rejected visual references absent"
+          echo "---- BUTTON / OUTLET / NAV MARKERS ----"
+          grep -q 'outlet' admin.html
+          grep -q 'button' admin.html
+          grep -q 'nav' admin.html
+          echo "GREEN: partner controls/nav markers present"
+
+          echo "---- JAVASCRIPT SYNTAX ----"
+          JS_COUNT=0
+          while IFS= read -r -d '' f; do
+            node --check "$f" >/dev/null
+            JS_COUNT=$((JS_COUNT+1))
+          done < <(find . -maxdepth 1 -type f -name '*.js' -print0)
+
+          echo "GREEN: $JS_COUNT root JavaScript files passed syntax validation"
+
+          echo "---- STALE VISUAL REFERENCES ----"
+          if grep -RIn \
+            --exclude-dir=.git \
+            --exclude='jpt-technical-control-v3.yml' \
+            'jpt-partner-visual-layer-final-v1.js\|jpt-partner-visual-skin-v2.js' \
+            . >/tmp/jpt_stale_refs.txt 2>/dev/null; then
+            echo "FAIL: stale rejected visual reference found"
+            cat /tmp/jpt_stale_refs.txt
+            exit 1
           fi
 
-          echo ""
-          echo "===== 4. OUTLET / ID / PARTNER CONTROLS ====="
+          echo "GREEN: no rejected visual-layer references found"
 
-          if grep -Ein \
-            'outlet|outlet.?id|partner.?id|switch.?outlet|change.?id|select.?outlet' \
-            admin.html | head -40; then
-            echo "GREEN: outlet/ID control code detected"
-          else
-            echo "YELLOW: outlet/ID control code not detected by static scan"
-          fi
-
-          echo ""
-          echo "===== 5. BOTTOM NAVIGATION / BUTTONS ====="
-
-          if grep -Ein \
-            'bottom|nav|navigation|menu|orders|offers|settings|button|onclick' \
-            admin.html | head -80; then
-            echo "GREEN: partner navigation/button code detected"
-          else
-            echo "YELLOW: navigation/button markers not detected"
-          fi
-
-          echo ""
-          echo "===== 6. COLOR / LIGHTING BOARD ====="
-
-          if grep -Ein \
-            'gold|lighting|glow|theme|color|board|premium|black' \
-            admin.html jpt-partner-final-touch-v10.js 2>/dev/null | head -100; then
-            echo "GREEN: color/lighting visual code detected"
-          else
-            echo "YELLOW: color/lighting markers not detected"
-          fi
-
-          echo ""
-          echo "===== 7. SPONSOR MANAGEMENT ====="
-
-          if grep -Ein \
-            'sponsor|advert|carousel|slider|checkout_sponsor_ads|delivery_partner_sponsor_ads' \
-            admin.html jpt-sponsor-manager-v2.js 2>/dev/null | head -120; then
-            echo "GREEN: sponsor management wiring detected"
-          else
-            echo "YELLOW: sponsor management wiring not detected"
-          fi
-
-          echo ""
-          echo "===== 8. CUSTOMER CHECKOUT SPONSOR ====="
-
-          if grep -R -Ein \
-            'checkout_sponsor_ads|checkout.*sponsor|sponsor.*checkout' \
-            --include='*.html' --include='*.js' . 2>/dev/null | head -100; then
-            echo "GREEN: checkout sponsor wiring detected"
-          else
-            echo "YELLOW: checkout sponsor wiring not detected"
-          fi
-
-          echo ""
-          echo "===== 9. CUSTOMER TRACKING SPONSOR ====="
-
-          if [[ -f jpt-customer-tracking-sponsor-connector-v2.js ]] &&
-             [[ -f jpt-customer-tracking-sponsor-slider-v3.js ]]; then
-            echo "GREEN: customer tracking sponsor components present"
-          else
-            echo "YELLOW: customer tracking sponsor components incomplete"
-          fi
-
-          echo ""
-          echo "===== 10. DELIVERY PARTNER SPONSOR ====="
-
-          if grep -R -Ein \
-            'delivery_partner_sponsor_ads|delivery.*sponsor|sponsor.*delivery' \
-            --include='*.html' --include='*.js' . 2>/dev/null | head -100; then
-            echo "GREEN: delivery partner sponsor wiring detected"
-          else
-            echo "YELLOW: delivery partner sponsor wiring not detected"
-          fi
-
-          echo ""
-          echo "===== 11. DELIVERY PARTNER WORKFLOW ====="
-
-          if grep -R -Ein \
-            'delivery.?partner|rider|driver|GO ONLINE|GO OFFLINE|ACCEPT|REJECT|pickup|location|GPS' \
-            --include='*.html' --include='*.js' . 2>/dev/null | head -150; then
-            echo "GREEN: delivery partner workflow markers detected"
-          else
-            echo "YELLOW: delivery partner workflow markers not detected"
-          fi
-
-          echo ""
-          echo "===== 12. JAVASCRIPT SYNTAX CHECK ====="
-
-          JS_ERRORS=0
-
-          while IFS= read -r file; do
-            if ! node --check "$file" >/tmp/jpt-js-error 2>&1; then
-              echo "FAIL: JavaScript syntax error: $file"
-              cat /tmp/jpt-js-error
-              JS_ERRORS=$((JS_ERRORS + 1))
-            fi
-          done < <(find . -type f -name '*.js' \
-            -not -path './.git/*' \
-            -not -path './node_modules/*')
-
-          if [[ "$JS_ERRORS" -eq 0 ]]; then
-            echo "GREEN: JavaScript syntax scan passed"
-          else
-            echo "FAIL: $JS_ERRORS JavaScript file(s) have syntax errors"
-          fi
-
-          echo ""
-          echo "===== 13. BROKEN / STALE VISUAL REFERENCES ====="
-
-          if grep -R -Ein \
-            'visual-skin-v2|visual-layer-final-v1' \
-            --include='*.html' --include='*.js' . 2>/dev/null; then
-            echo "FAIL: stale/rejected visual reference detected"
-          else
-            echo "GREEN: stale/rejected visual references absent"
-          fi
-
-          echo ""
-          echo "===== 14. CUSTOMER / PARTNER / DELIVERY FILE MAP ====="
-
-          echo "--- HTML files ---"
-          find . -maxdepth 2 -type f -name '*.html' \
-            -not -path './.git/*' | sort
-
-          echo ""
-          echo "--- Relevant JS files ---"
-          find . -maxdepth 2 -type f -name '*.js' \
-            -not -path './.git/*' \
-            | grep -Ei \
-            'partner|customer|delivery|sponsor|tracking|admin|menu|order|checkout' \
-            | sort || true
-
-          echo ""
           echo "========================================"
-          echo "JPT DIAGNOSIS COMPLETE"
-          echo "NO SOURCE FILES WERE MODIFIED"
+          echo "GREEN: FULL REPOSITORY DIAGNOSIS PASSED"
           echo "========================================"
 
-      - name: Final validation
+      - name: Verify only intended files changed
+        if: steps.command.outputs.command == 'JPT-REPAIR CUSTOMER_SPONSOR_PLACEMENT'
         shell: bash
         run: |
           set -euo pipefail
 
+          echo "========================================"
+          echo "CHANGE SCOPE"
+          echo "========================================"
+
+          git status --short
+
+          CHANGED="$(git status --short | awk '{print $2}')"
+
+          if [[ -n "$CHANGED" ]]; then
+            while IFS= read -r file; do
+              case "$file" in
+                index.html|jpt-customer-tracking-sponsor-slider-v3.js)
+                  ;;
+                *)
+                  echo "FAIL: unexpected modified file: $file"
+                  exit 1
+                  ;;
+              esac
+            done <<< "$CHANGED"
+          fi
+
+          echo "GREEN: only approved customer files may be committed"
+
+      - name: Final protected validation
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "========================================"
+          echo "FINAL PROTECTED VALIDATION"
+          echo "========================================"
+
           test -f admin.html
+          test -f index.html
           test -f jpt-partner-final-touch-v10.js
 
           grep -q 'jpt-partner-final-touch-v10.js?v=10-bridge-20260924' admin.html
@@ -295,4 +366,44 @@ jobs:
           ! grep -q 'jpt-partner-visual-layer-final-v1.js' admin.html
           ! grep -q 'jpt-partner-visual-skin-v2.js' admin.html
 
-          echo "GREEN: protected validation passed"
+          echo "GREEN: admin.html protected"
+          echo "GREEN: V10 protected"
+          echo "GREEN: rejected visual layers protected"
+
+      - name: Commit controlled repair
+        if: steps.command.outputs.command == 'JPT-REPAIR CUSTOMER_SPONSOR_PLACEMENT'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git add index.html jpt-customer-tracking-sponsor-slider-v3.js
+
+          if git diff --cached --quiet; then
+            echo "GREEN: no source change required"
+            exit 0
+          fi
+
+          git diff --cached --check
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git commit -m "Repair customer sponsor placement"
+          git push origin HEAD:main
+
+          echo "GREEN: controlled repair committed to main"
+
+      - name: Final status
+        shell: bash
+        run: |
+          echo "========================================"
+          echo "JPT TECHNICAL CONTROL V3 COMPLETE"
+          echo "========================================"
+          echo "Command: ${{ steps.command.outputs.command }}"
+          echo "Protected V10: GREEN"
+          echo "Customer core: GREEN"
+          echo "Partner core: GREEN"
+          echo "Delivery partner: GREEN"
+          echo "Sponsor controls: GREEN"
+          echo "Repository validation: GREEN"
+          echo "========================================"
