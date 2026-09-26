@@ -125,7 +125,7 @@ if(settingsHost && !document.getElementById('jptSponsorLauncherV2')){
    const path='sponsors/'+Date.now()+'-'+Math.random().toString(36).slice(2,9)+'.jpg';
    const up=await sb().storage.from(bucket).upload(path,safe,{upsert:false,contentType:'image/jpeg'});if(up.error)throw up.error;
    const url=sb().storage.from(bucket).getPublicUrl(path).data.publicUrl,targetAll=r.target.value==='all',outlet=r.outlet.value||currentOutlet();
-   const row={title:r.title.value.trim()||r.sponsor.value.trim()||'Sponsor Banner',sponsor_name:r.sponsor.value.trim(),media_type:'image',media_url:url,poster_url:url,target_all_live:targetAll,outlet_ids:targetAll?null:[outlet],is_active:true,sort_order:Number(r.sort.value||0),starts_at:r.start.value?new Date(r.start.value).toISOString():null,ends_at:r.end.value?new Date(r.end.value).toISOString():null,created_by:(await sb().auth.getUser()).data.user?.id||null};
+   const row={title:r.title.value.trim()||r.sponsor.value.trim()||'Sponsor Banner',sponsor_name:r.sponsor.value.trim(),media_type:'image',media_url:url,poster_url:url,target_all_live:targetAll,outlet_ids:targetAll?[]:[outlet],is_active:true,sort_order:Number(r.sort.value||0),starts_at:r.start.value?new Date(r.start.value).toISOString():null,ends_at:r.end.value?new Date(r.end.value).toISOString():null,created_by:(await sb().auth.getUser()).data.user?.id||null};
    const ins=await sb().from(table).insert(row);if(ins.error)throw ins.error;
    r.msg.textContent='Banner added successfully.';r.file.value='';r.crop.style.display='none';await refresh();
   }catch(e){r.msg.textContent=e.message||'Upload failed.'}finally{r.save.disabled=false}
