@@ -59,34 +59,38 @@ function cropEditor(ref){
 async function mount(){
  const h=host();if(!h||document.getElementById('jptSponsorManager'))return;
 if(!(await isCentral()))return;
+// V2 visibility bridge: expose Sponsor Ads V2 inside Settings.
+const settingsHost = h;
 
-// V2 visibility bridge: expose Sponsor Ads as a dedicated Partner Dashboard tab.
-const tabs=document.querySelector('.tabs');
+if(settingsHost && !document.getElementById('jptSponsorLauncherV2')){
+  const btn = document.createElement('button');
 
-if(tabs&&!document.querySelector('[data-panel="sponsors"]')){
-  const btn=document.createElement('button');
+  btn.id = 'jptSponsorLauncherV2';
+  btn.type = 'button';
+  btn.className = 'btn';
+  btn.textContent = '📢 Sponsor Ads V2';
 
-  btn.className='btn';
-  btn.dataset.panel='sponsors';
-  btn.textContent='📢 Sponsor Ads V2';
+  btn.style.cssText =
+    'display:block;margin:0 0 14px;width:100%;' +
+    'background:#171717;color:#f4d77a;' +
+    'border:1px solid #d4af37;border-radius:10px;' +
+    'padding:11px 14px;font-weight:900;cursor:pointer;';
 
-  btn.onclick=()=>{
-    document.querySelectorAll('.panel').forEach(x=>{
-      x.classList.toggle('active',x.id==='sponsors');
-    });
-
-    document.querySelectorAll('.tabs .btn').forEach(x=>{
-      x.classList.toggle('gold',x===btn);
-    });
+  btn.onclick = () => {
+    if(typeof window.showPanel === 'function'){
+      window.showPanel('settings');
+    }
 
     document.getElementById('jptSponsorManager')
-      ?.scrollIntoView({behavior:'smooth',block:'start'});
+      ?.scrollIntoView({
+        behavior:'smooth',
+        block:'start'
+      });
   };
 
-  tabs.appendChild(btn);
+  settingsHost.insertBefore(btn, settingsHost.firstChild);
 }
-
-css();
+s();
  const box=document.createElement('section');box.id='jptSponsorManager';
  box.innerHTML=`<div class="jpt-sm"><h3>✨ Sponsor Advertisement Manager V2</h3>
  <div class="sub">Central Owner controls Delivery Partner + Customer Tracking sponsor banners. Image-only • crop • zoom • drag • schedule • outlet targeting.</div>
