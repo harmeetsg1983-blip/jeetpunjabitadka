@@ -8,7 +8,7 @@ if(window.__JPT_DELIVERY_FINAL_UI_V2__) return;
 window.__JPT_DELIVERY_FINAL_UI_V2__ = true;
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const sbx=()=>window.sb||window.supabaseClient||null;
+const sbx=()=>window.sb||window.supabaseClient||(typeof sb!=='undefined'?sb:null);
 
 function css(){
   if(document.getElementById('jptFinalUiCss')) return;
