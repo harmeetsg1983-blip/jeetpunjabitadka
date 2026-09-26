@@ -38,7 +38,7 @@
       </div>
       <div id="jptTimingRows"></div>
       <div class="rowactions" style="margin-top:10px">
-        <button class="btn gold" id="jptTimingSave">Save Timings</button>
+        <button class="btn gold" id="jptTimingSave" style="background:#d8ae42!important;color:#111!important;border:1px solid #d8ae42!important;font-weight:700!important;opacity:1!important;visibility:visible!important;">Save Timings</button>
         <button class="btn" id="jptTimingRefresh">↻ Refresh</button>
       </div>
       <div id="jptTimingNotice" class="notice">Loading timing settings…</div>
@@ -174,8 +174,7 @@
     const patch = {
       opening_time: fallbackOpen + ':00',
       closing_time: fallbackClose + ':00',
-      metadata: meta,
-      updated_at: new Date().toISOString()
+      metadata: meta
     };
 
     let r = await sb.from('outlets').update(patch).eq('code',outletId);
