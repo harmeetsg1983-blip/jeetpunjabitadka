@@ -58,8 +58,35 @@ function cropEditor(ref){
 }
 async function mount(){
  const h=host();if(!h||document.getElementById('jptSponsorManager'))return;
- if(!(await isCentral()))return;
- css();
+if(!(await isCentral()))return;
+
+// V2 visibility bridge: expose Sponsor Ads as a dedicated Partner Dashboard tab.
+const tabs=document.querySelector('.tabs');
+
+if(tabs&&!document.querySelector('[data-panel="sponsors"]')){
+  const btn=document.createElement('button');
+
+  btn.className='btn';
+  btn.dataset.panel='sponsors';
+  btn.textContent='📢 Sponsor Ads V2';
+
+  btn.onclick=()=>{
+    document.querySelectorAll('.panel').forEach(x=>{
+      x.classList.toggle('active',x.id==='sponsors');
+    });
+
+    document.querySelectorAll('.tabs .btn').forEach(x=>{
+      x.classList.toggle('gold',x===btn);
+    });
+
+    document.getElementById('jptSponsorManager')
+      ?.scrollIntoView({behavior:'smooth',block:'start'});
+  };
+
+  tabs.appendChild(btn);
+}
+
+css();
  const box=document.createElement('section');box.id='jptSponsorManager';
  box.innerHTML=`<div class="jpt-sm"><h3>✨ Sponsor Advertisement Manager V2</h3>
  <div class="sub">Central Owner controls Delivery Partner + Customer Tracking sponsor banners. Image-only • crop • zoom • drag • schedule • outlet targeting.</div>
