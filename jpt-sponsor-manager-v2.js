@@ -90,7 +90,7 @@ if(settingsHost && !document.getElementById('jptSponsorLauncherV2')){
 
   settingsHost.insertBefore(btn, settingsHost.firstChild);
 }
-s();
+ css();
  const box=document.createElement('section');box.id='jptSponsorManager';
  box.innerHTML=`<div class="jpt-sm"><h3>✨ Sponsor Advertisement Manager V2</h3>
  <div class="sub">Central Owner controls Delivery Partner + Customer Tracking sponsor banners. Image-only • crop • zoom • drag • schedule • outlet targeting.</div>
