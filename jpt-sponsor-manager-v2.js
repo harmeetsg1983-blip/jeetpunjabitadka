@@ -15,7 +15,7 @@ const CUSTOMER_BUCKET='checkout-sponsor-media';
 
 function sb(){return window.sb||window.supabaseClient||null}
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function host(){return document.querySelector('#settingsPanel')||document.querySelector('[data-panel="settings"]')||document.querySelector('#settings')||document.querySelector('.settings-panel')}
+function host(){return document.querySelector('#settings')||document.querySelector('#settingsPanel')||document.querySelector('.settings-panel')}
 function currentOutlet(){const s=document.getElementById('outletSelect');return window.activeOutlet||s?.value||''}
 async function isCentral(){try{const r=await sb()?.rpc('partner_access_is_central_owner');return !r?.error&&r.data===true}catch(e){return false}}
 async function load(table){const r=await sb().from(table).select('*').order('sort_order',{ascending:true}).order('created_at',{ascending:false});if(r.error)throw r.error;return r.data||[]}
