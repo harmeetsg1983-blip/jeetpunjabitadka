@@ -58,7 +58,8 @@ function cropEditor(ref){
 }
 async function mount(){
  const h=host();if(!h||document.getElementById('jptSponsorManager'))return;
-if(!(await isCentral()))return;
+// Sponsor Manager visibility is controlled by the authenticated Partner Dashboard.
+// Database RLS remains the final security layer.
 
 // V2 visibility bridge: expose Sponsor Ads as a dedicated Partner Dashboard tab.
 const tabs=document.querySelector('.tabs');
