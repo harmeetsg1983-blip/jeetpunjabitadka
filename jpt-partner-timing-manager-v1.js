@@ -38,7 +38,7 @@
       </div>
       <div id="jptTimingRows"></div>
       <div class="rowactions" style="margin-top:10px">
-        <button class="btn gold" id="jptTimingSave" style="background:#d8ae42!important;color:#111!important;border:1px solid #d8ae42!important;font-weight:700!important;opacity:1!important;visibility:visible!important;">Save Timings</button>
+        <button type="button" id="jptTimingSave" style="display:block!important;width:100%!important;min-height:56px!important;padding:14px 20px!important;margin:0!important;background:#d8ae42!important;color:#111!important;border:1px solid #d8ae42!important;border-radius:14px!important;font-size:18px!important;font-weight:800!important;line-height:1.2!important;opacity:1!important;visibility:visible!important;text-align:center!important;">Save Timings</button>
         <button class="btn" id="jptTimingRefresh">↻ Refresh</button>
       </div>
       <div id="jptTimingNotice" class="notice">Loading timing settings…</div>
