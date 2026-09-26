@@ -23,9 +23,6 @@
     const verified = /verified|approved/i.test(verify.textContent || '');
 
    if(submitted && verified){
-  if(typeof window.show === 'function'){
-    window.show('home');
-  }
   gate.style.display = 'none';
 }else{
   gate.style.display = '';
