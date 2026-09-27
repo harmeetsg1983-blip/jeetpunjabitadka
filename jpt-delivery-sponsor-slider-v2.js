@@ -1,42 +1,1117 @@
-/* JPT Delivery Sponsor Slider V2 — outlet targeting fix */
+/* JPT Sponsor Manager V2
+   Central Owner sponsor manager.
+   Additive: preserves existing sponsor tables and storage buckets.
+   Adds image crop/zoom/position before upload and outlet targeting.
+*/
 (function(){
 'use strict';
-if(window.__JPT_DELIVERY_SPONSOR_SLIDER_V2__)return;
-window.__JPT_DELIVERY_SPONSOR_SLIDER_V2__=true;
-const TABLE='delivery_partner_sponsor_ads';
+if(window.__JPT_SPONSOR_MANAGER_V2__) return;
+window.__JPT_SPONSOR_MANAGER_V2__=true;
+
+const DELIVERY_TABLE='delivery_partner_sponsor_ads';
+const CUSTOMER_TABLE='checkout_sponsor_ads';
+const DELIVERY_BUCKET='delivery-partner-sponsors';
+const CUSTOMER_BUCKET='checkout-sponsor-media';
+
 function sb(){return window.sb||window.supabaseClient||null}
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function getOutlet(){
- const q=new URLSearchParams(location.search).get('outlet');
- if(q)return q;
- for(const k of ['jpt_delivery_outlet','delivery_outlet_id','jpt_outlet_id']){try{const v=localStorage.getItem(k);if(v)return v}catch(e){}}
- return window.JPT_DELIVERY_OUTLET_ID||window.activeOutlet||'';
+function host(){return document.querySelector('#settings')||document.querySelector('#settingsPanel')||document.querySelector('.settings-panel')}
+function currentOutlet(){const s=document.getElementById('outletSelect');return window.activeOutlet||s?.value||''}
+
+async function isCentral(){
+  try{
+    const r=await sb()?.rpc('partner_access_is_central_owner');
+    return !r?.error&&r.data===true
+  }catch(e){
+    return false
+  }
 }
-function ensure(){
- if(document.getElementById('jptDeliverySponsor'))return document.getElementById('jptDeliverySponsor');
- const s=document.createElement('style');s.id='jptDeliverySponsorCssV2';s.textContent=`#jptDeliverySponsor{position:relative;margin:12px 0 16px;border-radius:22px;padding:2px;background:linear-gradient(135deg,#2ee879,#d8aa45,#2ee879);box-shadow:0 0 28px rgba(49,197,107,.28),0 0 55px rgba(216,170,69,.14)}.jpt-ds-inner{position:relative;min-height:190px;border-radius:20px;overflow:hidden;background:#070707}.jpt-ds-glow{position:absolute;inset:-35%;background:radial-gradient(circle at 20% 50%,rgba(49,197,107,.28),transparent 38%),radial-gradient(circle at 85% 20%,rgba(216,170,69,.20),transparent 34%);pointer-events:none}.jpt-ds-slide{position:absolute;inset:0;opacity:0;transition:opacity .65s ease;display:grid;place-items:center}.jpt-ds-slide.on{opacity:1}.jpt-ds-slide img{width:100%;height:100%;object-fit:cover;display:block}.jpt-ds-shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.25),transparent 45%,rgba(0,0,0,.18))}.jpt-ds-dots{position:absolute;left:50%;bottom:9px;transform:translateX(-50%);display:flex;gap:5px;z-index:3;max-width:80%;overflow:hidden}.jpt-ds-dot{width:6px;height:6px;border-radius:50%;background:#ffffff77}.jpt-ds-dot.on{background:#f4d77a;box-shadow:0 0 8px #f4d77a}@media(max-width:520px){.jpt-ds-inner{min-height:175px}}`;document.head.appendChild(s);
- const el=document.createElement('section');el.id='jptDeliverySponsor';el.innerHTML='<div class="jpt-ds-inner"><div class="jpt-ds-glow"></div><div id="jptDsSlides"></div><div id="jptDsDots" class="jpt-ds-dots"></div></div>';
- const home=document.getElementById('home');(home?.firstElementChild?.parentNode||document.querySelector('main')||document.body).insertBefore(el,home?.firstElementChild||null);return el;
+
+async function load(table){
+  const r=await sb()
+    .from(table)
+    .select('*')
+    .order('sort_order',{ascending:true})
+    .order('created_at',{ascending:false});
+
+  if(r.error)throw r.error;
+  return r.data||[];
 }
-async function load(){
- const client=sb();if(!client)return[];
- const r=await client.from(TABLE).select('id,media_url,title,sponsor_name,target_all_live,outlet_ids,is_active,starts_at,ends_at,sort_order').eq('is_active',true).order('sort_order',{ascending:true}).order('created_at',{ascending:false});
- if(r.error)return[];
- const now=Date.now(),outlet=String(getOutlet()||'');
- return (r.data||[]).filter(x=>{
-  const live=!x.starts_at||new Date(x.starts_at).getTime()<=now;
-  const end=!x.ends_at||new Date(x.ends_at).getTime()>=now;
-  const target=x.target_all_live || (outlet && Array.isArray(x.outlet_ids) && x.outlet_ids.includes(outlet));
-  return live&&end&&target;
- });
+
+async function outlets(ref){
+  const r=await sb()
+    .from('outlets')
+    .select('code,name')
+    .order('name');
+
+  if(r.error)throw r.error;
+
+  ref.outlet.innerHTML=(r.data||[])
+    .map(o=>`<option value="${esc(o.code)}">${esc(o.name||o.code)}</option>`)
+    .join('');
 }
-async function start(){
- const el=ensure(),slides=el.querySelector('#jptDsSlides'),dots=el.querySelector('#jptDsDots');let idx=0,timer;
- async function refresh(){
-  const rows=await load();slides.innerHTML=rows.map((x,i)=>`<div class="jpt-ds-slide ${i===0?'on':''}"><img src="${esc(x.media_url)}" alt="${esc(x.sponsor_name||x.title||'Sponsor')}"><div class="jpt-ds-shade"></div></div>`).join('');dots.innerHTML=rows.map((x,i)=>`<i class="jpt-ds-dot ${i===0?'on':''}></i>`).join('');idx=0;clearInterval(timer);if(rows.length>1)timer=setInterval(()=>{const ss=slides.children;if(!ss.length)return;ss[idx]?.classList.remove('on');dots.children[idx]?.classList.remove('on');idx=(idx+1)%ss.length;ss[idx]?.classList.add('on');dots.children[idx]?.classList.add('on')},5000);
+
+function css(){
+  if(document.getElementById('jptSponsorManagerCssV2'))return;
+
+  const s=document.createElement('style');
+  s.id='jptSponsorManagerCssV2';
+
+  s.textContent=`
+ #jptSponsorManager{
+   margin-top:18px
  }
- await refresh();setInterval(refresh,60000);
+ .jpt-sm{
+   background:linear-gradient(145deg,#151515,#090909);
+   border:1px solid rgba(212,175,55,.4);
+   border-radius:20px;
+   padding:16px;
+   color:#fff;
+   box-shadow:0 12px 38px #0008
+ }
+ .jpt-sm h3{
+   margin:0;
+   color:#f4d77a
+ }
+ .jpt-sm .sub{
+   font-size:12px;
+   color:#aaa;
+   margin-top:4px
+ }
+ .jpt-sm-tabs{
+   display:flex;
+   gap:8px;
+   margin:14px 0;
+   flex-wrap:wrap
+ }
+ .jpt-sm-tabs button{
+   border:1px solid #4a3818;
+   background:#151515;
+   color:#ddd;
+   border-radius:10px;
+   padding:9px 12px;
+   font-weight:800
+ }
+ .jpt-sm-tabs button.on{
+   border-color:#d4af37;
+   color:#f4d77a;
+   background:#211a0d
+ }
+ .jpt-sm-grid{
+   display:grid;
+   grid-template-columns:1fr 1fr;
+   gap:12px
+ }
+ .jpt-sm label{
+   font-size:11px;
+   color:#c8c8c8
+ }
+ .jpt-sm input,
+ .jpt-sm select{
+   width:100%;
+   box-sizing:border-box;
+   background:#0a0a0a;
+   color:#fff;
+   border:1px solid #51401f;
+   border-radius:10px;
+   padding:10px;
+   margin:5px 0 9px
+ }
+ .jpt-sm button{
+   cursor:pointer
+ }
+ .jpt-sm-primary{
+   background:linear-gradient(135deg,#f4d77a,#c69229);
+   color:#111;
+   border:0;
+   border-radius:10px;
+   padding:11px 14px;
+   font-weight:900
+ }
+ .jpt-sm-preview{
+   height:190px;
+   border-radius:14px;
+   border:1px solid #4a3818;
+   background:#050505;
+   overflow:hidden;
+   display:grid;
+   place-items:center;
+   margin:4px 0 10px
+ }
+ .jpt-sm-preview img{
+   max-width:100%;
+   max-height:100%;
+   object-fit:contain
+ }
+ .jpt-crop{
+   background:#050505;
+   border:1px solid #493719;
+   border-radius:14px;
+   padding:10px;
+   margin:8px 0
+ }
+ .jpt-crop canvas{
+   display:block;
+   width:100%;
+   height:auto;
+   max-height:280px;
+   background:#111;
+   border-radius:10px
+ }
+ .jpt-crop-row{
+   display:grid;
+   grid-template-columns:1fr 1fr 1fr;
+   gap:8px;
+   margin-top:8px
+ }
+ .jpt-crop button{
+   background:#211a0d;
+   color:#f4d77a;
+   border:1px solid #5a461b;
+   border-radius:9px;
+   padding:8px;
+   font-weight:800
+ }
+ .jpt-sm-list{
+   margin-top:16px
+ }
+ .jpt-sm-item{
+   display:grid;
+   grid-template-columns:110px 1fr auto;
+   gap:10px;
+   align-items:center;
+   border-top:1px solid #292929;
+   padding:10px 0
+ }
+ .jpt-sm-thumb{
+   width:110px;
+   height:62px;
+   object-fit:contain;
+   object-position:center;
+   background:#080808;
+   border-radius:9px;
+   border:1px solid #493719
+ }
+ .jpt-sm-chip{
+   display:inline-block;
+   padding:4px 7px;
+   border-radius:999px;
+   border:1px solid #493719;
+   font-size:10px;
+   margin:2px
+ }
+ .jpt-sm-danger{
+   background:#291111;
+   color:#ffb8b8;
+   border:1px solid #733;
+   border-radius:9px;
+   padding:8px 10px
+ }
+ .jpt-sm-note{
+   font-size:11px;
+   color:#aaa;
+   line-height:1.45
+ }
+ @media(max-width:700px){
+   .jpt-sm-grid{
+     grid-template-columns:1fr
+   }
+   .jpt-sm-item{
+     grid-template-columns:82px 1fr
+   }
+   .jpt-sm-item button{
+     grid-column:1/-1
+   }
+   .jpt-sm-thumb{
+     width:82px;
+     height:54px
+   }
+ }
+ `;
+
+  document.head.appendChild(s)
 }
-function boot(){const t=setInterval(()=>{if(document.getElementById('home')&&sb()){clearInterval(t);start()}},700)}
-boot();
+
+function cropEditor(ref){
+  let img=null,
+      scale=1,
+      ox=0,
+      oy=0,
+      drag=false,
+      lx=0,
+      ly=0,
+      ready=false;
+
+  const canvas=ref.canvas;
+  const ctx=canvas.getContext('2d');
+
+  function draw(){
+    if(!img)return;
+
+    const w=canvas.width;
+    const h=canvas.height;
+
+    ctx.fillStyle='#111';
+    ctx.fillRect(0,0,w,h);
+
+    const iw=img.width*scale;
+    const ih=img.height*scale;
+
+    ctx.drawImage(
+      img,
+      (w-iw)/2+ox,
+      (h-ih)/2+oy,
+      iw,
+      ih
+    );
+  }
+
+  function fit(){
+    if(!img)return;
+
+    const cw=900;
+    const ch=330;
+
+    canvas.width=cw;
+    canvas.height=ch;
+
+    scale=Math.max(
+      cw/img.width,
+      ch/img.height
+    );
+
+    ox=0;
+    oy=0;
+
+    draw();
+  }
+
+  ref.file.onchange=()=>{
+    const f=ref.file.files?.[0];
+    if(!f)return;
+
+    const u=URL.createObjectURL(f);
+
+    img=new Image();
+
+    img.onload=()=>{
+      fit();
+
+      ref.cropBox.style.display='block';
+
+      if(ref.preview){
+        ref.preview.src=u;
+        ref.preview.style.display='block';
+      }
+
+      ready=true;
+    };
+
+    img.src=u;
+  };
+
+  ref.zoomIn.onclick=()=>{
+    if(!img)return;
+    scale*=1.12;
+    draw();
+  };
+
+  ref.zoomOut.onclick=()=>{
+    if(!img)return;
+    scale=Math.max(scale/1.12,0.05);
+    draw();
+  };
+
+  ref.center.onclick=()=>{
+    if(!img)return;
+    ox=0;
+    oy=0;
+    draw();
+  };
+
+  canvas.addEventListener('pointerdown',e=>{
+    if(!img)return;
+
+    drag=true;
+    lx=e.clientX;
+    ly=e.clientY;
+
+    canvas.setPointerCapture(e.pointerId);
+  });
+
+  canvas.addEventListener('pointermove',e=>{
+    if(!drag)return;
+
+    ox+=e.clientX-lx;
+    oy+=e.clientY-ly;
+
+    lx=e.clientX;
+    ly=e.clientY;
+
+    draw();
+  });
+
+  canvas.addEventListener('pointerup',()=>{
+    drag=false;
+  });
+
+  return {
+    ready,
+
+    exportBlob:()=>new Promise((resolve,reject)=>{
+      if(!img){
+        reject(new Error('Choose an image first.'));
+        return;
+      }
+
+      canvas.toBlob(
+        b=>b
+          ?resolve(b)
+          :reject(new Error('Crop export failed.')),
+        'image/jpeg',
+        .92
+      );
+    })
+  };
+}
+
+async function mount(){
+  const h=host();
+
+  if(!h||document.getElementById('jptSponsorManager'))return;
+
+  if(!(await isCentral()))return;
+
+  const settingsHost=h;
+
+  if(
+    settingsHost &&
+    !document.getElementById('jptSponsorLauncherV2')
+  ){
+    const btn=document.createElement('button');
+
+    btn.id='jptSponsorLauncherV2';
+    btn.type='button';
+    btn.className='btn';
+    btn.textContent='📢 Sponsor Ads V2';
+
+    btn.style.cssText=
+      'display:block;margin:0 0 14px;width:100%;'+
+      'background:#171717;color:#f4d77a;'+
+      'border:1px solid #d4af37;border-radius:10px;'+
+      'padding:11px 14px;font-weight:900;cursor:pointer;';
+
+    btn.onclick=()=>{
+      if(typeof window.showPanel==='function'){
+        window.showPanel('settings');
+      }
+
+      document.getElementById('jptSponsorManager')
+        ?.scrollIntoView({
+          behavior:'smooth',
+          block:'start'
+        });
+    };
+
+    settingsHost.insertBefore(
+      btn,
+      settingsHost.firstChild
+    );
+  }
+
+  css();
+
+  const box=document.createElement('section');
+  box.id='jptSponsorManager';
+
+  box.innerHTML=`
+  <div class="jpt-sm">
+
+    <h3>✨ Sponsor Advertisement Manager V2</h3>
+
+    <div class="sub">
+      Central Owner controls Delivery Partner + Customer Tracking sponsor banners.
+      Image-only • crop • zoom • drag • schedule • outlet targeting.
+    </div>
+
+    <div class="jpt-sm-tabs">
+      <button id="jptSmDelivery" class="on">
+        Delivery Partner
+      </button>
+
+      <button id="jptSmCustomer">
+        Customer Tracking
+      </button>
+    </div>
+
+    <div class="jpt-sm-grid">
+
+      <div>
+        <label>Sponsor Name</label>
+        <input
+          id="jptSmSponsor"
+          placeholder="Sponsor / Brand">
+      </div>
+
+      <div>
+        <label>Banner Title</label>
+        <input
+          id="jptSmTitle"
+          placeholder="Optional title">
+      </div>
+
+    </div>
+
+    <label>Banner Image</label>
+
+    <input
+      id="jptSmFile"
+      type="file"
+      accept="image/*">
+
+    <div
+      id="jptSmCrop"
+      class="jpt-crop"
+      style="display:none">
+
+      <canvas id="jptSmCanvas"></canvas>
+
+      <div class="jpt-crop-row">
+
+        <button id="jptSmZoomOut">
+          − Zoom
+        </button>
+
+        <button id="jptSmCenter">
+          Center
+        </button>
+
+        <button id="jptSmZoomIn">
+          ＋ Zoom
+        </button>
+
+      </div>
+
+      <div
+        class="jpt-sm-note"
+        style="margin-top:6px">
+
+        Drag the image inside the frame to position it.
+
+      </div>
+
+    </div>
+
+    <div class="jpt-sm-grid">
+
+      <div>
+        <label>Target</label>
+
+        <select id="jptSmTarget">
+
+          <option value="all">
+            All live users
+          </option>
+
+          <option value="outlet">
+            Selected outlet
+          </option>
+
+        </select>
+      </div>
+
+      <div>
+        <label>Sort Order</label>
+
+        <input
+          id="jptSmSort"
+          type="number"
+          value="0"
+          min="0">
+      </div>
+
+    </div>
+
+    <div
+      id="jptSmOutletWrap"
+      style="display:none">
+
+      <label>Outlet</label>
+
+      <select id="jptSmOutlet"></select>
+
+    </div>
+
+    <div class="jpt-sm-grid">
+
+      <div>
+        <label>Start (optional)</label>
+
+        <input
+          id="jptSmStart"
+          type="datetime-local">
+      </div>
+
+      <div>
+        <label>End (optional)</label>
+
+        <input
+          id="jptSmEnd"
+          type="datetime-local">
+      </div>
+
+    </div>
+
+    <button
+      id="jptSmSave"
+      class="jpt-sm-primary">
+
+      ADD SPONSOR BANNER
+
+    </button>
+
+    <div
+      id="jptSmMsg"
+      class="jpt-sm-note">
+    </div>
+
+    <div class="jpt-sm-list">
+
+      <b>Saved Banners</b>
+
+      <div
+        id="jptSmList"
+        class="jpt-sm-note">
+
+        Loading...
+
+      </div>
+
+    </div>
+
+  </div>
+  `;
+
+  h.appendChild(box);
+
+  const r={};
+
+  [
+    'jptSmDelivery',
+    'jptSmCustomer',
+    'jptSmSponsor',
+    'jptSmTitle',
+    'jptSmFile',
+    'jptSmCrop',
+    'jptSmCanvas',
+    'jptSmZoomOut',
+    'jptSmCenter',
+    'jptSmZoomIn',
+    'jptSmTarget',
+    'jptSmOutletWrap',
+    'jptSmOutlet',
+    'jptSmSort',
+    'jptSmStart',
+    'jptSmEnd',
+    'jptSmSave',
+    'jptSmMsg',
+    'jptSmList'
+  ].forEach(id=>{
+    r[
+      id.replace('jptSm','').toLowerCase()
+    ]=document.getElementById(id);
+  });
+
+  let mode='delivery';
+
+  const editor=cropEditor({
+    file:r.file,
+    cropBox:r.crop,
+    canvas:r.canvas,
+    zoomOut:r.zoomout,
+    center:r.center,
+    zoomIn:r.zoomin,
+    preview:r.preview||document.createElement('img')
+  });
+
+  async function fillOutlets(){
+    await outlets({
+      outlet:r.outlet
+    });
+  }
+
+  await fillOutlets();
+
+  r.target.onchange=()=>{
+    r.outletwrap.style.display=
+      r.target.value==='outlet'
+        ?'block'
+        :'none';
+  };
+
+  const setMode=x=>{
+    mode=x;
+
+    r.delivery.classList.toggle(
+      'on',
+      x==='delivery'
+    );
+
+    r.customer.classList.toggle(
+      'on',
+      x==='customer'
+    );
+
+    refresh();
+  };
+
+  r.delivery.onclick=()=>{
+    setMode('delivery');
+  };
+
+  r.customer.onclick=()=>{
+    setMode('customer');
+  };
+
+  async function refresh(){
+
+    try{
+
+      const table=
+        mode==='delivery'
+          ?DELIVERY_TABLE
+          :CUSTOMER_TABLE;
+
+      const bucket=
+        mode==='delivery'
+          ?DELIVERY_BUCKET
+          :CUSTOMER_BUCKET;
+
+      const rows=await load(table);
+
+      r.list.innerHTML=rows.length
+        ?rows.map(x=>`
+
+          <div class="jpt-sm-item">
+
+            <img
+              class="jpt-sm-thumb"
+              src="${esc(x.media_url)}">
+
+            <div>
+
+              <b>
+                ${esc(
+                  x.sponsor_name||
+                  x.title||
+                  'Sponsor'
+                )}
+              </b>
+
+              <div class="jpt-sm-note">
+
+                ${esc(x.title||'')}
+                ·
+                ${x.is_active?'ON':'OFF'}
+                · order ${x.sort_order??0}
+
+              </div>
+
+              <span class="jpt-sm-chip">
+
+                ${
+                  x.target_all_live
+                    ?'ALL LIVE'
+                    :(x.outlet_ids||[]).join(', ')
+                }
+
+              </span>
+
+            </div>
+
+            <div
+              style="display:flex;gap:6px;flex-wrap:wrap">
+
+              <button
+                class="jpt-sm-danger"
+                data-action="toggle"
+                data-id="${esc(x.id)}"
+                data-active="${x.is_active?'1':'0'}">
+
+                ${x.is_active
+                  ?'TURN OFF'
+                  :'TURN ON'}
+
+              </button>
+
+              <button
+                class="jpt-sm-danger"
+                data-action="delete"
+                data-id="${esc(x.id)}"
+                data-url="${esc(x.media_url||'')}">
+
+                🗑 DELETE
+
+              </button>
+
+            </div>
+
+          </div>
+
+        `).join('')
+
+        :'No sponsor banners yet.';
+
+      r.list
+        .querySelectorAll(
+          'button[data-action="toggle"]'
+        )
+        .forEach(b=>{
+
+          b.onclick=async()=>{
+
+            const q=await sb()
+              .from(table)
+              .update({
+                is_active:
+                  b.dataset.active!=='1'
+              })
+              .eq(
+                'id',
+                b.dataset.id
+              );
+
+            if(q.error){
+
+              r.msg.textContent=
+                q.error.message;
+
+            }else{
+
+              await refresh();
+
+            }
+
+          };
+
+        });
+
+      r.list
+        .querySelectorAll(
+          'button[data-action="delete"]'
+        )
+        .forEach(b=>{
+
+          b.onclick=async()=>{
+
+            if(
+              !confirm(
+                'Delete this sponsor banner permanently? The saved image will also be removed.'
+              )
+            ){
+              return;
+            }
+
+            b.disabled=true;
+
+            r.msg.textContent=
+              'Deleting banner and image...';
+
+            try{
+
+              const mediaUrl=
+                b.dataset.url||'';
+
+              let storagePath='';
+
+              const marker=
+                '/storage/v1/object/public/'+
+                bucket+
+                '/';
+
+              const pos=
+                mediaUrl.indexOf(marker);
+
+              if(pos!==-1){
+
+                storagePath=
+                  decodeURIComponent(
+                    mediaUrl.slice(
+                      pos+marker.length
+                    )
+                  );
+
+              }
+
+              if(storagePath){
+
+                const rm=await sb()
+                  .storage
+                  .from(bucket)
+                  .remove([
+                    storagePath
+                  ]);
+
+                if(rm.error){
+                  throw rm.error;
+                }
+
+              }
+
+              const del=await sb()
+                .from(table)
+                .delete()
+                .eq(
+                  'id',
+                  b.dataset.id
+                );
+
+              if(del.error){
+                throw del.error;
+              }
+
+              r.msg.textContent=
+                'Banner and saved image deleted successfully.';
+
+              await refresh();
+
+            }catch(e){
+
+              b.disabled=false;
+
+              r.msg.textContent=
+                e.message||
+                'Delete failed.';
+
+            }
+
+          };
+
+        });
+
+    }catch(e){
+
+      r.list.textContent=
+        e.message||
+        'Unable to load banners.';
+
+    }
+
+  }
+
+  r.save.onclick=async()=>{
+
+    const file=
+      r.file.files?.[0];
+
+    if(!file){
+
+      r.msg.textContent=
+        'Please choose a banner image.';
+
+      return;
+    }
+
+    r.save.disabled=true;
+
+    r.msg.textContent=
+      'Cropping and uploading...';
+
+    try{
+
+      const blob=
+        await editor.exportBlob();
+
+      const safe=
+        new File(
+          [
+            blob
+          ],
+          (file.name||'sponsor')+'.jpg',
+          {
+            type:'image/jpeg'
+          }
+        );
+
+      const bucket=
+        mode==='delivery'
+          ?DELIVERY_BUCKET
+          :CUSTOMER_BUCKET;
+
+      const table=
+        mode==='delivery'
+          ?DELIVERY_TABLE
+          :CUSTOMER_TABLE;
+
+      const path=
+        'sponsors/'+
+        Date.now()+
+        '-' +
+        Math.random()
+          .toString(36)
+          .slice(2,9)+
+        '.jpg';
+
+      const up=
+        await sb()
+          .storage
+          .from(bucket)
+          .upload(
+            path,
+            safe,
+            {
+              upsert:false,
+              contentType:'image/jpeg'
+            }
+          );
+
+      if(up.error){
+        throw up.error;
+      }
+
+      const url=
+        sb()
+          .storage
+          .from(bucket)
+          .getPublicUrl(path)
+          .data
+          .publicUrl;
+
+      const targetAll=
+        r.target.value==='all';
+
+      const outlet=
+        r.outlet.value||
+        currentOutlet();
+
+      const row={
+
+        title:
+          r.title.value.trim()||
+          r.sponsor.value.trim()||
+          'Sponsor Banner',
+
+        sponsor_name:
+          r.sponsor.value.trim(),
+
+        media_type:
+          'image',
+
+        media_url:
+          url,
+
+        poster_url:
+          url,
+
+        target_all_live:
+          targetAll,
+
+        outlet_ids:
+          targetAll
+            ?[]
+            :[outlet],
+
+        is_active:
+          true,
+
+        sort_order:
+          Number(
+            r.sort.value||0
+          ),
+
+        starts_at:
+          r.start.value
+            ?new Date(
+              r.start.value
+            ).toISOString()
+            :null,
+
+        ends_at:
+          r.end.value
+            ?new Date(
+              r.end.value
+            ).toISOString()
+            :null,
+
+        created_by:
+          (
+            await sb()
+              .auth
+              .getUser()
+          )
+          .data
+          .user?.id||
+          null
+
+      };
+
+      const ins=
+        await sb()
+          .from(table)
+          .insert(row);
+
+      if(ins.error){
+        throw ins.error;
+      }
+
+      r.msg.textContent=
+        'Banner added successfully.';
+
+      r.file.value='';
+
+      r.crop.style.display=
+        'none';
+
+      await refresh();
+
+    }catch(e){
+
+      r.msg.textContent=
+        e.message||
+        'Upload failed.';
+
+    }finally{
+
+      r.save.disabled=false;
+
+    }
+
+  };
+
+  await refresh();
+}
+
+function boot(){
+
+  let n=0;
+
+  const t=setInterval(
+    async()=>{
+
+      try{
+        await mount();
+      }catch(e){}
+
+      if(
+        document.getElementById(
+          'jptSponsorManager'
+        )||
+        ++n>60
+      ){
+        clearInterval(t);
+      }
+
+    },
+    500
+  );
+
+}
+
+document.readyState==='loading'
+  ?document.addEventListener(
+      'DOMContentLoaded',
+      boot
+    )
+  :boot();
+
 })();
