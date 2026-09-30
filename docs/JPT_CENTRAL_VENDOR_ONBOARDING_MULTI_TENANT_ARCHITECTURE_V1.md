@@ -228,3 +228,11 @@ Phase I — scale/security/load testing
 No production feature is declared GREEN until the access boundary is tested with at least two different outlets and cross-outlet access is proven blocked.
 
 No financial feature is declared GREEN until server-side source-of-truth, auditability, and reconciliation behavior are verified.
+
+
+## Onboarding source-contract checkpoint — 01 Oct 2026
+- Current onboarding UI creates a `restaurant_partner_applications` record and uses the existing `partner-approve-restaurant` Edge Function for approval.
+- The approval Edge Function is the authoritative boundary for Outlet ID creation and Partner access, but its implementation is not present in the repository source available to this audit.
+- Existing partner sessions resolve authorized outlets through `partner_my_outlets`; the access bridge stores/uses the returned canonical `outlet_id` values.
+- Therefore the scalable onboarding UI must not invent outlet IDs, partner-access rows, authentication provisioning, or RLS policies on the client.
+- Phase B/D implementation remains blocked until the authoritative Edge Function/data-contract source is available. The current UI may be treated as an application workflow, not as proof that full automated onboarding/account provisioning is production-complete.
