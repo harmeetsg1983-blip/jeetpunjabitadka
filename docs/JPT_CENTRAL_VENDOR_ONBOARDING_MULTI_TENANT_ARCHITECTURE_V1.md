@@ -367,3 +367,13 @@ No financial feature is declared GREEN until server-side source-of-truth, audita
 - Therefore no client-side workaround, service-role bypass, or new duplicate delivery backend has been introduced.
 - Phase F security authority remains YELLOW/BLOCKED until authoritative backend function/RLS definitions or controlled runtime evidence are available.
 - No production code changed.
+
+
+## Phase G sales/reporting source checkpoint — 01 Oct 2026
+- Active `admin.html` Finance/Reports source derives figures from the selected outlet's live `orders` rows; it does not load a separate sales/settlement aggregate.
+- Gross is derived from each loaded row's `subtotal`, falling back through `total`, `grand_total`, or `amount`; discounts are summed from `discount`; status counts are derived from the same rows.
+- The active source explicitly labels these as outlet-scoped operational figures and does not claim settlement/payout authority.
+- A separate legacy `jpt-v106-partner-operations-v2.js` contains an `ALL OUTLETS` sales presentation path, but it is not evidenced as loaded by the active `admin.html`; it must not be promoted into the production Central Finance source without a fresh source/backend audit.
+- The conceptual `JPT_Restaurant_Partner_Large_Model_Finance_Settlement_V2.html` remains non-production and contains example figures.
+- Phase G operational reporting source is therefore identified; final financial reporting/settlement remains blocked by missing authoritative backend ledger/RPC/RLS evidence.
+- No production code changed.
