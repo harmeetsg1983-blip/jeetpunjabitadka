@@ -61,3 +61,13 @@ No GREEN claim until these are runtime-tested.
 - Customer media surfaces remain distinct: #heroTrack (legacy outlet-media surface), #videoBanner (media-hotfix-v4 canonical Home Hero), and #highlightGrid (controlled customer outlet showcase).
 - No deletion, disablement, schema/RLS change, or customer order/menu change is authorized from this checkpoint.
 - Safe next boundary: runtime-test the three customer media surfaces and Banner V4 E2E, then define migration/retirement of legacy writers only after their stored records and readers are proven non-dependent.
+
+
+## Settings injector ownership checkpoint — 01 Oct 2026
+- `admin.html` loads multiple Settings-related modules in sequence; the `#settings` element is a shared host, not a single feature owner.
+- Central Owner gated media managers: Sponsor Manager V2 and Sponsor Media Manager V4 mount into Settings only after the existing `partner_access_is_central_owner` check.
+- Banner Control Center V4 is the controlled visual owner for the outlet-banner surface and explicitly hides the legacy Sponsor Manager V2, Sponsor Media Manager V4, and Outlet Media V1 DOM owners when it mounts.
+- Restaurant Partner Onboarding UI V2 remains a separate functional module with its own Central Owner check and approval/application workflow; it must not be hidden merely because media ownership is consolidated.
+- Partner Timing Manager V1 remains a separate Settings functional module and writes timing settings for the active outlet; it must retain its own ownership until its backend contract is independently audited.
+- Campaign Media Layer V4 is a separate campaign/creative workflow and is not equivalent to the outlet-banner control surface.
+- Therefore a future Settings Hub should become a navigation/ownership shell over these verified functional modules, not a second implementation of their business logic. No existing module is authorized for deletion from this checkpoint.
