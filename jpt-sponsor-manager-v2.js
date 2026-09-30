@@ -43,6 +43,11 @@ function cropEditor(ref){
  }
  ref.file.onchange=()=>{
   const f=ref.file.files?.[0];if(!f)return;
+  const isVideo=/^video\\//i.test(f.type)||/\\.(mp4|webm|ogg)$/i.test(f.name);
+  if(isVideo){
+    img=null;ref.cropBox.style.display='block';canvas.width=900;canvas.height=330;
+    const x=canvas.getContext('2d');x.fillStyle='#111';x.fillRect(0,0,900,330);x.fillStyle='#f4d77a';x.font='700 28px system-ui';x.textAlign='center';x.fillText('VIDEO SELECTED',450,150);x.font='500 18px system-ui';x.fillStyle='#aaa';x.fillText('No crop required • original video will be uploaded',450,195);ready=true;return;
+  }
   const u=URL.createObjectURL(f);img=new Image();img.onload=()=>{fit();ref.cropBox.style.display='block';ref.preview.src=u;ref.preview.style.display='block';ready=true};img.src=u;
  };
  ref.zoomIn.onclick=()=>{if(!img)return;scale*=1.12;draw()};
