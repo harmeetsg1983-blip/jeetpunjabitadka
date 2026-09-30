@@ -57,7 +57,8 @@ function editor(){
  function reset(){media=null;video=null;type='image';scale=1;ox=0;oy=0}
  function setPreview(host,file){
   reset();
-  const isVideo=String(file.type||'').toLowerCase().startsWith('video/')||/\.(mp4|webm|ogg)$/i.test(String(file.name||''));
+  const name=String(file.name||'').toLowerCase();
+  const isVideo=String(file.type||'').toLowerCase().startsWith('video/')||['.mp4','.webm','.ogg'].some(ext=>name.endsWith(ext));
   type=isVideo?'video':'image';
   const u=URL.createObjectURL(file);
   host.innerHTML='';
@@ -95,7 +96,8 @@ function editor(){
 }
 
 async function uploadMedia(file,bucket,folder){
- const ext=(file.name.match(/\\.(mp4|webm|ogg|jpg|jpeg|png|webp)$/i)||['.bin'])[0].toLowerCase();
+ const lower=String(file.name||'').toLowerCase();
+ const ext=['.mp4','.webm','.ogg','.jpg','.jpeg','.png','.webp'].find(x=>lower.endsWith(x))||'.bin';
  const path=folder+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,9)+ext;
  const r=await sb().storage.from(bucket).upload(path,file,{upsert:false,cacheControl:'60',contentType:file.type||'application/octet-stream'});
  if(r.error)throw new Error('MEDIA UPLOAD FAILED: '+r.error.message);
@@ -139,7 +141,8 @@ async function deactivateOutletMedia(code){
 
 async function saveOutletBanner(code,file,title,ed,preview,msgEl){
  if(!file)throw new Error('Please choose an image or video.');
- const isVideo=/^video\\//i.test(file.type)||/\\.(mp4|webm|ogg)$/i.test(file.name);
+ const lower=String(file.name||'').toLowerCase();
+ const isVideo=String(file.type||'').toLowerCase().startsWith('video/')||['.mp4','.webm','.ogg'].some(ext=>lower.endsWith(ext));
  if(isVideo&&file.size>60*1024*1024)throw new Error('Video must be under 60MB.');
  if(!isVideo&&file.size>12*1024*1024)throw new Error('Image must be under 12MB.');
  msg(msgEl,'Uploading media…',true);
@@ -305,7 +308,8 @@ async function renderSponsorSurface(kind){
    const b=wrap.querySelector('[data-push]'),f=file.files?.[0];b.disabled=true;
    try{
     if(!f)throw new Error('Choose an image or video first.');
-    const isVideo=String(f.type||'').toLowerCase().startsWith('video/')||/\.(mp4|webm|ogg)$/i.test(String(f.name||''));
+    const lower=String(f.name||'').toLowerCase();
+    const isVideo=String(f.type||'').toLowerCase().startsWith('video/')||['.mp4','.webm','.ogg'].some(ext=>lower.endsWith(ext));
     if(isVideo&&f.size>60*1024*1024)throw new Error('Video must be under 60MB.');
     const prepared=await ed.blob(f),up=await uploadMedia(prepared,bucket,'manager-v3/'+kind);
     const current=await sb().from(table).select('id').eq('is_active',true);
