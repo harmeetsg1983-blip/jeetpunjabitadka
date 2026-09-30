@@ -45,6 +45,7 @@ function css(){
  .jpt-bcc-list{border-top:1px solid #292929;margin-top:12px;padding-top:10px}.jpt-bcc-row{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #222}.jpt-bcc-thumb{width:70px;height:44px;object-fit:cover;border-radius:7px;background:#050505}
  .jpt-bcc-legacy{border:1px dashed #59451d;padding:8px;border-radius:9px;color:#aaa;font-size:10px;margin-top:7px}
  .jpt-bcc-global{border:1px solid #40351f;border-radius:16px;padding:12px;margin-top:12px;background:#0c0c0c}
+ #jptOutletMediaV1{display:none!important}
  @media(max-width:700px){.jpt-bcc-fields{grid-template-columns:1fr}.jpt-bcc-preview{height:260px}.jpt-bcc-tools{grid-template-columns:repeat(2,1fr)}}
  `;document.head.appendChild(s)
 }
@@ -155,7 +156,7 @@ async function saveOutletBanner(code,file,title,ed,preview,msgEl){
   priority:100,
   banner_url:isVideo?null:up.url,
   video_url:isVideo?up.url:null,
-  schedule_json:{version:2,campaign_type:'media',media_type:isVideo?'video':'image',video_url:isVideo?up.url:null,image_url:isVideo?null:up.url,placement:'top',banner_control_id:FIXED_IDS[code]||('OUT-'+String(code||'').replace(/[^A-Za-z0-9_-]/g,'').slice(0,24))}
+  schedule_json:{version:3,campaign_type:'media',surface:'customer_outlet_showcase',media_type:isVideo?'video':'image',video_url:isVideo?up.url:null,image_url:isVideo?null:up.url,placement:'outlet_showcase',publication:'published',banner_control_id:FIXED_IDS[code]||('OUT-'+String(code||'').replace(/[^A-Za-z0-9_-]/g,'').slice(0,24))}
  };
  const ins=await sb().from(CAMPAIGNS).insert(row);
  if(ins.error)throw new Error('BANNER SAVE FAILED: '+ins.error.message);
