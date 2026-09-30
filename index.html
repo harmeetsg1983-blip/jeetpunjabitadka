@@ -126,19 +126,22 @@ const money=n=>'₹'+Math.max(0,Math.round(Number(n||0))).toLocaleString('en-IN'
 function toast(t){$('toast')?.remove();let x=document.createElement('div');x.id='toast';x.className='toast';x.textContent=t;document.body.appendChild(x);setTimeout(()=>x.remove(),2200)}
 function setTheme(){document.documentElement.style.setProperty('--accent',OUTLETS[outletId].accent);$('restaurant').textContent=outletRecords[outletId]?.name||OUTLETS[outletId].name;$('menuTitle').textContent=(outletId==='JPT-001'?'📋 Jeet Punjabi Tadka Menu':'📋 '+(outletRecords[outletId]?.name||OUTLETS[outletId].name)+' Menu')}
 function renderOutlets(){const bar=$('outletbar');if(!bar)return;const q=String($('outletSearch')?.value||'').trim().toLowerCase();const all=Object.entries(OUTLETS);const current=all.find(([id])=>id===outletId);const filtered=q?all.filter(([id,o])=>String(id+' '+(o.name||'')).toLowerCase().includes(q)):all.slice(0,12);const rows=current&&!filtered.some(([id])=>id===outletId)?[current,...filtered]:filtered;bar.innerHTML=rows.map(([id,o])=>`<button class="outlet ${id===outletId?'on':''}" onclick="switchOutlet('${id}')">${esc(o.name)}</button>`).join('')}
-function renderHighlights(){
+async function renderHighlights(){
  const title=document.querySelector('.section');
  const grid=$('highlightGrid');
  if(title&&grid){const show=outletId==='JPT-001'; title.style.display=show?'':'none'; grid.style.display=show?'':'none';}
  const ids=Object.keys(OUTLETS).filter(id=>id!=='JPT-001').slice(0,12);
  const showcaseByOutlet={};
- (campaigns||[]).filter(activeWindow).filter(c=>{
+ try{
+  const cr=ids.length?await sb.from('campaigns').select('*').in('outlet_id',ids):{data:[],error:null};
+  if(!cr.error)(cr.data||[]).filter(activeWindow).filter(c=>{
    const s=c.schedule_json||{};
    return s.campaign_type==='media'&&s.surface==='customer_outlet_showcase';
- }).sort((a,b)=>Number(b.priority||0)-Number(a.priority||0)||String(b.created_at||'').localeCompare(String(a.created_at||''))).forEach(c=>{
+  }).sort((a,b)=>Number(b.priority||0)-Number(a.priority||0)||String(b.created_at||'').localeCompare(String(a.created_at||''))).forEach(c=>{
    const id=String(c.outlet_id||'').trim();
    if(id&&!showcaseByOutlet[id])showcaseByOutlet[id]=c;
- });
+  });
+ }catch(e){}
  $('highlightGrid').innerHTML=ids.map(id=>{
   const o=OUTLETS[id], rec=outletRecords[id]||{}, os=(offersByOutlet[id]||[]).filter(activeWindow);
   const best=os[0], label=best?offerText(best):'View menu';
