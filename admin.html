@@ -587,12 +587,15 @@ function primeNewOrderAudio(){
     if(p&&p.then)p.then(()=>{a.pause();a.currentTime=0;a.muted=false}).catch(()=>{a.muted=false});
   }catch(e){}
 }
-let lastOrderStamp=localStorage.getItem('jpt_v107_last_order_'+activeOutlet)||'';
+const jptAlarmedOrders=new Set();
 function orderItemsText(x){
   const a=Array.isArray(x.items)?x.items:[];
   return a.map(i=>`${i.name||i.item_name||'Item'} × ${Number(i.qty??i.quantity??1)}`).join(', ');
 }
 function showOrderAlarm(order){
+  const alarmKey=String(order?.id||order?.order_no||'');
+  if(alarmKey && jptAlarmedOrders.has(alarmKey))return;
+  if(alarmKey)jptAlarmedOrders.add(alarmKey);
   $('orderAlarmText').textContent='New order '+(order?.order_no||'')+' received for '+(currentOutletRow?.name||activeOutlet)+'.';
   $('orderAlarm').style.display='block';$('orderAlarm').classList.add('alarmPulse');
   try{navigator.vibrate?.([300,120,300]);}catch(e){}
@@ -620,6 +623,7 @@ async function orderAction(id,status,extra={}){
     const patch={status,updated_at:new Date().toISOString(),...extra};
     const r=await sb.from('orders').update(patch).eq('id',id).eq('outlet_id',activeOutlet);
     if(r.error){toast('Order update failed: '+r.error.message);return false}
+    if(String(status)!=='new')stopOrderAlarm();
     await loadOrders();return true;
   }finally{jptOrderActionBusy.delete(key)}
 }
