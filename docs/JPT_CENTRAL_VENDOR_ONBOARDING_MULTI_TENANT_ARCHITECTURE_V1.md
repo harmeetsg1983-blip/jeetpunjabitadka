@@ -348,3 +348,13 @@ No financial feature is declared GREEN until server-side source-of-truth, audita
 - Refund/cancellation policy text documents customer-facing policy context, but does not establish a transactional refund ledger or authoritative settlement implementation.
 - Therefore Phase G financial/settlement implementation remains BLOCKED/YELLOW pending authoritative backend schema/RPC/function/RLS evidence and reconciliation tests.
 - No production code changed.
+
+
+## Phase F delivery lifecycle source-chain checkpoint — 01 Oct 2026
+- Delivery runtime source chain is present for offer → rider response → active assignment → status progression → location writes → location-stop → earnings summary.
+- Offer discovery uses server RPC `delivery_partner_offer_snapshot`; rider response uses `delivery_assignment_respond`; active assignment uses `delivery_partner_assignment_snapshot`; status transitions use `delivery_assignment_status`.
+- Location lifecycle uses `delivery_partner_record_location` during an active assignment and `delivery_partner_stop_location_sharing` on completion in the stronger audited V9/V11 flow.
+- Restaurant Partner delivery bridge uses server-side offer/assignment functions rather than client-created assignment IDs.
+- This confirms the client-side lifecycle wiring, but does NOT prove server authorization, outlet isolation, race handling, or post-completion location rejection because authoritative RPC bodies/RLS policies are not present in the repository evidence.
+- Required runtime/security gate remains: unauthorized rider cannot see/accept another rider's assignment; assignment remains tied to order/outlet; concurrent acceptance cannot create duplicate active assignment; unauthorized location writes are rejected; completed assignments cannot continue location writes; only eligible approved ONLINE riders receive offers.
+- No production code changed.
