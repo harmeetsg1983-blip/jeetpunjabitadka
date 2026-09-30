@@ -188,3 +188,11 @@ Before creating the new onboarding UI/module, obtain and map the actual Supabase
 - Existing image mapping writes both `menu_item_images` and, where supported, `menu_items.image_url`; no replacement menu schema is authorized from this audit.
 - Phase C should therefore add onboarding/import tooling around these existing contracts rather than creating a second menu model.
 - PDF/OCR extraction is not yet evidenced as a production backend capability in the repository. It must remain a future prefill/review workflow until its authoritative implementation and permissions are available.
+
+
+## PDF menu import evidence checkpoint — 01 Oct 2026
+- Repository search found no authoritative production implementation for PDF menu upload, PDF parsing/OCR, extracted menu-item staging, human review/publish, or related backend permissions.
+- Therefore PDF upload/import must not be represented as a working production feature yet.
+- The supported current Phase C path is the existing manual menu management contract: outlet-scoped categories, menu items, prices/availability, and menu-item image mapping.
+- When PDF import is implemented, it must stage extracted data for human review before publishing into the existing menu contracts; it must not silently write extracted prices/items directly into the live customer menu.
+- Required future evidence: storage contract for PDFs, extraction service/Edge Function, staging data contract, validation/review workflow, publish transaction, authorization/RLS, error handling, and audit trail.
