@@ -138,7 +138,7 @@ function renderHighlights(){
   return `<div class="highlight" style="${style}" onclick="switchOutlet('${id}')"><b style="color:${o.accent}">${esc(rec.name||o.name)}</b><small>${id} • Direct outlet ordering</small><div class="offer" style="border:1px solid ${o.accent}">${esc(label)}</div></div>`
  }).join('');
 }
-async function switchOutlet(id){outletId=id;history.pushState({outlet:id},'',location.pathname+'?outlet='+encodeURIComponent(id));cartState={};selectedPromo=null;items=[];offers=[];campaigns=[];imageMap={};setTheme();renderOutlets();await loadManagedMenu()}
+async function switchOutlet(id){outletId=id;history.pushState({outlet:id},'',location.pathname+'?outlet='+encodeURIComponent(id));cartState={};selectedPromo=null;items=[];offers=[];campaigns=[];imageMap={};setTheme();renderOutlets();await loadManagedMenu();window.dispatchEvent(new CustomEvent('jpt:outlet-changed',{detail:{outletId:id}}))}
 function renderChips(cats){$('chips').innerHTML=['All',...cats].map((c,i)=>`<button class="chip ${i===0?'on':''}" data-cat="${esc(c)}" onclick="filterCat(this.dataset.cat,this)">${esc(c)}</button>`).join('')}
 function render(list=items){
  const cats=[...new Set(list.map(x=>x.category).filter(Boolean))];
