@@ -210,12 +210,7 @@ function renderVideo(){
  });
  /* JPT legacy/customer campaign media is intentionally handled by the same lower queue. */
  
- (campaigns||[]).slice().sort((a,b)=>Number(a.sort_order??9999)-Number(b.sort_order??9999)).forEach(c=>{
-   const video=c.video_url||c.video||c.video_banner_url||c.media_video_url;
-   const image=c.image_url||c.banner_image||c.media_url||c.banner_url||c.video_thumbnail||c.thumbnail_url;
-   if(video) media.push({type:'video',src:video,poster:image||''});
-   else if(image) media.push({type:'image',src:image});
- });
+
  if(!media.length){
    $('videoBanner').innerHTML='<div class="videoFallback"><div><b>🎬 Festival & Restaurant Media</b>Campaign image/video will appear here.</div></div>';
    return;
