@@ -254,3 +254,10 @@ No financial feature is declared GREEN until server-side source-of-truth, audita
 - Delivery Tracking V2 requests its tracking snapshot with the active outlet ID and listens to delivery assignment changes as an auxiliary view.
 - Order Alert V4 persists the alerted order's `outlet_id` and rechecks the order status before restoring an alert; however, the repository does not provide the server-side authorization/RLS definition proving that a malicious or mis-scoped realtime/client request can never cross outlet boundaries.
 - Therefore Phase E is source-supported for client-side outlet scoping but is NOT GREEN. Required verification: two distinct partner accounts/outlets, new orders on each, alert isolation, order-list isolation, mutation isolation, refresh/reconnect isolation, and server-side cross-outlet denial.
+
+
+## Phase E backend-authority evidence audit — 01 Oct 2026
+- Repository search confirms production Partner runtime depends on `partner_my_outlets` for authorized outlet discovery and on `partner-approve-restaurant` Edge Function for onboarding approval.
+- Repository search did not find authoritative `CREATE POLICY`/RLS SQL for the `orders` table, nor an auditable server-side policy definition proving partner-specific cross-outlet denial.
+- Existing client/runtime filters are therefore evidence of intended outlet scoping, not proof of authorization.
+- No code change is authorized from this audit. Phase E remains YELLOW/BLOCKED pending backend policy/function evidence and a two-outlet negative-access runtime test.
