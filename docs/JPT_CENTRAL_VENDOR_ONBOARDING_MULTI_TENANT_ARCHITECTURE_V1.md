@@ -236,3 +236,12 @@ No financial feature is declared GREEN until server-side source-of-truth, audita
 - Existing partner sessions resolve authorized outlets through `partner_my_outlets`; the access bridge stores/uses the returned canonical `outlet_id` values.
 - Therefore the scalable onboarding UI must not invent outlet IDs, partner-access rows, authentication provisioning, or RLS policies on the client.
 - Phase B/D implementation remains blocked until the authoritative Edge Function/data-contract source is available. The current UI may be treated as an application workflow, not as proof that full automated onboarding/account provisioning is production-complete.
+
+
+## Partner account / login evidence checkpoint — 01 Oct 2026
+- Current Partner runtime obtains the authenticated Supabase session and then resolves authorized outlets through `partner_my_outlets`.
+- The dynamic access bridge uses the returned canonical `outlet_id` values and `access_level`; local storage only remembers the selected authorized outlet and is not treated as the authorization source.
+- Role/permission UI hides Central Owner-only controls for outlet partners, but this is presentation control; server-side authorization remains authoritative.
+- Repository evidence does not establish a production contact-number OTP provisioning flow for restaurant partners, nor the implementation of account creation inside `partner-approve-restaurant`.
+- Therefore Phase D must reuse the existing authenticated session + `partner_my_outlets` contract and must not invent client-side account provisioning or authorization.
+- Required backend evidence before declaring Phase D complete: partner account provisioning contract, contact/OTP authentication contract, outlet-access assignment contract, role/access policy, and two-outlet cross-access test.
