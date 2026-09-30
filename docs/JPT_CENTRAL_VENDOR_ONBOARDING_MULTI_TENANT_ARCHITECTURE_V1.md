@@ -330,3 +330,12 @@ No financial feature is declared GREEN until server-side source-of-truth, audita
 - Financial status remains NOT GREEN. No payout formula, commission, GST, TDS, settlement amount, or rider earnings calculation should be invented or copied from conceptual/legacy UI.
 - Required evidence before financial GREEN: authoritative server-side source of truth, append-safe/auditable ledger, outlet/order/rider linkage, reconciliation path, defined payout/commission/tax rules, and negative-access tests.
 - No production code changed in this checkpoint.
+
+
+## Phase G operational finance/reporting source checkpoint — 01 Oct 2026
+- Current `admin.html` Finance panel loads live order rows for the selected outlet and derives operational figures: order count, gross order value, discounts and net after discounts. The UI explicitly states that cross-outlet rows are not loaded and that delivery/settlement payout is not estimated.
+- Current Reports panel derives New / In Progress / Completed / Cancelled counts from the same selected-outlet order rows.
+- Repository evidence does not establish a separate authoritative accounting/settlement ledger behind these figures. Therefore these panels should be treated as operational reporting, not final financial settlement/accounting.
+- No cross-outlet aggregate financial reporting should be added until a central-owner reporting contract and authoritative backend source are evidenced.
+- Phase G financial GREEN gate remains unmet: authoritative server-side financial source, immutable/auditable ledger, reconciliation, refund/adjustment handling, outlet/rider linkage, and permission/RLS evidence are still required.
+- No production code changed in this checkpoint.
