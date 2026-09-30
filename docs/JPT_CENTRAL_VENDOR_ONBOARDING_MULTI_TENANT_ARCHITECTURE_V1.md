@@ -310,3 +310,13 @@ No financial feature is declared GREEN until server-side source-of-truth, audita
 - However, authoritative RPC bodies/RLS are still absent from the repository. Therefore server-side eligibility, outlet isolation, duplicate acceptance/race handling, and unauthorized assignment access are NOT independently proven and remain blocked from GREEN.
 - Required runtime/backend evidence: rider A cannot see/accept B's assignment; assignment must remain tied to its order/outlet; only eligible ONLINE/approved riders receive offers; concurrent acceptance cannot create duplicate active assignment; status transitions and completed delivery remain rider/assignment scoped.
 - No production code changed in this checkpoint.
+
+
+## Delivery location lifecycle checkpoint — 01 Oct 2026
+- Active Delivery Partner assignment starts periodic GPS submission through `delivery_partner_record_location` using the server-returned assignment ID; audited variants use roughly 10–15 second intervals and send latitude/longitude/accuracy.
+- Assignment completion calls the client stop-location path (`delivery_partner_stop_location_sharing` in V10/V11), while the stronger V8/V9 flow stops its local timer on delivered status; therefore UI/runtime stop behavior exists but exact server stop semantics require backend evidence.
+- Delivery status transitions are server-RPC based through `delivery_assignment_status`, not client-only state.
+- Maps navigation uses the current server-provided customer address rather than inventing an assignment.
+- Authoritative RPC bodies/RLS are absent from the repository, so rider-to-assignment authorization, outlet isolation, location-write authorization, and guaranteed server-side location stop after completion are NOT independently proven. This remains NOT GREEN.
+- Required evidence: unauthorized rider cannot write location for another assignment; rider cannot write after completion; completed assignment stops server-side sharing; location records remain tied to the correct assignment/outlet/order; offline/ended assignment cannot continue location writes.
+- No production code changed in this checkpoint.
