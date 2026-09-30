@@ -580,7 +580,7 @@ function showOrderAlarm(order){
   $('orderAlarm').style.display='block';$('orderAlarm').classList.add('alarmPulse');
   try{navigator.vibrate?.([300,120,300]);}catch(e){}
   try{if('Notification' in window && Notification.permission==='granted') new Notification('JPT — NEW ORDER',{body:$('orderAlarmText').textContent});}catch(e){}
-  clearTimeout(orderAlarmTimer);orderAlarmTimer=setTimeout(()=>stopOrderAlarm(),12000);
+  clearTimeout(orderAlarmTimer);orderAlarmTimer=null;
 }
 function stopOrderAlarm(){clearTimeout(orderAlarmTimer);$('orderAlarm').style.display='none';$('orderAlarm').classList.remove('alarmPulse');try{navigator.vibrate?.(0)}catch(e){}}
 async function enableOrderAlarm(){
