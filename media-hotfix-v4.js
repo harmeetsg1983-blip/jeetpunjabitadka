@@ -237,7 +237,12 @@
     }
 
     var src = ASSETS[id];
-    if (!src) return;
+    if (!src) {
+      /* Clear stale media when the selected outlet has no media. */
+      box.innerHTML = '';
+      box.style.background = '#090909';
+      return;
+    }
 
     var img = box.querySelector('img');
 
