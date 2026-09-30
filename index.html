@@ -131,12 +131,24 @@ function renderHighlights(){
  const grid=$('highlightGrid');
  if(title&&grid){const show=outletId==='JPT-001'; title.style.display=show?'':'none'; grid.style.display=show?'':'none';}
  const ids=Object.keys(OUTLETS).filter(id=>id!=='JPT-001').slice(0,12);
+ const showcaseByOutlet={};
+ (campaigns||[]).filter(activeWindow).filter(c=>{
+   const s=c.schedule_json||{};
+   return s.campaign_type==='media'&&s.surface==='customer_outlet_showcase';
+ }).sort((a,b)=>Number(b.priority||0)-Number(a.priority||0)||String(b.created_at||'').localeCompare(String(a.created_at||''))).forEach(c=>{
+   const id=String(c.outlet_id||'').trim();
+   if(id&&!showcaseByOutlet[id])showcaseByOutlet[id]=c;
+ });
  $('highlightGrid').innerHTML=ids.map(id=>{
   const o=OUTLETS[id], rec=outletRecords[id]||{}, os=(offersByOutlet[id]||[]).filter(activeWindow);
   const best=os[0], label=best?offerText(best):'View menu';
-  const bg=rec.cover_image||rec.banner_image||rec.image_url||rec.image||ROYAL_MEDIA[id]||'';
+  const managed=showcaseByOutlet[id];
+  const s=managed?.schedule_json||{};
+  const isVideo=managed&&s.media_type==='video';
+  const bg=managed&&!isVideo?(s.image_url||managed.banner_url||''):(rec.cover_image||rec.banner_image||rec.image_url||rec.image||ROYAL_MEDIA[id]||'');
   const style=`border-color:${o.accent};${bg?`background-image:url('${esc(bg)}')`:''}`;
-  return `<div class="highlight" style="${style}" onclick="switchOutlet('${id}')"><b style="color:${o.accent}">${esc(rec.name||o.name)}</b><small>${id} • Direct outlet ordering</small><div class="offer" style="border:1px solid ${o.accent}">${esc(label)}</div></div>`
+  const media=isVideo&&managed?.video_url?`<video autoplay muted playsinline loop preload="metadata" aria-label="${esc(rec.name||o.name)} banner" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none"><source src="${esc(managed.video_url)}"></video>`:(bg?'':'');
+  return `<div class="highlight" style="${style}" onclick="switchOutlet('${id}')">${media}<b style="color:${o.accent}">${esc(rec.name||o.name)}</b><small>${id} • Direct outlet ordering</small><div class="offer" style="border:1px solid ${o.accent}">${esc(label)}</div></div>`
  }).join('');
 }
 async function switchOutlet(id){outletId=id;history.pushState({outlet:id},'',location.pathname+'?outlet='+encodeURIComponent(id));cartState={};selectedPromo=null;items=[];offers=[];campaigns=[];imageMap={};setTheme();renderOutlets();await loadManagedMenu();window.dispatchEvent(new CustomEvent('jpt:outlet-changed',{detail:{outletId:id}}))}
