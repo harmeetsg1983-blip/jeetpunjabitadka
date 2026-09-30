@@ -171,7 +171,7 @@ if(isAdmin && !document.getElementById('jptCampaignV4')){
     const st=document.getElementById('jpt4MStart').value?new Date(document.getElementById('jpt4MStart').value).toISOString():null;
     const en=document.getElementById('jpt4MEnd').value?new Date(document.getElementById('jpt4MEnd').value).toISOString():null;
     const priority=Number(document.getElementById('jpt4MPriority').value||80);
-    const rows=outs.map(outlet_id=>({outlet_id,title,message:type+' customer media',active:true,start_at:st,end_at:en,priority,banner_url:image||null,video_url:video||null,schedule_json:{version:1,campaign_type:'media',media_type:type,video_url:video||null,image_url:image||null,created_by_ui:'jpt-customer-media-scheduler-v4'}}));
+    const rows=outs.map(outlet_id=>({outlet_id,title,message:type+' customer media',active:true,start_at:st,end_at:en,priority,banner_url:image||null,video_url:video||null,schedule_json:{version:2,campaign_type:'media',surface:'customer_home_hero',media_type:type,video_url:video||null,image_url:image||null,publication:'published',created_by_ui:'jpt-customer-media-scheduler-v4'}}));
     const r=await sb.from('campaigns').insert(rows);
     if(r.error)return toast('Media save failed: '+r.error.message);
     document.getElementById('jpt4MNotice').textContent=`Saved for ${outs.length} outlet(s).`;toast('Customer media saved');await refresh();
@@ -192,9 +192,16 @@ if(isAdmin && !document.getElementById('jptCampaignV4')){
 if(isCustomer){
   window.renderVideo=function(){
     try{
+      const now=Date.now();
       const media=(Array.isArray(window.campaigns)?window.campaigns:[]).filter(c=>{
         const s=c&&c.schedule_json;
-        return s&&typeof s==='object'&&s.campaign_type==='media';
+        if(!s||typeof s!=='object'||s.campaign_type!=='media')return false;
+        // Home hero is isolated from outlet showcase media.
+        if(s.surface==='customer_outlet_showcase'||s.banner_control_id)return false;
+        if(s.surface&&s.surface!=='customer_home_hero')return false;
+        if(c.active===false)return false;
+        const st=c.start_at?Date.parse(c.start_at):-Infinity,en=c.end_at?Date.parse(c.end_at):Infinity;
+        return st<=now&&now<=en;
       }).sort((a,b)=>Number(b.priority||0)-Number(a.priority||0));
       const el=document.getElementById('videoBanner');if(!el)return;
       if(!media.length){el.innerHTML='<div class="videoFallback"><div><b>🎬 Festival & Restaurant Video</b>No scheduled customer media is active.</div></div>';return;}
