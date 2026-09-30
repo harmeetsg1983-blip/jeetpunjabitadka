@@ -20,7 +20,7 @@ function load(src,attr){
 
 async function boot(){
   await load(
-    './jpt-customer-tracking-sponsor-slider-v3.js?v=4',
+    './jpt-customer-tracking-sponsor-slider-v3.js?v=5',
     'data-jpt-customer-sponsor-v3'
   );
 }
