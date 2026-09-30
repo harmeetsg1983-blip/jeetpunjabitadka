@@ -271,3 +271,12 @@ No financial feature is declared GREEN until server-side source-of-truth, audita
 - However, the repository does not contain the authoritative SQL/function bodies proving that offer selection, assignment response/status/location operations enforce the intended rider/outlet/order authorization server-side. Therefore Phase F is source-supported but not GREEN.
 - Additional runtime/security gate required: an order from Outlet A must not be offered/accepted/tracked by an unauthorized rider or Partner context for Outlet B; assignment status/location operations must reject mismatched assignment ownership; completed assignment must stop active location sharing.
 - No production code was changed in this checkpoint.
+
+
+## Delivery earnings source checkpoint — 01 Oct 2026
+- Delivery Partner UI calls `delivery_partner_earnings_summary` with a 30-day window in the audited runtime/foundation files.
+- Some older UI variants additionally render a fixed `₹50` multiplier/text around the server-returned summary. This is presentation logic, not evidence of an approved production payout formula.
+- Repository search did not establish an authoritative production payout/commission/GST/TDS formula or settlement ledger implementation.
+- Therefore delivery earnings/payout is NOT GREEN and no fixed payout amount/formula should be copied into the production architecture.
+- Existing architecture requirement remains: completed deliveries and earnings must be server-side source-of-truth, append-safe/auditable, with payout/commission/GST/TDS intentionally unresolved until the authoritative financial contract is available.
+- No production code changed in this checkpoint.
