@@ -222,7 +222,7 @@ function renderOutletCard(o,data,ed){
   try{await saveOutletBanner(o.code,f,box.querySelector('[data-title]').value.trim(),ed,preview,m);await bootOutlet();}catch(e){msg(m,e.message||String(e),false)}finally{b.disabled=false}
  };
  box.querySelector('[data-toggle]').onclick=async()=>{
-  try{await outletToggle(o.code,state.row,!state.row?.active,m=box.querySelector('[data-msg]'));await bootOutlet()}catch(e){msg(box.querySelector('[data-msg]'),e.message||String(e),false)}
+  try{await outletToggle(o.code,state.row,!state.row?.active,box.querySelector('[data-msg]'));await bootOutlet()}catch(e){msg(box.querySelector('[data-msg]'),e.message||String(e),false)}
  };
  box.querySelector('[data-delete]').onclick=async()=>{
   if(!confirm('Remove the live banner for '+o.name+'?'))return;
@@ -234,7 +234,7 @@ function renderOutletCard(o,data,ed){
 async function bootOutlet(){
  const root=document.getElementById('jptBccOutletList');if(!root)return;
  root.innerHTML='<div class="jpt-bcc-small">Loading five outlet banner records…</div>';
- try{const data=await loadOutletData();root.innerHTML='';const ed=editor();OUT.forEach(o=>root.appendChild(renderOutletCard(o,data,ed)))}catch(e){root.innerHTML='<div class="jpt-bcc-status">'+esc(e.message||String(e))+'</div>'}
+ try{const data=await loadOutletData();root.innerHTML='';OUT.forEach(o=>root.appendChild(renderOutletCard(o,data,editor())))}catch(e){root.innerHTML='<div class="jpt-bcc-status">'+esc(e.message||String(e))+'</div>'}
 }
 
 async function renderSponsorSurface(kind){
