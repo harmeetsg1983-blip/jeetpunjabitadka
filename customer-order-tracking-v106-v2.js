@@ -13,7 +13,16 @@
   var POLL_MS=4000;
   var DELIVERY_BUFFER=20;
   var timer=null, active=false, sbClient=null;
+  var lastStatus='';
+  var JPT_CUSTOMER_ACCEPTED_AUDIO='./ringtones/1000449572.mp4';
   var readySinceKey='jpt_v106_ready_since';
+  function playCustomerAcceptedTone(){
+    try{
+      var a=new Audio(JPT_CUSTOMER_ACCEPTED_AUDIO);
+      a.preload='auto';a.loop=false;
+      a.play().catch(function(){});
+    }catch(e){}
+  }
 
   function getSb(){
     if(sbClient) return sbClient;
@@ -149,8 +158,11 @@
       if(r.error)return;
       var row=Array.isArray(r.data)?r.data[0]:r.data;
       if(row){
+        var nextStatus=String(row.status||'').toLowerCase().trim().replace(/\s+/g,'_');
+        if(lastStatus && lastStatus!=='accepted' && nextStatus==='accepted') playCustomerAcceptedTone();
+        lastStatus=nextStatus;
         o=Object.assign(o,row);save(o);render(o);
-        if(String(row.status||'').toLowerCase()==='delivered'){
+        if(nextStatus==='delivered'){
           active=false;if(timer){clearInterval(timer);timer=null}
         }
       }
