@@ -303,6 +303,14 @@
     }
   }
 
+  window.addEventListener('jpt:outlet-changed', function () {
+    mainBox();
+  });
+
+  window.addEventListener('popstate', function () {
+    setTimeout(mainBox, 0);
+  });
+
   if (document.readyState === 'loading') {
     document.addEventListener(
       'DOMContentLoaded',
