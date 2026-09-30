@@ -245,3 +245,12 @@ No financial feature is declared GREEN until server-side source-of-truth, audita
 - Repository evidence does not establish a production contact-number OTP provisioning flow for restaurant partners, nor the implementation of account creation inside `partner-approve-restaurant`.
 - Therefore Phase D must reuse the existing authenticated session + `partner_my_outlets` contract and must not invent client-side account provisioning or authorization.
 - Required backend evidence before declaring Phase D complete: partner account provisioning contract, contact/OTP authentication contract, outlet-access assignment contract, role/access policy, and two-outlet cross-access test.
+
+
+## Phase E outlet-scoped Orders/Alerts source checkpoint — 01 Oct 2026
+- Core Partner order reads are filtered by `activeOutlet`; status mutations in `orderAction` are scoped by both order ID and `outlet_id`.
+- Realtime order subscriptions in `admin.html` use an `outlet_id=eq.<activeOutlet>` filter for INSERT/UPDATE events.
+- Partner Orders UI V1 also queries orders by the selected outlet and delegates mutations to the existing `orderAction` rather than creating a second write path.
+- Delivery Tracking V2 requests its tracking snapshot with the active outlet ID and listens to delivery assignment changes as an auxiliary view.
+- Order Alert V4 persists the alerted order's `outlet_id` and rechecks the order status before restoring an alert; however, the repository does not provide the server-side authorization/RLS definition proving that a malicious or mis-scoped realtime/client request can never cross outlet boundaries.
+- Therefore Phase E is source-supported for client-side outlet scoping but is NOT GREEN. Required verification: two distinct partner accounts/outlets, new orders on each, alert isolation, order-list isolation, mutation isolation, refresh/reconnect isolation, and server-side cross-outlet denial.
