@@ -41,3 +41,10 @@ Create a safe architecture checkpoint before changing the live Partner Dashboard
 
 ## Next engineering target
 Design and implement a single-owner Order Command Center/navigation architecture on this branch, preserving the existing orderAction/backend foundation. First target: navigation + order-surface ownership, then runtime verification.
+
+
+## Canonical outlet identity checkpoint — 30 Sep 2026
+- Banner Control Center V4 retains B01–B05 mappings only as legacy/display control IDs.
+- Database operations in the audited V4 path use the outlet database code (outlet_id / code), not B04-style display IDs.
+- V4 has a deterministic fallback control ID for outlets outside the five legacy mappings, so the fixed map is not by itself a 5-outlet database limit.
+- Future onboarding must continue to treat the canonical outlet database identity as authoritative and must not require adding a new hard-coded B-code mapping for each new outlet.
