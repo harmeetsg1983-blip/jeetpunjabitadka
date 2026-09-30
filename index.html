@@ -35,6 +35,7 @@ main{padding-bottom:12px}.item{display:flex;gap:14px;padding:15px 14px;border:1p
 <header>
  <div class="top"><div class="logo">JPT</div><div><div class="name" id="restaurant">Jeet Punjabi Tadka</div><div class="meta" id="restaurantMeta">North Indian • Direct Order</div></div></div>
  <div class="tools"><input id="search" class="search" placeholder="Search dishes..."><button class="icon" onclick="scrollTo({top:0,behavior:'smooth'})">☰</button></div>
+ <input id="outletSearch" class="search" placeholder="Search outlets..." aria-label="Search outlets" oninput="renderOutlets()">
  <div id="outletbar" class="outletbar"></div>
  <div id="chips" class="chips"></div>
 </header>
@@ -124,7 +125,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&
 const money=n=>'₹'+Math.max(0,Math.round(Number(n||0))).toLocaleString('en-IN');
 function toast(t){$('toast')?.remove();let x=document.createElement('div');x.id='toast';x.className='toast';x.textContent=t;document.body.appendChild(x);setTimeout(()=>x.remove(),2200)}
 function setTheme(){document.documentElement.style.setProperty('--accent',OUTLETS[outletId].accent);$('restaurant').textContent=outletRecords[outletId]?.name||OUTLETS[outletId].name;$('menuTitle').textContent=(outletId==='JPT-001'?'📋 Jeet Punjabi Tadka Menu':'📋 '+(outletRecords[outletId]?.name||OUTLETS[outletId].name)+' Menu')}
-function renderOutlets(){$('outletbar').innerHTML=Object.entries(OUTLETS).map(([id,o])=>`<button class="outlet ${id===outletId?'on':''}" onclick="switchOutlet('${id}')">${esc(o.name)}</button>`).join('')}
+function renderOutlets(){const bar=$('outletbar');if(!bar)return;const q=String($('outletSearch')?.value||'').trim().toLowerCase();const all=Object.entries(OUTLETS);const current=all.find(([id])=>id===outletId);const filtered=q?all.filter(([id,o])=>String(id+' '+(o.name||'')).toLowerCase().includes(q)):all.slice(0,12);const rows=current&&!filtered.some(([id])=>id===outletId)?[current,...filtered]:filtered;bar.innerHTML=rows.map(([id,o])=>`<button class="outlet ${id===outletId?'on':''}" onclick="switchOutlet('${id}')">${esc(o.name)}</button>`).join('')}
 function renderHighlights(){
  const title=document.querySelector('.section');
  const grid=$('highlightGrid');
