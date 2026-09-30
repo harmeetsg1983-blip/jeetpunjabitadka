@@ -261,3 +261,13 @@ No financial feature is declared GREEN until server-side source-of-truth, audita
 - Repository search did not find authoritative `CREATE POLICY`/RLS SQL for the `orders` table, nor an auditable server-side policy definition proving partner-specific cross-outlet denial.
 - Existing client/runtime filters are therefore evidence of intended outlet scoping, not proof of authorization.
 - No code change is authorized from this audit. Phase E remains YELLOW/BLOCKED pending backend policy/function evidence and a two-outlet negative-access runtime test.
+
+
+## Phase F delivery-partner assignment source checkpoint — 01 Oct 2026
+- Existing production-oriented delivery foundation uses server RPCs for offer snapshot, assignment response, active assignment snapshot, assignment status, location recording and location-sharing stop.
+- The stronger pre-live delivery runtime (`JPT_Delivery_Partner_PreLive_V9.html`) uses these RPCs rather than client-only assignment writes; older V5/V6/V7 demo onboarding files are not treated as production authority.
+- Partner-side delivery tracking uses `partner_delivery_tracking_snapshot(p_outlet_id)` as a least-privilege snapshot source, with the current outlet supplied by the Partner dashboard.
+- Delivery assignment objects expose `outlet_id` to the rider UI, and the partner tracking UI is outlet-scoped at the RPC call.
+- However, the repository does not contain the authoritative SQL/function bodies proving that offer selection, assignment response/status/location operations enforce the intended rider/outlet/order authorization server-side. Therefore Phase F is source-supported but not GREEN.
+- Additional runtime/security gate required: an order from Outlet A must not be offered/accepted/tracked by an unauthorized rider or Partner context for Outlet B; assignment status/location operations must reject mismatched assignment ownership; completed assignment must stop active location sharing.
+- No production code was changed in this checkpoint.
