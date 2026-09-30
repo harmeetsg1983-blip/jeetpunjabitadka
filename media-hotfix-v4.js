@@ -139,7 +139,7 @@
        leak into the canonical #videoBanner Home Hero reader. */
     if (s.controller === 'jpt-outlet-media-v1') return null;
     if (s.surface && s.surface !== 'customer_home_hero') return null;
-    if (s.banner_control_id || s.surface === 'customer_outlet_showcase' || s.controller === 'jpt-outlet-media-v1') return null;
+    if (s.banner_control_id || s.surface === 'customer_outlet_showcase') return null;
     var video = row.video_url || s.video_url || null;
     var image = row.banner_url || s.image_url || null;
     if (!video && !image) return null;
