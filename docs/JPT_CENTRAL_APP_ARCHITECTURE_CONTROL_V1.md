@@ -48,3 +48,12 @@ Design and implement a single-owner Order Command Center/navigation architecture
 - Database operations in the audited V4 path use the outlet database code (outlet_id / code), not B04-style display IDs.
 - V4 has a deterministic fallback control ID for outlets outside the five legacy mappings, so the fixed map is not by itself a 5-outlet database limit.
 - Future onboarding must continue to treat the canonical outlet database identity as authoritative and must not require adding a new hard-coded B-code mapping for each new outlet.
+
+
+## Phase I scale/security evidence boundary — 01 Oct 2026
+- Repository audit found no independently verifiable idempotency implementation, audit-event/immutable audit-log implementation, backup/recovery procedure, or tenant_id contract in repository source.
+- Existing source consistently treats Supabase RPC/RLS as the intended security boundary, but authoritative policy/function bodies are not available in this repository for independent verification.
+- Existing client outlet filters are not counted as proof of server-side tenant isolation.
+- Therefore Phase I scale/security readiness is YELLOW/BLOCKED for production sign-off. No client workaround, service-role bypass, or invented audit/backup mechanism is authorized from this evidence alone.
+- Required future evidence: authoritative backend/RLS policies, idempotency strategy for transactional writes, auditable event/ledger path, backup/restore and recovery verification, and at least two-outlet negative-access testing.
+- No production code changed.
