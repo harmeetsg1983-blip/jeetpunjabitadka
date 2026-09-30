@@ -96,15 +96,15 @@ if(settingsHost && !document.getElementById('jptSponsorLauncherV2')){
  <div class="sub">Central Owner controls Delivery Partner + Customer Tracking sponsor banners. Image-only • crop • zoom • drag • schedule • outlet targeting.</div>
  <div class="jpt-sm-tabs"><button id="jptSmDelivery" class="on">Delivery Partner</button><button id="jptSmCustomer">Customer Tracking</button></div>
  <div class="jpt-sm-grid"><div><label>Sponsor Name</label><input id="jptSmSponsor" placeholder="Sponsor / Brand"></div><div><label>Banner Title</label><input id="jptSmTitle" placeholder="Optional title"></div></div>
- <label>Banner Image</label><input id="jptSmFile" type="file" accept="image/*">
+ <label>Banner Media</label><input id="jptSmFile" type="file" accept="image/*,video/mp4,video/webm,video/ogg">
  <div id="jptSmCrop" class="jpt-crop" style="display:none"><canvas id="jptSmCanvas"></canvas><div class="jpt-crop-row"><button id="jptSmZoomOut">− Zoom</button><button id="jptSmCenter">Center</button><button id="jptSmZoomIn">＋ Zoom</button></div><div class="jpt-sm-note" style="margin-top:6px">Drag the image inside the frame to position it.</div></div>
- <div class="jpt-sm-grid"><div><label>Target</label><select id="jptSmTarget"><option value="all">All live users</option><option value="outlet">Selected outlet</option></select></div><div><label>Sort Order</label><input id="jptSmSort" type="number" value="0" min="0"></div></div>
+ <div class="jpt-sm-grid"><div><label>Sponsor Slot</label><select id="jptSmSlot"><option value="1">Slot 1</option><option value="2">Slot 2</option></select></div><div><label>Target</label><select id="jptSmTarget"><option value="all">All live users</option><option value="outlet">Selected outlet</option></select></div><div><label>Sort Order</label><input id="jptSmSort" type="number" value="0" min="0"></div></div>
  <div id="jptSmOutletWrap" style="display:none"><label>Outlet</label><select id="jptSmOutlet"></select></div>
  <div class="jpt-sm-grid"><div><label>Start (optional)</label><input id="jptSmStart" type="datetime-local"></div><div><label>End (optional)</label><input id="jptSmEnd" type="datetime-local"></div></div>
  <button id="jptSmSave" class="jpt-sm-primary">ADD SPONSOR BANNER</button><div id="jptSmMsg" class="jpt-sm-note"></div>
  <div class="jpt-sm-list"><b>Saved Banners</b><div id="jptSmList" class="jpt-sm-note">Loading...</div></div></div>`;
  h.appendChild(box);
- const r={};['jptSmDelivery','jptSmCustomer','jptSmSponsor','jptSmTitle','jptSmFile','jptSmCrop','jptSmCanvas','jptSmZoomOut','jptSmCenter','jptSmZoomIn','jptSmTarget','jptSmOutletWrap','jptSmOutlet','jptSmSort','jptSmStart','jptSmEnd','jptSmSave','jptSmMsg','jptSmList'].forEach(id=>r[id.replace('jptSm','').toLowerCase()]=document.getElementById(id));
+ const r={};['jptSmDelivery','jptSmCustomer','jptSmSponsor','jptSmSlot','jptSmTitle','jptSmFile','jptSmCrop','jptSmCanvas','jptSmZoomOut','jptSmCenter','jptSmZoomIn','jptSmTarget','jptSmOutletWrap','jptSmOutlet','jptSmSort','jptSmStart','jptSmEnd','jptSmSave','jptSmMsg','jptSmList'].forEach(id=>r[id.replace('jptSm','').toLowerCase()]=document.getElementById(id));
  let mode='delivery',editor=cropEditor({file:r.file,cropBox:r.crop,canvas:r.canvas,zoomOut:r.zoomout,center:r.center,zoomIn:r.zoomin,preview:r.preview||document.createElement('img')});
  async function fillOutlets(){await outlets({outlet:r.outlet})} await fillOutlets();
  r.target.onchange=()=>r.outletwrap.style.display=r.target.value==='outlet'?'block':'none';
@@ -118,14 +118,14 @@ if(settingsHost && !document.getElementById('jptSponsorLauncherV2')){
  }
  r.save.onclick=async()=>{
   const file=r.file.files?.[0];if(!file){r.msg.textContent='Please choose a banner image.';return}
-  r.save.disabled=true;r.msg.textContent='Cropping and uploading...';
+  r.save.disabled=true;r.msg.textContent='Preparing media...';
   try{
-   const blob=await editor.exportBlob(),safe=new File([blob],(file.name||'sponsor')+'.jpg',{type:'image/jpeg'});
+   const isVideo=/^video\//i.test(file.type)||/\.(mp4|webm|ogg)$/i.test(file.name);const blob=isVideo?file:await editor.exportBlob();const safe=isVideo?file:new File([blob],(file.name||'sponsor')+'.jpg',{type:'image/jpeg'});
    const bucket=mode==='delivery'?DELIVERY_BUCKET:CUSTOMER_BUCKET,table=mode==='delivery'?DELIVERY_TABLE:CUSTOMER_TABLE;
    const path='sponsors/'+Date.now()+'-'+Math.random().toString(36).slice(2,9)+'.jpg';
-   const up=await sb().storage.from(bucket).upload(path,safe,{upsert:false,contentType:'image/jpeg'});if(up.error)throw up.error;
+   if(isVideo&&safe.size>60*1024*1024)throw new Error('Video must be under 60MB');if(!isVideo&&safe.size>8*1024*1024)throw new Error('Image must be under 8MB');const up=await sb().storage.from(bucket).upload(path,safe,{upsert:false,contentType:safe.type||'application/octet-stream'});if(up.error)throw up.error;
    const url=sb().storage.from(bucket).getPublicUrl(path).data.publicUrl,targetAll=r.target.value==='all',outlet=r.outlet.value||currentOutlet();
-   const row={title:r.title.value.trim()||r.sponsor.value.trim()||'Sponsor Banner',sponsor_name:r.sponsor.value.trim(),media_type:'image',media_url:url,poster_url:url,target_all_live:targetAll,outlet_ids:targetAll?[]:[outlet],is_active:true,sort_order:Number(r.sort.value||0),starts_at:r.start.value?new Date(r.start.value).toISOString():null,ends_at:r.end.value?new Date(r.end.value).toISOString():null,created_by:(await sb().auth.getUser()).data.user?.id||null};
+   const row={title:r.title.value.trim()||r.sponsor.value.trim()||'Sponsor Banner',sponsor_name:r.sponsor.value.trim(),media_type:isVideo?'video':'image',media_url:url,video_url:isVideo?url:null,poster_url:isVideo?null:url,target_all_live:targetAll,outlet_ids:targetAll?[]:[outlet],is_active:true,sort_order:Number(r.sort.value||0),starts_at:r.start.value?new Date(r.start.value).toISOString():null,ends_at:r.end.value?new Date(r.end.value).toISOString():null,created_by:(await sb().auth.getUser()).data.user?.id||null,schedule_json:{slot:Number(document.getElementById('jptSmSlot')?.value||1),muted:true}};
    const ins=await sb().from(table).insert(row);if(ins.error)throw ins.error;
    r.msg.textContent='Banner added successfully.';r.file.value='';r.crop.style.display='none';await refresh();
   }catch(e){r.msg.textContent=e.message||'Upload failed.'}finally{r.save.disabled=false}
