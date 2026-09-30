@@ -73,7 +73,7 @@ button,input,select,textarea{font:inherit}.app{min-height:100vh;background:#0707
 </section>
 
 <section id="orders" class="panel">
- <div class="card"><div class="rowactions"><button class="btn" id="ordersRefresh">↻ Refresh Orders</button><button class="btn gold" id="enableAlarm">🔔 Enable Order Alarm</button></div><div id="ordersNotice" class="notice">Loading…</div><div id="orderAlarm" class="notice" style="display:none;border-color:#d8ae42;background:#211706"><b>🔔 NEW ORDER</b><div id="orderAlarmText" class="muted" style="color:#fff;margin-top:4px"></div><button class="btn gold" id="stopAlarm" style="margin-top:8px">Acknowledge</button></div><div class="tablewrap"><table class="table"><thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Total</th><th>Time</th><th>Timer</th><th>Actions</th></tr></thead><tbody id="ordersBody"></tbody></table></div></div>
+ <div class="card"><div class="rowactions"><button class="btn" id="ordersRefresh">↻ Refresh Orders</button><button class="btn gold" id="enableAlarm">🔔 Enable Order Alarm</button></div><div id="ordersNotice" class="notice">Loading…</div><div id="orderQueueBar" class="rowactions" style="gap:6px;flex-wrap:wrap;margin:8px 0"><button type="button" class="btn gold orderQueueBtn" data-queue="all">ALL</button><button type="button" class="btn orderQueueBtn" data-queue="new">NEW</button><button type="button" class="btn orderQueueBtn" data-queue="accepted">ACCEPTED</button><button type="button" class="btn orderQueueBtn" data-queue="preparing">PREPARING</button><button type="button" class="btn orderQueueBtn" data-queue="ready">READY</button><button type="button" class="btn orderQueueBtn" data-queue="out_for_delivery">OUT FOR DELIVERY</button><button type="button" class="btn orderQueueBtn" data-queue="delivered">DELIVERED</button><button type="button" class="btn orderQueueBtn" data-queue="cancelled">CANCELLED</button></div><div id="orderAlarm" class="notice" style="display:none;border-color:#d8ae42;background:#211706"><b>🔔 NEW ORDER</b><div id="orderAlarmText" class="muted" style="color:#fff;margin-top:4px"></div><button class="btn gold" id="stopAlarm" style="margin-top:8px">Acknowledge</button></div><div class="tablewrap" id="ordersTableWrap"><table class="table"><thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Total</th><th>Time</th><th>Timer</th><th>Actions</th></tr></thead><tbody id="ordersBody"></tbody></table></div></div>
 </section>
 
 <section id="menu" class="panel">
@@ -588,49 +588,71 @@ async function enableOrderAlarm(){
   localStorage.setItem('jpt_v107_alarm_enabled','1');toast('Order alarm enabled');
 }
 $('enableAlarm').onclick=enableOrderAlarm;$('stopAlarm').onclick=stopOrderAlarm;
+const jptOrderActionBusy=new Set();
 async function orderAction(id,status,extra={}){
-  const patch={status,updated_at:new Date().toISOString(),...extra};
-  const r=await sb.from('orders').update(patch).eq('id',id).eq('outlet_id',activeOutlet);
-  if(r.error){toast('Order update failed: '+r.error.message);return false}
-  await loadOrders();return true;
+  const key=String(id||'')+'|'+String(status||'');
+  if(jptOrderActionBusy.has(key))return false;
+  jptOrderActionBusy.add(key);
+  try{
+    const patch={status,updated_at:new Date().toISOString(),...extra};
+    const r=await sb.from('orders').update(patch).eq('id',id).eq('outlet_id',activeOutlet);
+    if(r.error){toast('Order update failed: '+r.error.message);return false}
+    await loadOrders();return true;
+  }finally{jptOrderActionBusy.delete(key)}
 }
 async function acceptOrder(id,minutes){
-  const m=[30,40,50,60].includes(Number(minutes))?Number(minutes):30;
+  const allowed=[15,20,25,30,35,40,50,60],m=allowed.includes(Number(minutes))?Number(minutes):15;
   const now=new Date(),deadline=new Date(now.getTime()+m*60000);
   return orderAction(id,'accepted',{target_minutes:m,accepted_at:now.toISOString(),deadline_at:deadline.toISOString(),eta_minutes:m+20});
 }
+let activeOrderQueue='all',ordersLoadBusy=false,ordersLoadQueued=false;
+function normalizeOrderStatus(v){const s=String(v||'new').toLowerCase();if(s==='completed')return 'delivered';if(s==='canceled')return 'cancelled';return s}
+function setOrderQueue(q){activeOrderQueue=q||'all';document.querySelectorAll('.orderQueueBtn').forEach(b=>b.classList.toggle('gold',b.dataset.queue===activeOrderQueue));loadOrders().catch(()=>{})}
+document.querySelectorAll('.orderQueueBtn').forEach(b=>b.onclick=()=>setOrderQueue(b.dataset.queue));
 async function loadOrders(){
-  const r=await sb.from('orders').select('*').eq('outlet_id',activeOutlet).order('created_at',{ascending:false}).limit(50);
-  if(r.error){$('ordersNotice').innerHTML='<span class="danger">'+esc(r.error.message)+'</span>';return}
-  const rows=r.data||[];
-  renderOrderSummaries(rows);$('ordersCount').textContent=rows.length;$('ordersNotice').textContent='Showing latest '+rows.length+' outlet-scoped orders';
-  $('ordersBody').innerHTML=rows.map(x=>{
-    const order=x.order_no||x.order_number||x.id||'—', customer=x.customer_name||x.name||x.customer_phone||'Customer', status=String(x.status||'new').toLowerCase(), total=x.total??x.grand_total??x.amount??'—', time=x.created_at?new Date(x.created_at).toLocaleString('en-IN'):'—';
-    const target=[30,40,50,60].includes(Number(x.target_minutes))?Number(x.target_minutes):30;
-    const deadline=x.deadline_at||(x.created_at?new Date(new Date(x.created_at).getTime()+target*60000).toISOString():'');
-    const left=deadline?Math.max(0,new Date(deadline).getTime()-Date.now()):0, secs=Math.floor(left/1000),mm=Math.floor(secs/60),ss=secs%60;
-    let actions='';
-    if(status==='new') actions=`<div class="order-actions"><select class="input acceptMinutes" data-order-id="${esc(x.id||'')}" style="width:auto;padding:6px 8px"><option>30</option><option>40</option><option>50</option><option>60</option></select><button class="btn gold acceptBtn" data-order-id="${esc(x.id||'')}">ACCEPT</button><button class="btn red rejectBtn" data-order-id="${esc(x.id||'')}">REJECT</button></div>`;
-    else if(status==='accepted') actions='<div class="order-actions"><button class="btn gold prepBtn" data-order-id="'+esc(x.id||'')+'">START PREPARING</button></div>';
-    else if(status==='preparing') actions='<div class="order-actions"><button class="btn green readyBtn" data-order-id="'+esc(x.id||'')+'">READY</button></div>';
-    else if(status==='ready') actions='<div class="order-actions"><button class="btn gold outBtn" data-order-id="'+esc(x.id||'')+'">OUT FOR DELIVERY</button></div>';
-    else if(status==='out_for_delivery') actions='<div class="order-actions"><button class="btn green completeBtn" data-order-id="'+esc(x.id||'')+'">DELIVERED / COMPLETED</button></div>';
-    return `<tr><td><b>${esc(order)}</b><div class="muted">${esc(orderItemsText(x))}</div></td><td>${esc(customer)}<div class="muted">${esc(x.customer_phone||x.phone||'')}</div></td><td><span class="tag">${esc(status.toUpperCase())}</span></td><td>${typeof total==='number'?money(total):esc(total)}</td><td>${esc(time)}</td><td><span class="tag countdown" data-deadline="${esc(deadline)}">${left?String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0'):(status==='preparing'?'TIME OVER':'—')}</span></td><td>${actions}</td></tr>`;
-  }).join('')||'<tr><td colspan="7">No orders found.</td></tr>';
-  document.querySelectorAll('.acceptBtn').forEach(b=>b.onclick=async()=>{const sel=b.parentElement.querySelector('.acceptMinutes');await acceptOrder(b.dataset.orderId,sel?.value||30);toast('Order accepted');});
-  document.querySelectorAll('.rejectBtn').forEach(b=>b.onclick=async()=>{if(confirm('Reject this customer order?')){await orderAction(b.dataset.orderId,'cancelled',{rejection_reason:'Rejected by restaurant'});toast('Order rejected');}});
-  document.querySelectorAll('.prepBtn').forEach(b=>b.onclick=async()=>{await orderAction(b.dataset.orderId,'preparing');toast('Order is PREPARING');});
-  document.querySelectorAll('.readyBtn').forEach(b=>b.onclick=async()=>{await orderAction(b.dataset.orderId,'ready');toast('Order marked READY');});
-  document.querySelectorAll('.outBtn').forEach(b=>b.onclick=async()=>{await orderAction(b.dataset.orderId,'out_for_delivery');toast('Order moved to OUT FOR DELIVERY');});
-  document.querySelectorAll('.completeBtn').forEach(b=>b.onclick=async()=>{await orderAction(b.dataset.orderId,'completed');toast('Order marked DELIVERED / COMPLETED');});
-  document.querySelectorAll('.orderStatus').forEach(sel=>sel.onchange=async()=>{await orderAction(sel.dataset.orderId,sel.value);});
-  const newest=rows[0];
-  if(newest){const stamp=String(newest.created_at||'')+'|'+String(newest.id||'');if(lastOrderStamp && stamp!==lastOrderStamp && String(newest.status).toLowerCase()==='new' && localStorage.getItem('jpt_v107_alarm_enabled')==='1')showOrderAlarm(newest);lastOrderStamp=stamp;localStorage.setItem('jpt_v107_last_order_'+activeOutlet,stamp)}
+  if(ordersLoadBusy){ordersLoadQueued=true;return}
+  ordersLoadBusy=true;
+  const pageY=window.scrollY,wrap=document.getElementById('ordersTableWrap'),wrapY=wrap?.scrollTop||0;
+  try{
+    const r=await sb.from('orders').select('*').eq('outlet_id',activeOutlet).order('created_at',{ascending:false}).limit(100);
+    if(r.error){$('ordersNotice').innerHTML='<span class="danger">'+esc(r.error.message)+'</span>';return}
+    const rows=r.data||[],filtered=activeOrderQueue==='all'?rows:rows.filter(x=>normalizeOrderStatus(x.status)===activeOrderQueue);
+    renderOrderSummaries(rows);$('ordersCount').textContent=filtered.length;$('ordersNotice').textContent='Showing '+filtered.length+' '+(activeOrderQueue==='all'?'outlet-scoped':activeOrderQueue.toUpperCase())+' orders';
+    $('ordersBody').innerHTML=filtered.map(x=>{
+      const order=x.order_no||x.order_number||x.id||'—',customer=x.customer_name||x.name||x.customer_phone||'Customer',status=normalizeOrderStatus(x.status),total=x.total??x.grand_total??x.amount??'—',time=x.created_at?new Date(x.created_at).toLocaleString('en-IN'):'—',allowed=[15,20,25,30,35,40,50,60],target=allowed.includes(Number(x.target_minutes))?Number(x.target_minutes):15,deadline=x.deadline_at||(x.created_at?new Date(new Date(x.created_at).getTime()+target*60000).toISOString():''),left=deadline?Math.max(0,new Date(deadline).getTime()-Date.now()):0,secs=Math.floor(left/1000),mm=Math.floor(secs/60),ss=secs%60;
+      let actions='';
+      if(status==='new') actions=`<div class="order-actions" data-stepper="${esc(x.id||'')}">
+        <button type="button" class="btn prepMinus" data-order-id="${esc(x.id||'')}" aria-label="Decrease preparation time">−</button>
+        <span class="tag prepValue" data-minutes="${target}" style="min-width:58px;text-align:center">${target} min</span>
+        <button type="button" class="btn prepPlus" data-order-id="${esc(x.id||'')}" aria-label="Increase preparation time">+</button>
+        <button class="btn gold acceptBtn" data-order-id="${esc(x.id||'')}">ACCEPT</button>
+        <button class="btn red rejectBtn" data-order-id="${esc(x.id||'')}">REJECT</button></div>`;
+      else if(status==='accepted') actions='<div class="order-actions"><button class="btn gold prepBtn" data-order-id="'+esc(x.id||'')+'">START PREPARING</button></div>';
+      else if(status==='preparing') actions='<div class="order-actions"><button class="btn green readyBtn" data-order-id="'+esc(x.id||'')+'">READY</button></div>';
+      else if(status==='ready') actions='<div class="order-actions"><button class="btn gold outBtn" data-order-id="'+esc(x.id||'')+'">OUT FOR DELIVERY</button></div>';
+      else if(status==='out_for_delivery') actions='<div class="order-actions"><button class="btn green completeBtn" data-order-id="'+esc(x.id||'')+'">DELIVERED</button></div>';
+      return `<tr><td><b>${esc(order)}</b><div class="muted">${esc(orderItemsText(x))}</div></td><td>${esc(customer)}<div class="muted">${esc(x.customer_phone||x.phone||'')}</div></td><td><span class="tag">${esc(status.toUpperCase())}</span></td><td>${typeof total==='number'?money(total):esc(total)}</td><td>${esc(time)}</td><td><span class="tag countdown" data-deadline="${esc(deadline)}">${left?String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0'):(status==='preparing'?'TIME OVER':'—')}</span></td><td>${actions}</td></tr>`;
+    }).join('')||'<tr><td colspan="7">No orders in this queue.</td></tr>';
+    document.querySelectorAll('.prepMinus').forEach(b=>b.onclick=()=>{const v=b.closest('[data-stepper]')?.querySelector('.prepValue');if(!v)return;const n=Math.max(15,Number(v.dataset.minutes||15)-5);v.dataset.minutes=String(n);v.textContent=n+' min'});
+    document.querySelectorAll('.prepPlus').forEach(b=>b.onclick=()=>{const v=b.closest('[data-stepper]')?.querySelector('.prepValue');if(!v)return;const n=Math.min(60,Number(v.dataset.minutes||15)+5);v.dataset.minutes=String(n);v.textContent=n+' min'});
+    document.querySelectorAll('.acceptBtn').forEach(b=>b.onclick=async()=>{if(b.dataset.busy==='1')return;b.dataset.busy='1';b.disabled=true;const v=b.closest('[data-stepper]')?.querySelector('.prepValue');const ok=await acceptOrder(b.dataset.orderId,Number(v?.dataset.minutes||15));if(ok)toast('Order accepted');else b.disabled=false;b.dataset.busy='0'});
+    document.querySelectorAll('.rejectBtn').forEach(b=>b.onclick=async()=>{if(b.dataset.busy==='1')return;if(confirm('Reject this customer order?')){b.dataset.busy='1';b.disabled=true;const ok=await orderAction(b.dataset.orderId,'cancelled',{rejection_reason:'Rejected by restaurant'});if(ok)toast('Order rejected');else b.disabled=false;b.dataset.busy='0'}});
+    document.querySelectorAll('.prepBtn').forEach(b=>b.onclick=async()=>{if(b.dataset.busy==='1')return;b.dataset.busy='1';b.disabled=true;const ok=await orderAction(b.dataset.orderId,'preparing');if(ok)toast('Order is PREPARING');else b.disabled=false;b.dataset.busy='0'});
+    document.querySelectorAll('.readyBtn').forEach(b=>b.onclick=async()=>{if(b.dataset.busy==='1')return;b.dataset.busy='1';b.disabled=true;const ok=await orderAction(b.dataset.orderId,'ready');if(ok)toast('Order marked READY');else b.disabled=false;b.dataset.busy='0'});
+    document.querySelectorAll('.outBtn').forEach(b=>b.onclick=async()=>{if(b.dataset.busy==='1')return;b.dataset.busy='1';b.disabled=true;const ok=await orderAction(b.dataset.orderId,'out_for_delivery');if(ok)toast('Order moved to OUT FOR DELIVERY');else b.disabled=false;b.dataset.busy='0'});
+    document.querySelectorAll('.completeBtn').forEach(b=>b.onclick=async()=>{if(b.dataset.busy==='1')return;b.dataset.busy='1';b.disabled=true;const ok=await orderAction(b.dataset.orderId,'completed');if(ok)toast('Order marked DELIVERED');else b.disabled=false;b.dataset.busy='0'});
+    document.querySelectorAll('.orderStatus').forEach(sel=>sel.onchange=async()=>{await orderAction(sel.dataset.orderId,sel.value)});
+    const newest=rows[0];if(newest){const stamp=String(newest.created_at||'')+'|'+String(newest.id||'');if(lastOrderStamp&&stamp!==lastOrderStamp&&normalizeOrderStatus(newest.status)==='new'&&localStorage.getItem('jpt_v107_alarm_enabled')==='1')showOrderAlarm(newest);lastOrderStamp=stamp;localStorage.setItem('jpt_v107_last_order_'+activeOutlet,stamp)}
+  }finally{
+    requestAnimationFrame(()=>{window.scrollTo(0,pageY);const w=document.getElementById('ordersTableWrap');if(w)w.scrollTop=wrapY});
+    ordersLoadBusy=false;if(ordersLoadQueued){ordersLoadQueued=false;loadOrders().catch(()=>{})}
+  }
 }
 async function bindOrderRealtime(){
   try{if(orderChannel) await sb.removeChannel(orderChannel);orderChannel=sb.channel('jpt-v107-orders-'+activeOutlet+'-'+Date.now()).on('postgres_changes',{event:'INSERT',schema:'public',table:'orders',filter:'outlet_id=eq.'+activeOutlet},p=>{if(p?.new?.status==='new'){showOrderAlarm(p.new)}loadOrders().catch(()=>{})}).on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders',filter:'outlet_id=eq.'+activeOutlet},()=>loadOrders().catch(()=>{})).subscribe();}catch(e){console.warn('Order realtime unavailable',e)}
 }
 $('ordersRefresh').onclick=loadOrders;
+document.querySelectorAll('.orderQueueBtn').forEach(b=>b.classList.toggle('gold',b.dataset.queue==='all'));
 
 $('scratchSetup').onclick=configureScratchSlabs;
 
