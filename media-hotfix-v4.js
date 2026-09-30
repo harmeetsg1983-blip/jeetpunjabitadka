@@ -121,13 +121,85 @@
     img.style.background = '#090909';
   }
 
-  function mainBox() {
+  function mediaWindowActive(row) {
+    try {
+      if (!row || row.active === false) return false;
+      var now = Date.now();
+      var start = row.start_at ? Date.parse(row.start_at) : -Infinity;
+      var end = row.end_at ? Date.parse(row.end_at) : Infinity;
+      return start <= now && now <= end;
+    } catch (e) { return false; }
+  }
+
+  function campaignMedia(row) {
+    var s = row && row.schedule_json && typeof row.schedule_json === 'object'
+      ? row.schedule_json : {};
+    if (s.campaign_type !== 'media') return null;
+    if (s.surface && s.surface !== 'customer_home_hero') return null;
+    if (s.banner_control_id || s.surface === 'customer_outlet_showcase') return null;
+    var video = row.video_url || s.video_url || null;
+    var image = row.banner_url || s.image_url || null;
+    if (!video && !image) return null;
+    return { video: video, image: image, title: row.title || '' };
+  }
+
+  async function loadManagedMedia(id) {
+    try {
+      var client = window.sb || window.supabaseClient;
+      if (!client) return null;
+      var result = await client
+        .from('campaigns')
+        .select('id,title,active,start_at,end_at,priority,banner_url,video_url,schedule_json,created_at')
+        .eq('outlet_id', id)
+        .order('priority', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (result.error) return null;
+
+      var rows = (result.data || [])
+        .filter(mediaWindowActive)
+        .map(campaignMedia)
+        .filter(Boolean);
+
+      return rows[0] || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function renderManagedMedia(box, media, id) {
+    box.innerHTML = '';
+    if (media.video) {
+      var video = document.createElement('video');
+      video.setAttribute('data-jpt-v106-media-v4', '1');
+      video.src = media.video;
+      video.alt = '';
+      setupVideo(box, video);
+      video.addEventListener('loadeddata', function () {
+        video.muted = true;
+        video.play().catch(function () {});
+      }, { once: true });
+      video.play().catch(function () {});
+    } else if (media.image) {
+      var img = document.createElement('img');
+      img.setAttribute('data-jpt-v106-media-v4', '1');
+      setupImage(box, img, media.image, id);
+    }
+  }
+
+  async function mainBox() {
     var box = document.getElementById('videoBanner');
     if (!box) return;
 
     setupBox(box);
 
     var id = getOutlet();
+    var managed = await loadManagedMedia(id);
+
+    if (managed) {
+      renderManagedMedia(box, managed, id);
+      return;
+    }
 
     if (id === 'JPT-001') {
       var video = box.querySelector('video');
