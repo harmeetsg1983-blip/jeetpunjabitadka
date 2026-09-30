@@ -30,7 +30,7 @@ async function run(){
    const isVideo=kind==='video';
    canvas.style.display=isVideo?'none':'block';
    zoomOut.disabled=isVideo;center.disabled=isVideo;zoomIn.disabled=isVideo;
-   zoomOut.style.opacity=isVideo?.55:1;center.style.opacity=isVideo?.55:1;zoomIn.style.opacity=isVideo?.55:1;
+   zoomOut.style.opacity=isVideo ? .55 : 1;center.style.opacity=isVideo ? .55 : 1;zoomIn.style.opacity=isVideo ? .55 : 1;
    let v=document.getElementById('jpt4VideoPreview');
    if(isVideo){
      if(!v){v=document.createElement('video');v.id='jpt4VideoPreview';v.controls=true;v.playsInline=true;v.muted=muted.checked;v.style.cssText='width:100%;height:100%;object-fit:contain;background:#000';preview.appendChild(v)}
