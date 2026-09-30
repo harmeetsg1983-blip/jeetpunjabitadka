@@ -196,3 +196,11 @@ Before creating the new onboarding UI/module, obtain and map the actual Supabase
 - The supported current Phase C path is the existing manual menu management contract: outlet-scoped categories, menu items, prices/availability, and menu-item image mapping.
 - When PDF import is implemented, it must stage extracted data for human review before publishing into the existing menu contracts; it must not silently write extracted prices/items directly into the live customer menu.
 - Required future evidence: storage contract for PDFs, extraction service/Edge Function, staging data contract, validation/review workflow, publish transaction, authorization/RLS, error handling, and audit trail.
+
+
+## Phase G Central Owner aggregate-reporting source boundary — 01 Oct 2026
+- A legacy file `jpt-v106-partner-operations-v2.js` contains a SALES view with TODAY/YESTERDAY/7 DAYS/1 MONTH filters and queries `orders` without an `outlet_id` predicate, then groups delivered/completed rows by `outlet_id` and reads outlet names from `outlets`.
+- Repository search did not find an active `admin.html` script reference to this file. Therefore it is not established as the active production Central Owner reporting implementation and must not be promoted merely because it contains an ALL OUTLETS view.
+- Its query also demonstrates why client-side aggregate reporting cannot be treated as financial authority: server-side authorization/RLS and complete-period semantics are not established by this file.
+- Active `admin.html` Finance/Reports remain selected-outlet, latest-100-row operational summaries as previously recorded.
+- No production code changed. Next safe boundary is to identify authoritative Central Owner reporting backend/RLS/function evidence before introducing any aggregate reporting implementation.
