@@ -43,14 +43,21 @@ function cropEditor(ref){
  }
  ref.file.onchange=()=>{
   const f=ref.file.files?.[0];if(!f)return;
-  const isVideo=/^video\\//i.test(f.type)||/\\.(mp4|webm|ogg|mov|m4v)$/i.test(f.name);
+  const isVideo=/^video\\//i.test(f.type)||/\\.(mp4|webm|ogg)$/i.test(f.name);
+  const canvasEl=ref.canvas, controls=[ref.zoomOut,ref.center,ref.zoomIn];
+  const oldVideo=ref.cropBox.querySelector('.jpt-video-preview');if(oldVideo)oldVideo.remove();
   if(isVideo){
-    img=null;ready=true;ref.cropBox.style.display='block';ref.zoomIn.disabled=true;ref.zoomOut.disabled=true;ref.center.disabled=true;
-    ref.zoomIn.style.opacity='.45';ref.zoomOut.style.opacity='.45';ref.center.style.opacity='.45';
-    const u=URL.createObjectURL(f);ref.cropBox.innerHTML='<div class="jpt-sm-preview"><video controls playsinline muted src="'+u+'"></video></div><div class="jpt-video-note">🎬 Video selected. Crop/Zoom/Drag is disabled for video. The original video will be uploaded.</div>';
+    img=null;ready=true;ref.cropBox.style.display='block';canvasEl.style.display='none';
+    controls.forEach(x=>{x.style.display='none';x.disabled=true});
+    let vp=ref.cropBox.querySelector('.jpt-video-preview');
+    if(!vp){vp=document.createElement('div');vp.className='jpt-video-preview';vp.style.cssText='width:100%;height:280px;background:#050505;border-radius:10px;display:grid;place-items:center';ref.cropBox.insertBefore(vp,ref.cropBox.querySelector('.jpt-crop-row'))}
+    const u=URL.createObjectURL(f);
+    vp.innerHTML='<video controls playsinline muted style="width:100%;height:100%;object-fit:contain;border-radius:10px"></video><div class="jpt-video-note">🎬 Video selected. Crop / Zoom / Drag is disabled for video. Original video will be uploaded.</div>';
+    vp.querySelector('video').src=u;
     return;
   }
-  const u=URL.createObjectURL(f);ref.cropBox.innerHTML='<canvas id="jptSmCanvas"></canvas><div class="jpt-crop-row"><button id="jptSmZoomOut">− Zoom</button><button id="jptSmCenter">Center</button><button id="jptSmZoomIn">＋ Zoom</button></div><div class="jpt-sm-note">Drag the image inside the frame to position it.</div>';ref.canvas=ref.cropBox.querySelector('canvas');ref.zoomOut=ref.cropBox.querySelector('#jptSmZoomOut');ref.center=ref.cropBox.querySelector('#jptSmCenter');ref.zoomIn=ref.cropBox.querySelector('#jptSmZoomIn');const u2=u;img=new Image();img.onload=()=>{fit();ref.cropBox.style.display='block';ref.zoomIn.disabled=false;ref.zoomOut.disabled=false;ref.center.disabled=false;ref.zoomIn.style.opacity='1';ref.zoomOut.style.opacity='1';ref.center.style.opacity='1';ready=true};img.src=u2;
+  canvasEl.style.display='block';controls.forEach(x=>{x.style.display='block';x.disabled=false});
+  const u=URL.createObjectURL(f);img=new Image();img.onload=()=>{fit();ref.cropBox.style.display='block';ready=true};img.src=u;
  };
  ref.zoomIn.onclick=()=>{if(!img)return;scale*=1.12;draw()};
  ref.zoomOut.onclick=()=>{if(!img)return;scale=Math.max(scale/1.12,0.05);draw()};
