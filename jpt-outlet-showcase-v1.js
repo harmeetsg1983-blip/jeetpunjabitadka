@@ -90,19 +90,19 @@ async function mount(){
    sb.from('campaigns').select('*').in('outlet_id',ids)
   ]);
   const recs=Object.fromEntries((or.data||[]).map(x=>[x.outlet_id,x]));
-  const by={};ids.forEach(id=>by[id]=[]);
-  (cr.data||[]).forEach(c=>{if(by[c.outlet_id]){const m=mediaOf(c);if(m&&active(c))by[c.outlet_id].push(m)}});
-  ids.forEach(id=>by[id].sort((a,b)=>b.priority-a.priority));
+  const by={};const lowerBy={};ids.forEach(id=>{by[id]=[];lowerBy[id]=[]});
+  (cr.data||[]).forEach(c=>{if(by[c.outlet_id]){const m=mediaOf(c);if(m&&active(c)){const place=String(c.schedule_json?.placement||'top').toLowerCase();(place==='lower'?lowerBy:by)[c.outlet_id].push(m)}}});
+  ids.forEach(id=>{by[id].sort((a,b)=>b.priority-a.priority);lowerBy[id].sort((a,b)=>b.priority-a.priority)});
   list.innerHTML=ids.map(id=>{
-   const o=OUT[id],r=recs[id]||{},poster=r.cover_image||r.banner_image||r.image_url||r.image||fallback[id]||'';
+   const o=OUT[id],r=recs[id]||{},poster=r.cover_image||r.banner_image||r.image_url||r.image||fallback[id]||'',lower=lowerBy[id]||[];
    return '<article class="jpt-os-card" style="--os-accent:'+o.accent+'">'+
     '<div class="jpt-os-name" style="color:'+o.accent+'">'+esc(r.name||o.name)+' <span>'+id+'</span></div>'+
     '<div class="jpt-os-video" data-os-video="'+id+'"><div class="jpt-os-empty"><div><b>🎬 VIDEO SPONSOR</b>Restaurant video will play here</div></div></div>'+
-    '<div class="jpt-os-poster">'+(poster?'<img src="'+esc(poster)+'" alt="'+esc(r.name||o.name)+' poster">':'<div class="jpt-os-poster-empty">Outlet poster / banner</div>')+'</div>'+
+    '<div class="jpt-os-poster" data-os-lower="'+id+'">'+(poster?'<img src="'+esc(poster)+'" alt="'+esc(r.name||o.name)+' poster">':'<div class="jpt-os-poster-empty">Outlet poster / banner</div>')+'</div>'+
     '<div class="jpt-os-footer"><b>VIDEO • GREEN LIGHT &nbsp; | &nbsp; POSTER • GOLD LIGHT</b><button type="button" data-os-open="'+id+'">VIEW MENU</button></div>'+
    '</article>';
   }).join('');
-  ids.forEach(id=>{const h=list.querySelector('[data-os-video="'+id+'"]');if(h&&by[id].length)playQueue(h,by[id]);});
+  ids.forEach(id=>{const h=list.querySelector('[data-os-video="'+id+'"]');if(h&&by[id].length)playQueue(h,by[id]);const lh=list.querySelector('[data-os-lower="'+id+'"]');if(lh&&lowerBy[id].length)playQueue(lh,lowerBy[id]);});
   list.querySelectorAll('[data-os-open]').forEach(b=>b.onclick=()=>window.switchOutlet&&window.switchOutlet(b.dataset.osOpen));
  }catch(e){console.warn('[JPT Outlet Showcase]',e);}
 }
