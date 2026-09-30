@@ -130,7 +130,7 @@ function renderHighlights(){
  const title=document.querySelector('.section');
  const grid=$('highlightGrid');
  if(title&&grid){const show=outletId==='JPT-001'; title.style.display=show?'':'none'; grid.style.display=show?'':'none';}
- const ids=Object.keys(OUTLETS).filter(id=>id!=='JPT-001');
+ const ids=Object.keys(OUTLETS).filter(id=>id!=='JPT-001').slice(0,12);
  $('highlightGrid').innerHTML=ids.map(id=>{
   const o=OUTLETS[id], rec=outletRecords[id]||{}, os=(offersByOutlet[id]||[]).filter(activeWindow);
   const best=os[0], label=best?offerText(best):'View menu';
