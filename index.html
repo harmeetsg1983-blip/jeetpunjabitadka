@@ -198,6 +198,11 @@ function renderHero(){
 }
 let jptMediaTimer=null,jptMediaIndex=0,jptMediaToken=0;
 function renderVideo(){
+ /* Customer Home Hero media is owned by media-hotfix-v4.js.
+    Keep the legacy renderer inert to prevent two controllers fighting
+    over the same #videoBanner surface. */
+ return;
+ /* legacy renderer retained below for rollback/reference */
  const media=[];
  (campaigns||[]).filter(activeWindow).filter(c=>{const s=c.schedule_json;return !(s&&s.controller==='jpt-outlet-media-v1'&&((s.placement||'top')==='top'))}).slice().sort((a,b)=>Number(a.sort_order??9999)-Number(b.sort_order??9999)).forEach(c=>{
    const s=c.schedule_json||{};
