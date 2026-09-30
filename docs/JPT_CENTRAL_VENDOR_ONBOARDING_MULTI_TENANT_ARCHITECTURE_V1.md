@@ -299,3 +299,14 @@ No financial feature is declared GREEN until server-side source-of-truth, audita
 - However, authoritative server function bodies/RLS for these approval/status RPCs are not available in the repository. Therefore the complete security gate is not independently proven and remains NOT GREEN.
 - Required runtime/backend evidence: unverified/unapproved rider cannot set ONLINE; approved rider can; rejected/inactive rider cannot; phone session maps to exactly one authorized rider; offer snapshot cannot expose assignments to an unauthorized rider.
 - No production code changed in this checkpoint.
+
+
+## Delivery offer → assignment checkpoint — 01 Oct 2026
+- Delivery Partner runtime polls the server RPC `delivery_partner_offer_snapshot`; it does not construct offers from client order data.
+- Rider response uses `delivery_assignment_respond` with the assignment ID and accept/reject decision.
+- Active assignment state is read from `delivery_partner_assignment_snapshot`; delivery status transitions use `delivery_assignment_status`.
+- Restaurant Partner delivery bridge uses `delivery_offer_next` to request an offer for a specific order and reports whether an eligible ONLINE rider received it; this is server-RPC based rather than client-side rider selection.
+- The audited UI keeps outlet/order identifiers from the server response and does not invent assignment IDs.
+- However, authoritative RPC bodies/RLS are still absent from the repository. Therefore server-side eligibility, outlet isolation, duplicate acceptance/race handling, and unauthorized assignment access are NOT independently proven and remain blocked from GREEN.
+- Required runtime/backend evidence: rider A cannot see/accept B's assignment; assignment must remain tied to its order/outlet; only eligible ONLINE/approved riders receive offers; concurrent acceptance cannot create duplicate active assignment; status transitions and completed delivery remain rider/assignment scoped.
+- No production code changed in this checkpoint.
