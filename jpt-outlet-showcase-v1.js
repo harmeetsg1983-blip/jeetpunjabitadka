@@ -1,21 +1,22 @@
 /* JPT Outlet Showcase V1
-   Customer home: five outlet cards, large top video/media sponsor area + lower outlet poster.
-   Top media: images rotate every 10s; videos advance on ended.
-   Top frame uses outlet accent (green-family sponsor glow); lower poster uses gold highlight.
-   Read-only customer layer; outlet management remains in Restaurant Partner/Admin.
+   Customer home outlet showcase.
+   Source of truth: campaigns rows published for surface "customer_outlet_showcase".
+   Falls back to legacy banner_control_id media for backward compatibility.
+   Outlet directory is dynamic; no five-outlet hard limit.
 */
 (function(){
 'use strict';
 if(window.__JPT_OUTLET_SHOWCASE_V1__) return;
 window.__JPT_OUTLET_SHOWCASE_V1__=true;
 
-const OUT={
+const LEGACY={
  "JPT-001":{name:"Jeet Punjabi Tadka",accent:"#d8ae42"},
  "SOP-002":{name:"Shan-e-Punjab",accent:"#49b36a"},
  "PFA-003":{name:"Punjabi Food Adda",accent:"#df6680"},
  "NME-004":{name:"99 Meal Express",accent:"#f29b32"},
  "TOP-005":{name:"Taste of Punjab",accent:"#7b74e8"}
 };
+const accentFor=(code,i)=>LEGACY[code]?.accent||["#d8ae42","#49b36a","#df6680","#f29b32","#7b74e8"][i%5];
 const fallback=window.ROYAL_MEDIA||{};
 const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const css=document.createElement('style');css.textContent=`
@@ -48,6 +49,9 @@ function active(c){
 function mediaOf(c){
  const s=c&&typeof c.schedule_json==='object'?c.schedule_json:{};
  if(s.campaign_type!=='media')return null;
+ const surface=String(s.surface||'');
+ const isShowcase=surface==='customer_outlet_showcase'||!!s.banner_control_id;
+ if(!isShowcase)return null;
  const video=c.video_url||s.video_url||null, image=c.banner_url||s.image_url||null;
  if(!video&&!image)return null;
  return {video,image,priority:Number(c.priority||0),id:c.id};
@@ -84,24 +88,26 @@ async function mount(){
  const list=wrap.querySelector('#jptOsList');
  try{
   const sb=window.sb;
-  const ids=Object.keys(OUT);
-  const [or,cr]=await Promise.all([
-   sb.from('outlets').select('*').in('outlet_id',ids),
-   sb.from('campaigns').select('*').in('outlet_id',ids)
-  ]);
-  const recs=Object.fromEntries((or.data||[]).map(x=>[x.outlet_id,x]));
+  const or=await sb.from('outlets').select('code,name,banner_url,logo_url').order('name',{ascending:true});
+  if(or.error)throw or.error;
+  const rows=(or.data||[]).filter(x=>x.code);
+  const ids=rows.map(x=>String(x.code));
+  if(!ids.length){list.innerHTML='<div class="jpt-os-empty"><div><b>NO OUTLETS AVAILABLE</b></div></div>';return;}
+  const cr=await sb.from('campaigns').select('*').in('outlet_id',ids);
+  if(cr.error)throw cr.error;
+  const recs=Object.fromEntries(rows.map(x=>[String(x.code),x]));
   const by={};ids.forEach(id=>{by[id]=[]});
-  (cr.data||[]).forEach(c=>{if(by[c.outlet_id]){const m=mediaOf(c);if(m&&active(c))by[c.outlet_id].push(m)}});
+  (cr.data||[]).forEach(c=>{const id=String(c.outlet_id||'');if(by[id]){const m=mediaOf(c);if(m&&active(c))by[id].push(m)}});
   ids.forEach(id=>{by[id].sort((a,b)=>b.priority-a.priority);by[id]=by[id].slice(0,1)});
-  list.innerHTML=ids.map(id=>{
-   const o=OUT[id],r=recs[id]||{},legacy=r.banner_url||r.cover_image||r.banner_image||r.image_url||r.image||fallback[id]||'';
+  list.innerHTML=ids.map((id,i)=>{
+   const r=recs[id]||{},legacy=r.banner_url||fallback[id]||'',o={name:r.name||id,accent:accentFor(id,i)};
    return '<article class="jpt-os-card" style="--os-accent:'+o.accent+'">'+
-    '<div class="jpt-os-name" style="color:'+o.accent+'">'+esc(r.name||o.name)+' <span>'+id+'</span></div>'+
-    '<div class="jpt-os-video" data-os-video="'+id+'">'+(legacy&&!by[id].length?'<img src="'+esc(legacy)+'" alt="'+esc(r.name||o.name)+' banner">':'<div class="jpt-os-empty"><div><b>🎬 OUTLET BANNER</b>Upload one image or video for this outlet</div></div>')+'</div>'+
-    '<div class="jpt-os-footer"><b>LIVE BANNER • '+id+'</b><button type="button" data-os-open="'+id+'">VIEW MENU</button></div>'+
+    '<div class="jpt-os-name" style="color:'+o.accent+'">'+esc(o.name)+' <span>'+esc(id)+'</span></div>'+
+    '<div class="jpt-os-video" data-os-video="'+esc(id)+'">'+(legacy&&!by[id].length?'<img src="'+esc(legacy)+'" alt="'+esc(o.name)+' banner">':'<div class="jpt-os-empty"><div><b>🎬 OUTLET BANNER</b>Media is not published for this outlet.</div></div>')+'</div>'+
+    '<div class="jpt-os-footer"><b>LIVE BANNER • '+esc(id)+'</b><button type="button" data-os-open="'+esc(id)+'">VIEW MENU</button></div>'+
    '</article>';
   }).join('');
-  ids.forEach(id=>{const h=list.querySelector('[data-os-video="'+id+'"]');if(h&&by[id].length)playQueue(h,by[id]);});
+  ids.forEach(id=>{const h=list.querySelector('[data-os-video="'+CSS.escape(id)+'"]');if(h&&by[id].length)playQueue(h,by[id]);});
   list.querySelectorAll('[data-os-open]').forEach(b=>b.onclick=()=>window.switchOutlet&&window.switchOutlet(b.dataset.osOpen));
  }catch(e){console.warn('[JPT Outlet Showcase]',e);}
 }
