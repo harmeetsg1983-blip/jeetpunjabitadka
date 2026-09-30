@@ -95,11 +95,69 @@ function editor(){
  };
 }
 
-async function uploadMedia(file,bucket,folder){
+async function loadTus(){
+ if(window.tus&&typeof window.tus.Upload==='function')return window.tus;
+ await new Promise((resolve,reject)=>{
+  const existing=document.querySelector('script[data-jpt-tus]');
+  if(existing){existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',()=>reject(new Error('Resumable upload library failed to load.')),{once:true});return}
+  const sc=document.createElement('script');
+  sc.src='https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js';
+  sc.async=true;sc.dataset.jptTus='1';
+  sc.onload=resolve;sc.onerror=()=>reject(new Error('Resumable upload library failed to load.'));
+  document.head.appendChild(sc);
+ });
+ if(!window.tus||typeof window.tus.Upload!=='function')throw new Error('Resumable upload library unavailable.');
+ return window.tus;
+}
+async function uploadVideoResumable(file,bucket,folder,msgEl){
+ const tus=await loadTus();
+ const session=await sb().auth.getSession();
+ const token=session?.data?.session?.access_token;
+ if(!token)throw new Error('AUTH SESSION EXPIRED. Please sign in again.');
+ const base=String(window.JPT_SUPABASE_URL||'').trim();
+ let host='';
+ try{host=new URL(base).hostname}catch(e){}
+ if(!host)throw new Error('SUPABASE STORAGE HOST NOT CONFIGURED.');
+ const projectRef=host.split('.')[0];
+ if(!projectRef)throw new Error('SUPABASE PROJECT REF NOT AVAILABLE.');
  const lower=String(file.name||'').toLowerCase();
- const ext=['.mp4','.webm','.ogg','.jpg','.jpeg','.png','.webp'].find(x=>lower.endsWith(x))||'.bin';
+ const ext=['.mp4','.webm','.ogg'].find(x=>lower.endsWith(x))||'.mp4';
  const path=folder+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,9)+ext;
- const r=await sb().storage.from(bucket).upload(path,file,{upsert:false,cacheControl:'60',contentType:file.type||'application/octet-stream'});
+ const endpoint='https://'+projectRef+'.storage.supabase.co/storage/v1/upload/resumable';
+ if(msgEl)msg(msgEl,'Uploading video securely… 0%',true);
+ return await new Promise((resolve,reject)=>{
+  const upload=new tus.Upload(file,{
+   endpoint,
+   retryDelays:[0,3000,5000,10000,20000],
+   headers:{authorization:'Bearer '+token,'x-upsert':'false'},
+   metadata:{bucketName:bucket,objectName:path,contentType:file.type||'video/mp4',cacheControl:'60'},
+   uploadDataDuringCreation:true,
+   removeFingerprintOnSuccess:true,
+   onError:error=>reject(new Error('VIDEO UPLOAD FAILED: '+(error?.message||String(error)))),
+   onProgress:(bytesUploaded,bytesTotal)=>{
+    const pct=bytesTotal?Math.floor(bytesUploaded/bytesTotal*100):0;
+    if(msgEl)msg(msgEl,'Uploading video securely… '+pct+'%',true);
+   },
+   onSuccess:()=>{
+    const u=sb().storage.from(bucket).getPublicUrl(path);
+    const url=u?.data?.publicUrl||'';
+    if(!url){reject(new Error('PUBLIC VIDEO URL NOT AVAILABLE'));return}
+    resolve({path,url});
+   }
+  });
+  upload.findPreviousUploads().then(previous=>{
+   if(previous.length)upload.resumeFromPreviousUpload(previous[0]);
+   upload.start();
+  }).catch(reject);
+ });
+}
+async function uploadMedia(file,bucket,folder,msgEl){
+ const lower=String(file.name||'').toLowerCase();
+ const isVideo=String(file.type||'').toLowerCase().startsWith('video/')||['.mp4','.webm','.ogg'].some(x=>lower.endsWith(x));
+ if(isVideo)return uploadVideoResumable(file,bucket,folder,msgEl);
+ const ext=['.jpg','.jpeg','.png','.webp'].find(x=>lower.endsWith(x))||'.jpg';
+ const path=folder+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,9)+ext;
+ const r=await sb().storage.from(bucket).upload(path,file,{upsert:false,cacheControl:'60',contentType:file.type||'image/jpeg'});
  if(r.error)throw new Error('MEDIA UPLOAD FAILED: '+r.error.message);
  const u=sb().storage.from(bucket).getPublicUrl(path);
  const url=u?.data?.publicUrl||'';
@@ -145,32 +203,57 @@ async function saveOutletBanner(code,file,title,ed,preview,msgEl){
  const isVideo=String(file.type||'').toLowerCase().startsWith('video/')||['.mp4','.webm','.ogg'].some(ext=>lower.endsWith(ext));
  if(isVideo&&file.size>60*1024*1024)throw new Error('Video must be under 60MB.');
  if(!isVideo&&file.size>12*1024*1024)throw new Error('Image must be under 12MB.');
- msg(msgEl,'Uploading media…',true);
  const prepared=await ed.blob(file);
- const up=await uploadMedia(prepared,'menu-images','outlet-banners/'+code);
- await deactivateOutletMedia(code);
- const row={
-  outlet_id:code,
-  title:title||code+' Banner',
-  message:'Outlet banner '+code,
-  active:true,
-  start_at:null,
-  end_at:null,
-  priority:100,
-  banner_url:isVideo?null:up.url,
-  video_url:isVideo?up.url:null,
-  schedule_json:{version:3,campaign_type:'media',surface:'customer_outlet_showcase',media_type:isVideo?'video':'image',video_url:isVideo?up.url:null,image_url:isVideo?null:up.url,placement:'outlet_showcase',publication:'published',banner_control_id:FIXED_IDS[code]||('OUT-'+String(code||'').replace(/[^A-Za-z0-9_-]/g,'').slice(0,24))}
- };
- const ins=await sb().from(CAMPAIGNS).insert(row);
- if(ins.error)throw new Error('BANNER SAVE FAILED: '+ins.error.message);
- // Keep legacy outlet banner field in sync for other existing consumers.
- const patch= isVideo ? {banner_url:null} : {banner_url:up.url};
- const ou=await sb().from(OUTLETS).update(patch).eq('code',code);
- if(ou.error)throw new Error('OUTLET BANNER MAPPING FAILED: '+ou.error.message);
- msg(msgEl,'✅ Pushed live to '+code+' • '+(isVideo?'VIDEO':'IMAGE'),true);
- return up.url;
-}
+ msg(msgEl,isVideo?'Preparing resumable video upload…':'Uploading image…',true);
+ const up=await uploadMedia(prepared,'menu-images','outlet-banners/'+code,msgEl);
+ let insertedId=null;
+ let previousRows=[];
+ try{
+  const existing=await sb().from(CAMPAIGNS).select('id,active,banner_url,video_url,schedule_json').eq('outlet_id',code).eq('schedule_json->>campaign_type','media').eq('schedule_json->>surface','customer_outlet_showcase');
+  if(existing.error)throw new Error('CURRENT MEDIA READ FAILED: '+existing.error.message);
+  previousRows=existing.data||[];
+  const row={
+   outlet_id:code,
+   title:title||code+' Banner',
+   message:'Outlet banner '+code,
+   active:true,
+   start_at:null,
+   end_at:null,
+   priority:100,
+   banner_url:isVideo?null:up.url,
+   video_url:isVideo?up.url:null,
+   schedule_json:{version:4,campaign_type:'media',surface:'customer_outlet_showcase',media_type:isVideo?'video':'image',video_url:isVideo?up.url:null,image_url:isVideo?null:up.url,storage_bucket:'menu-images',storage_path:up.path,placement:'outlet_showcase',publication:'published',banner_control_id:FIXED_IDS[code]||('OUT-'+String(code||'').replace(/[^A-Za-z0-9_-]/g,'').slice(0,24))}
+  };
+  const ins=await sb().from(CAMPAIGNS).insert(row).select('id').single();
+  if(ins.error)throw new Error('BANNER SAVE FAILED: '+ins.error.message);
+  insertedId=ins.data?.id||null;
 
+  // New record is now safely committed. Only now retire the previous showcase records.
+  const oldIds=previousRows.map(x=>x.id).filter(Boolean);
+  if(oldIds.length){
+   const off=await sb().from(CAMPAIGNS).update({active:false}).in('id',oldIds).eq('outlet_id',code);
+   if(off.error){
+    if(insertedId)await sb().from(CAMPAIGNS).update({active:false}).eq('id',insertedId).eq('outlet_id',code);
+    throw new Error('OLD MEDIA RETIRE FAILED: '+off.error.message);
+   }
+  }
+
+  // Keep the legacy outlet field synchronized only after the campaign is live.
+  const patch=isVideo?{banner_url:null}:{banner_url:up.url};
+  const ou=await sb().from(OUTLETS).update(patch).eq('code',code);
+  if(ou.error){
+   if(insertedId)await sb().from(CAMPAIGNS).update({active:false}).eq('id',insertedId).eq('outlet_id',code);
+   for(const old of previousRows.filter(x=>x.active))await sb().from(CAMPAIGNS).update({active:true}).eq('id',old.id).eq('outlet_id',code);
+   throw new Error('OUTLET BANNER MAPPING FAILED: '+ou.error.message);
+  }
+
+  msg(msgEl,'✅ LIVE PUBLISHED • '+code+' • '+(isVideo?'VIDEO':'IMAGE'),true);
+  return up.url;
+ }catch(e){
+  // If DB publication failed, remove the just-uploaded object so failed attempts do not accumulate.
+  try{await sb().storage.from('menu-images').remove([up.path])}catch(cleanup){}
+  throw e;
+}
 async function outletToggle(code,row,next,msgEl){
  const c=sb();if(!row?.id)throw new Error('No saved banner found for this outlet.');
  const r=await c.from(CAMPAIGNS).update({active:next}).eq('id',row.id).eq('outlet_id',code);
@@ -180,9 +263,22 @@ async function outletToggle(code,row,next,msgEl){
 
 async function outletDelete(code,row,msgEl){
  const c=sb();
- if(row?.id){const r=await c.from(CAMPAIGNS).update({active:false}).eq('id',row.id).eq('outlet_id',code);if(r.error)throw r.error}
- const u=await c.from(OUTLETS).update({banner_url:null}).eq('code',code);if(u.error)throw u.error;
- msg(msgEl,'🗑️ Banner removed from live display.',true);
+ if(!row?.id)throw new Error('No saved banner found for this outlet.');
+ const s=row.schedule_json&&typeof row.schedule_json==='object'?row.schedule_json:{};
+ const path=s.storage_path||'';
+ const bucket=s.storage_bucket||'menu-images';
+ const r=await c.from(CAMPAIGNS).update({active:false}).eq('id',row.id).eq('outlet_id',code);
+ if(r.error)throw new Error('BANNER OFF FAILED: '+r.error.message);
+ const u=await c.from(OUTLETS).update({banner_url:null}).eq('code',code);
+ if(u.error){
+  await c.from(CAMPAIGNS).update({active:true}).eq('id',row.id).eq('outlet_id',code);
+  throw new Error('OUTLET BANNER CLEAR FAILED: '+u.error.message);
+ }
+ if(path){
+  const rm=await c.storage.from(bucket).remove([path]);
+  if(rm.error)throw new Error('LIVE REMOVED, BUT MEDIA FILE CLEANUP FAILED: '+rm.error.message);
+ }
+ msg(msgEl,'🗑️ Banner, live record and media file removed.',true);
 }
 
 function mediaPreview(url,isVideo,host){
@@ -311,7 +407,7 @@ async function renderSponsorSurface(kind){
     const lower=String(f.name||'').toLowerCase();
     const isVideo=String(f.type||'').toLowerCase().startsWith('video/')||['.mp4','.webm','.ogg'].some(ext=>lower.endsWith(ext));
     if(isVideo&&f.size>60*1024*1024)throw new Error('Video must be under 60MB.');
-    const prepared=await ed.blob(f),up=await uploadMedia(prepared,bucket,'manager-v3/'+kind);
+    const prepared=await ed.blob(f),up=await uploadMedia(prepared,bucket,'manager-v3/'+kind,m);
     const current=await sb().from(table).select('id').eq('is_active',true);
     if(current.data?.length){const off=await sb().from(table).update({is_active:false}).in('id',current.data.map(x=>x.id));if(off.error)throw off.error}
     const targetAll=wrap.querySelector('[data-target]').value==='all';
@@ -343,7 +439,7 @@ async function mount(){
  const box=document.createElement('section');box.id='jptBannerControlV3';box.innerHTML=`
  <div class="jpt-bcc">
   <h3>🎛️ Banner Control Center V3</h3>
-  <div class="jpt-bcc-sub">Central outlet banner authority • searchable/paginated outlet directory • one live banner per outlet • large preview • image/video zoom • drag/center • Push • ON/OFF • Delete. Existing menu/order system is not touched.</div>
+  <div class="jpt-bcc-sub">Central outlet banner authority • searchable/paginated outlet directory • one live banner per outlet • large preview • image/video zoom • drag/center • Push • resumable video upload • ON/OFF • Delete with media cleanup. Existing menu/order system is not touched.</div>
   <div class="jpt-bcc-tabs"><button class="on" data-tab="outlets">🏪 OUTLET DIRECTORY</button><button data-tab="delivery">🛵 DELIVERY ADS</button><button data-tab="customer">🧾 CHECKOUT / TRACKING</button></div>
   <div data-view="outlets">
    <div class="notice">Each outlet has exactly <b>one live banner position</b>. The directory is loaded from the central <b>outlets</b> table, so adding outlets does not require adding new hard-coded cards. Search by name/code and manage one outlet at a time.</div>
