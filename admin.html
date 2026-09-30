@@ -570,6 +570,24 @@ function renderOrderSummaries(rows){
 
 let orderChannel=null;
 let orderAlarmTimer=null;
+let jptNewOrderAudio=null;
+const JPT_NEW_ORDER_AUDIO='./ringtones/1000449570.mp4';
+function ensureNewOrderAudio(){
+  if(!jptNewOrderAudio){
+    jptNewOrderAudio=new Audio(JPT_NEW_ORDER_AUDIO);
+    jptNewOrderAudio.preload='auto';
+    jptNewOrderAudio.loop=true;
+  }
+  return jptNewOrderAudio;
+}
+function primeNewOrderAudio(){
+  try{
+    const a=ensureNewOrderAudio();
+    a.muted=true;
+    const p=a.play();
+    if(p&&p.then)p.then(()=>{a.pause();a.currentTime=0;a.muted=false}).catch(()=>{a.muted=false});
+  }catch(e){}
+}
 let lastOrderStamp=localStorage.getItem('jpt_v107_last_order_'+activeOutlet)||'';
 function orderItemsText(x){
   const a=Array.isArray(x.items)?x.items:[];
@@ -580,12 +598,20 @@ function showOrderAlarm(order){
   $('orderAlarm').style.display='block';$('orderAlarm').classList.add('alarmPulse');
   try{navigator.vibrate?.([300,120,300]);}catch(e){}
   try{if('Notification' in window && Notification.permission==='granted') new Notification('JPT — NEW ORDER',{body:$('orderAlarmText').textContent});}catch(e){}
+  try{const a=ensureNewOrderAudio();a.loop=true;a.muted=false;const p=a.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}
   clearTimeout(orderAlarmTimer);orderAlarmTimer=null;
 }
-function stopOrderAlarm(){clearTimeout(orderAlarmTimer);$('orderAlarm').style.display='none';$('orderAlarm').classList.remove('alarmPulse');try{navigator.vibrate?.(0)}catch(e){}}
+function stopOrderAlarm(){
+  clearTimeout(orderAlarmTimer);
+  $('orderAlarm').style.display='none';
+  $('orderAlarm').classList.remove('alarmPulse');
+  try{navigator.vibrate?.(0)}catch(e){}
+  try{if(jptNewOrderAudio){jptNewOrderAudio.pause();jptNewOrderAudio.currentTime=0}}catch(e){}
+}
 async function enableOrderAlarm(){
+  try{primeNewOrderAudio();}catch(e){}
   try{if('Notification' in window && Notification.permission==='default') await Notification.requestPermission();}catch(e){}
-  localStorage.setItem('jpt_v107_alarm_enabled','1');toast('Order alarm enabled');
+  localStorage.setItem('jpt_v107_alarm_enabled','1');toast('Exact NEW ORDER ringtone enabled');
 }
 $('enableAlarm').onclick=enableOrderAlarm;$('stopAlarm').onclick=stopOrderAlarm;
 const jptOrderActionBusy=new Set();
