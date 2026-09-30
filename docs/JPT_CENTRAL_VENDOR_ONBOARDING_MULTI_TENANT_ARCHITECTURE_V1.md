@@ -377,3 +377,11 @@ No financial feature is declared GREEN until server-side source-of-truth, audita
 - The conceptual `JPT_Restaurant_Partner_Large_Model_Finance_Settlement_V2.html` remains non-production and contains example figures.
 - Phase G operational reporting source is therefore identified; final financial reporting/settlement remains blocked by missing authoritative backend ledger/RPC/RLS evidence.
 - No production code changed.
+
+
+## Phase G reporting completeness / period-boundary checkpoint — 01 Oct 2026
+- Active `admin.html` order loader queries the selected outlet, orders by `created_at` descending, and applies `.limit(100)`.
+- Finance and Reports summaries are calculated from that loaded set. There is no demonstrated date-range filter or pagination in the active source for these summaries.
+- Therefore current Finance/Reports values represent the latest loaded outlet-scoped order window, not a complete historical accounting period. The UI wording must not be interpreted as full-period settlement/accounting.
+- `jpt-partner-orders-ui-v1.js` separately loads the latest 50 outlet-scoped orders for its operations view; this does not change the Finance/Reports source.
+- No production code changed. Any future full-period reporting must first define an authoritative reporting period/query contract and pagination/aggregation behavior; do not silently increase limits and call it financial authority.
