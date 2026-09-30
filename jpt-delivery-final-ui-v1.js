@@ -345,7 +345,7 @@ async function loadBanners(){
 
       ss[idx]?.classList.add('on');
       dots.children[idx]?.classList.add('on');
-    },1000);
+    },9000);
   }
 }
 
