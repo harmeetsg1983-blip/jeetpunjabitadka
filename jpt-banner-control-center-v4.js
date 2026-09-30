@@ -224,16 +224,16 @@ async function saveOutletBanner(code,file,title,ed,preview,msgEl){
    video_url:isVideo?up.url:null,
    schedule_json:{version:4,campaign_type:'media',surface:'customer_outlet_showcase',media_type:isVideo?'video':'image',video_url:isVideo?up.url:null,image_url:isVideo?null:up.url,storage_bucket:'menu-images',storage_path:up.path,placement:'outlet_showcase',publication:'published',banner_control_id:FIXED_IDS[code]||('OUT-'+String(code||'').replace(/[^A-Za-z0-9_-]/g,'').slice(0,24))}
   };
-  const ins=await sb().from(CAMPAIGNS).insert(row).select('id').single();
+  const ins=await sb().from(CAMPAIGNS).insert(row);
   if(ins.error)throw new Error('BANNER SAVE FAILED: '+ins.error.message);
-  insertedId=ins.data?.id||null;
+  insertedId=true;
 
   // New record is now safely committed. Only now retire the previous showcase records.
   const oldIds=previousRows.map(x=>x.id).filter(Boolean);
   if(oldIds.length){
    const off=await sb().from(CAMPAIGNS).update({active:false}).in('id',oldIds).eq('outlet_id',code);
    if(off.error){
-    if(insertedId)await sb().from(CAMPAIGNS).update({active:false}).eq('id',insertedId).eq('outlet_id',code);
+    await sb().from(CAMPAIGNS).update({active:false}).eq('outlet_id',code).eq('schedule_json->>storage_path',up.path);
     throw new Error('OLD MEDIA RETIRE FAILED: '+off.error.message);
    }
   }
