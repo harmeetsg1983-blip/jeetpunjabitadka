@@ -339,3 +339,12 @@ No financial feature is declared GREEN until server-side source-of-truth, audita
 - No cross-outlet aggregate financial reporting should be added until a central-owner reporting contract and authoritative backend source are evidenced.
 - Phase G financial GREEN gate remains unmet: authoritative server-side financial source, immutable/auditable ledger, reconciliation, refund/adjustment handling, outlet/rider linkage, and permission/RLS evidence are still required.
 - No production code changed in this checkpoint.
+
+
+## Phase G backend finance/settlement evidence search checkpoint — 01 Oct 2026
+- Repository search for `sales_summary`, `financial_ledger`, `settlement`, `ledger`, `refund`, `adjustment`, `commission`, `tax/GST/TDS`, and `payout` found no independently auditable production financial ledger or settlement source of truth.
+- `admin.html` remains operational order-row reporting only.
+- `JPT_Restaurant_Partner_Large_Model_Finance_Settlement_V2.html` contains a conceptual settlement/finance model with example/hard-coded figures and UI placeholders; it is not evidence of a production backend ledger and must not be copied as production financial logic.
+- Refund/cancellation policy text documents customer-facing policy context, but does not establish a transactional refund ledger or authoritative settlement implementation.
+- Therefore Phase G financial/settlement implementation remains BLOCKED/YELLOW pending authoritative backend schema/RPC/function/RLS evidence and reconciliation tests.
+- No production code changed.
