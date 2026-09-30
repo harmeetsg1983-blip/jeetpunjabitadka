@@ -116,3 +116,12 @@ The controlled source path now has an explicit runtime verification matrix. This
 8. Repeat with video and verify video preview plus customer rendering.
 9. Repeat the identity test using B04 in the UI while all database operations remain on canonical NME-004.
 10. Only after these checks pass may the Customer Outlet Showcase surface be considered GREEN.
+
+
+## Sponsor Media V4 Slot persistence source checkpoint — 30 Sep 2026
+- Manager V4 persists the selected slot as `schedule_json.slot` using the selected value 1 or 2.
+- Refresh reads `schedule_json.slot` and reconstructs separate Slot 1 and Slot 2 lists; the customer runtime uses the same field to render the two slots.
+- Save also persists `storage_bucket` and `storage_path`; delete attempts storage cleanup after the database row is deleted.
+- Source evidence therefore resolves the earlier Slot-2 source gap. It does not prove runtime persistence, RLS authorization, customer rendering, or storage cleanup success.
+- Runtime gate remains: save Slot 1, refresh/reopen; save Slot 2, refresh/reopen; verify both customer slots; toggle each; delete each; verify media-file cleanup; test image and video.
+- No schema/RLS change is authorized from this source checkpoint.
