@@ -179,3 +179,12 @@ No feature is GREEN until:
 ## 12. Next action
 
 Before creating the new onboarding UI/module, obtain and map the actual Supabase SQL/RLS/Edge Function definitions. Then implement the Central Owner onboarding and Menu Builder as an additive production workflow using the verified contracts.
+
+
+## Phase C menu onboarding source baseline — 01 Oct 2026
+- Existing Partner menu management reads/writes the outlet-scoped `menu_items` table and uses `categories` plus `menu_item_images` for category and image mapping.
+- Existing Customer runtime reads `menu_items` filtered by canonical `outlet_id`, active `categories`, and outlet-scoped `menu_item_images`; this is the existing customer-facing menu contract and must remain the single runtime source.
+- Existing Partner menu operations include item creation, price/category/availability/featured edits, category create/edit/activate/deactivate, and dish-image upload/mapping through the existing `menu-images` bucket.
+- Existing image mapping writes both `menu_item_images` and, where supported, `menu_items.image_url`; no replacement menu schema is authorized from this audit.
+- Phase C should therefore add onboarding/import tooling around these existing contracts rather than creating a second menu model.
+- PDF/OCR extraction is not yet evidenced as a production backend capability in the repository. It must remain a future prefill/review workflow until its authoritative implementation and permissions are available.
