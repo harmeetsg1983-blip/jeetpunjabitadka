@@ -289,3 +289,13 @@ No financial feature is declared GREEN until server-side source-of-truth, audita
 - `delivery_partner_offer_snapshot` is the existing server snapshot used for offer polling; it must remain the source of eligible offers rather than client-side filtering.
 - Therefore online/offline behavior is source-supported but NOT GREEN until runtime and backend authorization evidence confirms: unapproved rider cannot go online, offline rider receives no new offer, reconnect restores the real server state, and offer eligibility is correctly enforced.
 - No production code changed in this checkpoint.
+
+
+## Delivery onboarding → approval → ONLINE gate checkpoint — 01 Oct 2026
+- Stronger Delivery Partner V9 source uses real Supabase phone OTP (`signInWithOtp` + `verifyOtp`) and reads the authenticated rider's `delivery_partners` record for status, active flag, onboarding completion and verification status.
+- KYC/onboarding submission is server-RPC based (`delivery_partner_prepare_profile`, private KYC storage upload, `delivery_partner_submit_onboarding`) and requires live camera selfie capture in the audited V9 flow.
+- Admin review bridge uses `delivery_partner_admin_queue` and `delivery_partner_admin_review`; the UI states approval enables ONLINE.
+- ONLINE/OFFLINE then uses `delivery_partner_set_status` rather than a client-only flag.
+- However, authoritative server function bodies/RLS for these approval/status RPCs are not available in the repository. Therefore the complete security gate is not independently proven and remains NOT GREEN.
+- Required runtime/backend evidence: unverified/unapproved rider cannot set ONLINE; approved rider can; rejected/inactive rider cannot; phone session maps to exactly one authorized rider; offer snapshot cannot expose assignments to an unauthorized rider.
+- No production code changed in this checkpoint.
