@@ -194,8 +194,18 @@ async function loadOutletDirectory(){
 }
 async function loadAllOutletOffers(){
  offersByOutlet={};
- for(const id of Object.keys(OUTLETS)){let r=await sb.from('offers').select('*').eq('outlet_id',id).eq('active',true);if(!r.error)offersByOutlet[id]=r.data||[]}
- renderHighlights()
+ try{
+  const r=await sb.from('offers').select('*').eq('active',true).order('outlet_id').order('created_at',{ascending:false}).limit(5000);
+  if(!r.error){
+   (r.data||[]).forEach(row=>{
+    const id=String(row.outlet_id||'').trim();
+    if(!id||!OUTLETS[id])return;
+    if(!offersByOutlet[id])offersByOutlet[id]=[];
+    if(offersByOutlet[id].length<5)offersByOutlet[id].push(row);
+   });
+  }
+ }catch(e){}
+ renderHighlights();
 }
 let heroTimer=null;
 function renderHero(){
