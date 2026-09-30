@@ -35,7 +35,7 @@ async function start(){
   if(r.error)return;
   const now=Date.now(),id=outlet();
   const rows=(r.data||[]).filter(x=>(!x.starts_at||new Date(x.starts_at).getTime()<=now)&&(!x.ends_at||new Date(x.ends_at).getTime()>=now)&&(x.target_all_live||(id&&Array.isArray(x.outlet_ids)&&x.outlet_ids.includes(id))));
-  const grouped=[1,2].map(n=>rows.filter(x=>Number(x.schedule_json?.slot||0)===n));
+  const grouped=[1,2].map(n=>rows.filter(x=>Number(x.schedule_json?.slot||0)===n || (n===1&&!Number(x.schedule_json?.slot||0))));
   grouped.forEach((items,n)=>{
    const h=slots[n];if(!items.length){h.innerHTML='<span class="jpt-sv4-label">SPONSOR '+(n+1)+'</span>';h.style.display='none';return}
    h.style.display='block';indexes[n]=0;if(timers[n])clearTimeout(timers[n]);
