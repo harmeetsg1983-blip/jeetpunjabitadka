@@ -147,7 +147,7 @@ async function saveOutletBanner(code,file,title,ed,preview,msgEl){
  if(!isVideo&&file.size>12*1024*1024)throw new Error('Image must be under 12MB.');
  msg(msgEl,'Uploading media…',true);
  const prepared=await ed.blob(file);
- const up=await uploadMedia(prepared,SPONSOR_BUCKETS.customer,'outlet-banners/'+code);
+ const up=await uploadMedia(prepared,'menu-images','outlet-banners/'+code);
  await deactivateOutletMedia(code);
  const row={
   outlet_id:code,
