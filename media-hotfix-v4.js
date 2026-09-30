@@ -285,14 +285,11 @@
       clearTimeout(timer);
 
       timer = setTimeout(function () {
-        var video = document.querySelector(
-          '#videoBanner video'
+        var media = document.querySelector(
+          '#videoBanner video[data-jpt-v106-media-v4="1"], #videoBanner img[data-jpt-v106-media-v4="1"]'
         );
 
-        if (!video ||
-            video.getAttribute(
-              'data-jpt-v106-media-v4'
-            ) !== '1') {
+        if (!media) {
           apply();
         }
       }, 120);
