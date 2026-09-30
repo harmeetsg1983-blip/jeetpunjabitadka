@@ -101,3 +101,18 @@ Once authoritative backend definitions are available:
 7. only then consider promotion toward main.
 
 No production file on main is changed by this evidence-gate work.
+
+
+## Banner V4 runtime gate — 30 Sep 2026
+The controlled source path now has an explicit runtime verification matrix. This is a test plan, not a GREEN claim.
+
+1. Select NME-004 in Banner Control V4 and upload an image.
+2. Confirm successful publish message and campaign record uses outlet_id=NME-004, campaign_type=media, surface=customer_outlet_showcase, active=true, and storage metadata.
+3. Open Customer App and confirm the NME-004 card renders that managed media.
+4. Switch to another outlet and confirm NME-004 media does not remain stale.
+5. Refresh/reopen and confirm the published state persists.
+6. Turn the NME-004 banner OFF and confirm the customer surface no longer treats that campaign as active.
+7. Delete it and confirm the campaign is inactive, outlets.banner_url is cleared, and storage cleanup succeeds or reports a cleanup failure explicitly.
+8. Repeat with video and verify video preview plus customer rendering.
+9. Repeat the identity test using B04 in the UI while all database operations remain on canonical NME-004.
+10. Only after these checks pass may the Customer Outlet Showcase surface be considered GREEN.
