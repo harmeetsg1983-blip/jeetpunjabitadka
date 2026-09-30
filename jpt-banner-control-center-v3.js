@@ -126,7 +126,7 @@ function live(row){
 
 async function deactivateOutletMedia(code){
  const c=sb();
- const q=await c.from(CAMPAIGNS).update({active:false}).eq('outlet_id',code);
+ const q=await c.from(CAMPAIGNS).update({active:false}).eq('outlet_id',code).eq('schedule_json->>campaign_type','media');
  if(q.error)throw q.error;
 }
 
