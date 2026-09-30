@@ -40,7 +40,7 @@ async function run(){
  type.onchange=()=>{file.value='';img=null;videoUrl='';setMode(type.value);msg.textContent=type.value==='video'?'Video mode: choose an MP4/WebM/OGG.':'Image mode: choose an image for crop/zoom.'};
  file.onchange=()=>{
    const f=file.files?.[0];if(!f)return;
-   const isVideo=/^video\\//i.test(f.type)||/\\.(mp4|webm|ogg)$/i.test(f.name);
+   const isVideo=/^video\//i.test(f.type)||/\.(mp4|webm|ogg)$/i.test(f.name);
    type.value=isVideo?'video':'image';setMode(type.value);
    if(isVideo){
      videoUrl=URL.createObjectURL(f);let v=document.getElementById('jpt4VideoPreview');v.src=videoUrl;v.muted=muted.checked;msg.textContent='Video selected. Zoom is for images; video will play to completion, then advance.';
