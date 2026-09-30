@@ -233,7 +233,7 @@ function renderOutletCard(o,data,ed){
    saveStep='refresh';
    await bootOutlet();
   }catch(e){
-   msg(m,'SAVE FAILED @ '+saveStep+': '+(e?.message||String(e)),false);
+   msg(m,'SAVE FAILED @ '+saveStep+': '+(e?.message||String(e))+' | '+String(e?.stack||'').split('\n').slice(0,3).join(' ← '),false);
   }finally{b.disabled=false}
  };
  box.querySelector('[data-toggle]').onclick=async()=>{
