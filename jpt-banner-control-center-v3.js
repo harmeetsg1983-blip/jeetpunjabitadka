@@ -186,7 +186,7 @@ function mediaPreview(url,isVideo,host){
  host.innerHTML='';
  if(!url){host.innerHTML='<div class="jpt-bcc-empty"><b>NO LIVE BANNER</b>Choose media below and Push Banner.</div>';return}
  if(isVideo){const v=document.createElement('video');v.src=url;v.controls=true;v.playsInline=true;v.muted=true;v.style.cssText='width:100%;height:100%;object-fit:contain';host.appendChild(v)}
- else{const i=document.createElement('img');i.src=url;i.alt='Banner preview';host.appendChild(i)}
+ else{const imgEl=document.createElement('img');imgEl.src=url;imgEl.alt='Banner preview';host.appendChild(imgEl)}
 }
 
 function renderOutletCard(o,data,ed){
