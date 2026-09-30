@@ -226,7 +226,15 @@ function renderOutletCard(o,data,ed){
  box.querySelector('[data-push]').onclick=async()=>{
   const b=box.querySelector('[data-push]'),f=box.querySelector('[data-file]').files?.[0],m=box.querySelector('[data-msg]');
   b.disabled=true;msg(m,'Preparing…',true);
-  try{await saveOutletBanner(o.code,f,box.querySelector('[data-title]').value.trim(),ed,preview,m);await bootOutlet();}catch(e){msg(m,e.message||String(e),false)}finally{b.disabled=false}
+  let saveStep='start';
+  try{
+   saveStep='saveOutletBanner';
+   await saveOutletBanner(o.code,f,box.querySelector('[data-title]').value.trim(),ed,preview,m);
+   saveStep='refresh';
+   await bootOutlet();
+  }catch(e){
+   msg(m,'SAVE FAILED @ '+saveStep+': '+(e?.message||String(e)),false);
+  }finally{b.disabled=false}
  };
  box.querySelector('[data-toggle]').onclick=async()=>{
   try{await outletToggle(o.code,state.row,!state.row?.active,box.querySelector('[data-msg]'));await bootOutlet()}catch(e){msg(box.querySelector('[data-msg]'),e.message||String(e),false)}
