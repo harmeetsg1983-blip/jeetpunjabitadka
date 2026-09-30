@@ -280,3 +280,12 @@ No financial feature is declared GREEN until server-side source-of-truth, audita
 - Therefore delivery earnings/payout is NOT GREEN and no fixed payout amount/formula should be copied into the production architecture.
 - Existing architecture requirement remains: completed deliveries and earnings must be server-side source-of-truth, append-safe/auditable, with payout/commission/GST/TDS intentionally unresolved until the authoritative financial contract is available.
 - No production code changed in this checkpoint.
+
+
+## Delivery online/offline source checkpoint — 01 Oct 2026
+- Delivery Partner V8/V9/V10/V11 foundations call the server RPC `delivery_partner_set_status` for both ONLINE and OFFLINE; UI state is updated only after the RPC succeeds.
+- Going ONLINE starts offer polling; going OFFLINE stops offer polling. The audited source does not use a client-only boolean as the persistence mechanism.
+- The authoritative function body/authorization contract for `delivery_partner_set_status` is not present in the repository, so approval gating and rider-availability enforcement cannot be independently proven from source alone.
+- `delivery_partner_offer_snapshot` is the existing server snapshot used for offer polling; it must remain the source of eligible offers rather than client-side filtering.
+- Therefore online/offline behavior is source-supported but NOT GREEN until runtime and backend authorization evidence confirms: unapproved rider cannot go online, offline rider receives no new offer, reconnect restores the real server state, and offer eligibility is correctly enforced.
+- No production code changed in this checkpoint.
