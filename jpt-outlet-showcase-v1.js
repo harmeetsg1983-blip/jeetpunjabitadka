@@ -27,7 +27,7 @@ const css=document.createElement('style');css.textContent=`
 .jpt-os-card{border:1px solid rgba(216,174,66,.72);border-radius:18px;background:#080808;overflow:hidden;box-shadow:0 10px 30px #0009}
 .jpt-os-name{padding:10px 12px 8px;font-weight:1000;font-size:17px;background:linear-gradient(180deg,#171717,#0a0a0a)}
 .jpt-os-name span{font-size:10px;color:#999;font-weight:700;margin-left:6px}
-.jpt-os-video{position:relative;height:180px;background:#020202;overflow:hidden;border-top:1px solid rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.05)}
+.jpt-os-video{position:relative;height:300px;background:#020202;overflow:hidden;border-top:1px solid rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.05)}
 .jpt-os-video:after{content:"";position:absolute;inset:0;pointer-events:none;border:2px solid var(--os-accent);box-shadow:inset 0 0 20px color-mix(in srgb,var(--os-accent) 28%,transparent),0 0 18px color-mix(in srgb,var(--os-accent) 18%,transparent);border-radius:0}
 .jpt-os-video video,.jpt-os-video img{width:100%;height:100%;display:block;object-fit:cover}
 .jpt-os-video video{position:relative;z-index:1}
@@ -90,19 +90,18 @@ async function mount(){
    sb.from('campaigns').select('*').in('outlet_id',ids)
   ]);
   const recs=Object.fromEntries((or.data||[]).map(x=>[x.outlet_id,x]));
-  const by={};const lowerBy={};ids.forEach(id=>{by[id]=[];lowerBy[id]=[]});
-  (cr.data||[]).forEach(c=>{if(by[c.outlet_id]){const m=mediaOf(c);if(m&&active(c)){const place=String(c.schedule_json?.placement||'top').toLowerCase();(place==='lower'?lowerBy:by)[c.outlet_id].push(m)}}});
-  ids.forEach(id=>{by[id].sort((a,b)=>b.priority-a.priority);lowerBy[id].sort((a,b)=>b.priority-a.priority)});
+  const by={};ids.forEach(id=>{by[id]=[]});
+  (cr.data||[]).forEach(c=>{if(by[c.outlet_id]){const m=mediaOf(c);if(m&&active(c))by[c.outlet_id].push(m)}});
+  ids.forEach(id=>by[id].sort((a,b)=>b.priority-a.priority));
   list.innerHTML=ids.map(id=>{
-   const o=OUT[id],r=recs[id]||{},poster=r.cover_image||r.banner_image||r.image_url||r.image||fallback[id]||'',lower=lowerBy[id]||[];
+   const o=OUT[id],r=recs[id]||{},legacy=r.banner_url||r.cover_image||r.banner_image||r.image_url||r.image||fallback[id]||'';
    return '<article class="jpt-os-card" style="--os-accent:'+o.accent+'">'+
     '<div class="jpt-os-name" style="color:'+o.accent+'">'+esc(r.name||o.name)+' <span>'+id+'</span></div>'+
-    '<div class="jpt-os-video" data-os-video="'+id+'"><div class="jpt-os-empty"><div><b>🎬 VIDEO SPONSOR</b>Restaurant video will play here</div></div></div>'+
-    '<div class="jpt-os-poster" data-os-lower="'+id+'">'+(poster?'<img src="'+esc(poster)+'" alt="'+esc(r.name||o.name)+' poster">':'<div class="jpt-os-poster-empty">Outlet poster / banner</div>')+'</div>'+
-    '<div class="jpt-os-footer"><b>VIDEO • GREEN LIGHT &nbsp; | &nbsp; POSTER • GOLD LIGHT</b><button type="button" data-os-open="'+id+'">VIEW MENU</button></div>'+
+    '<div class="jpt-os-video" data-os-video="'+id+'">'+(legacy&&!by[id].length?'<img src="'+esc(legacy)+'" alt="'+esc(r.name||o.name)+' banner">':'<div class="jpt-os-empty"><div><b>🎬 OUTLET BANNER</b>Upload one image or video for this outlet</div></div>')+'</div>'+
+    '<div class="jpt-os-footer"><b>LIVE BANNER • '+id+'</b><button type="button" data-os-open="'+id+'">VIEW MENU</button></div>'+
    '</article>';
   }).join('');
-  ids.forEach(id=>{const h=list.querySelector('[data-os-video="'+id+'"]');if(h&&by[id].length)playQueue(h,by[id]);const lh=list.querySelector('[data-os-lower="'+id+'"]');if(lh&&lowerBy[id].length)playQueue(lh,lowerBy[id]);});
+  ids.forEach(id=>{const h=list.querySelector('[data-os-video="'+id+'"]');if(h&&by[id].length)playQueue(h,by[id]);});
   list.querySelectorAll('[data-os-open]').forEach(b=>b.onclick=()=>window.switchOutlet&&window.switchOutlet(b.dataset.osOpen));
  }catch(e){console.warn('[JPT Outlet Showcase]',e);}
 }
