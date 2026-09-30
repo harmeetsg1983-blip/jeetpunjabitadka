@@ -173,6 +173,25 @@ function offerText(o){let pct=o.discount_percent??o.discount??o.percentage;let c
 function renderHomeOffers(){const bar=$('homeOfferBar');const active=(offers||[]).filter(activeWindow);if(!bar)return;if(!active.length){bar.innerHTML='<div class="offerTitle">🎁 OFFERS & PROMO CODES</div><small>No active offer for this outlet right now.</small>';return}const o=active[0],code=o.code||o.promo_code||o.coupon_code||'';bar.innerHTML=`<div class="offerTitle">🎁 ${esc(o.title||'ACTIVE OFFER')}</div><div>${esc(offerText(o))}</div>${code?`<span class="offerCode">PROMO CODE: ${esc(code)}</span>`:'<small>Offer is active for this outlet.</small>'}`;}
 function activeWindow(x){let now=Date.now();return (!x.start_at||new Date(x.start_at).getTime()<=now)&&(!x.end_at||new Date(x.end_at).getTime()>=now)}
 let offersByOutlet={};
+async function loadOutletDirectory(){
+ try{
+  const r=await sb.from('outlets').select('code,name,banner_url,logo_url').order('name',{ascending:true});
+  if(r.error||!Array.isArray(r.data)||!r.data.length)return;
+  const accentFallback=['#d8ae42','#49b36a','#df6680','#f29b32','#7b74e8'];
+  const existing={...OUTLETS};
+  const next={};
+  r.data.forEach((row,i)=>{
+   const id=String(row.code||'').trim();
+   if(!id)return;
+   next[id]={...(existing[id]||{}),name:row.name||existing[id]?.name||id,accent:existing[id]?.accent||accentFallback[i%accentFallback.length]};
+   outletRecords[id]=row;
+  });
+  Object.keys(existing).forEach(id=>{if(!next[id])next[id]=existing[id]});
+  Object.keys(OUTLETS).forEach(k=>delete OUTLETS[k]);
+  Object.assign(OUTLETS,next);
+  if(!OUTLETS[outletId])outletId=Object.keys(OUTLETS)[0]||'JPT-001';
+ }catch(e){}
+}
 async function loadAllOutletOffers(){
  offersByOutlet={};
  for(const id of Object.keys(OUTLETS)){let r=await sb.from('offers').select('*').eq('outlet_id',id).eq('active',true);if(!r.error)offersByOutlet[id]=r.data||[]}
@@ -337,8 +356,11 @@ async function placeOrder(){
  }catch(e){console.error(e);toast('Order could not be completed. Please try again.')} finally {jptCheckoutBusy=false}
 }
 window.addEventListener('popstate',async e=>{if($('modal').classList.contains('show')){closeCart(true);return;}if(e.state&&e.state.outlet){const id=e.state.outlet;if(OUTLETS[id]&&id!==outletId){outletId=id;cartState={};selectedPromo=null;items=[];offers=[];campaigns=[];imageMap={};setTheme();renderOutlets();await loadManagedMenu();}}else if(outletId!=='JPT-001'){outletId='JPT-001';cartState={};selectedPromo=null;items=[];offers=[];campaigns=[];imageMap={};setTheme();renderOutlets();await loadManagedMenu();}});
-loadAllOutletOffers().catch(()=>{});
-loadManagedMenu();
+(async function bootCustomerApp(){
+ await loadOutletDirectory();
+ await loadAllOutletOffers();
+ await loadManagedMenu();
+})();
 </script>
 <script src="./customer-upi-only-v106.js?v=106-upi1"></script>
 <script src="./customer-menu-runtime-fix-v106.js?v=v106-cart-v2"></script>
