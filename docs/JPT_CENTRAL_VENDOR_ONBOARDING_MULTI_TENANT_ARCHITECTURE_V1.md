@@ -320,3 +320,13 @@ No financial feature is declared GREEN until server-side source-of-truth, audita
 - Authoritative RPC bodies/RLS are absent from the repository, so rider-to-assignment authorization, outlet isolation, location-write authorization, and guaranteed server-side location stop after completion are NOT independently proven. This remains NOT GREEN.
 - Required evidence: unauthorized rider cannot write location for another assignment; rider cannot write after completion; completed assignment stops server-side sharing; location records remain tied to the correct assignment/outlet/order; offline/ended assignment cannot continue location writes.
 - No production code changed in this checkpoint.
+
+
+## Delivery earnings / financial authority checkpoint — 01 Oct 2026
+- Delivery Partner UI calls server RPC `delivery_partner_earnings_summary` for a 30-day summary; earnings are therefore not generated from the rider's local order list.
+- Some older delivery UI variants display a fixed `₹50` multiplier in presentation text. This is explicitly treated as legacy presentation and is NOT an approved production payout formula.
+- Repository search found no authoritative production payout/commission/GST/TDS/settlement ledger implementation that can be independently verified from source.
+- The current Restaurant Partner Finance panel intentionally states that delivery/settlement payout is not invented or estimated and calculates operational order figures from the selected outlet's live order rows.
+- Financial status remains NOT GREEN. No payout formula, commission, GST, TDS, settlement amount, or rider earnings calculation should be invented or copied from conceptual/legacy UI.
+- Required evidence before financial GREEN: authoritative server-side source of truth, append-safe/auditable ledger, outlet/order/rider linkage, reconciliation path, defined payout/commission/tax rules, and negative-access tests.
+- No production code changed in this checkpoint.
