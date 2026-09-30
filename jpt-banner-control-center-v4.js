@@ -429,8 +429,13 @@ async function renderSponsorSurface(kind){
 }
 
 async function mount(){
- const h=document.querySelector('#settings')||document.querySelector('#settingsPanel')||document.querySelector('.settings-panel');if(!h||document.getElementById('jptBannerControlV3'))return;
- if(!(await central()))return;
+ const h=document.querySelector('#settings')||document.querySelector('#settingsPanel')||document.querySelector('.settings-panel');
+ if(!h||document.getElementById('jptBannerControlV3'))return false;
+ /* Wait for the central-owner state established by the existing role guard.
+    This prevents the feature disappearing during the auth/RPC boot window.
+    Backend/RLS authorization remains unchanged. */
+ const centralClass=document.documentElement.classList.contains('jpt-central-owner');
+ if(!centralClass && !(await central()))return false;
  css();
  // Remove duplicate legacy managers visually; their files remain untouched for rollback.
  const old=document.getElementById('jptSponsorManager');if(old)old.style.display='none';
@@ -454,6 +459,19 @@ async function mount(){
  await renderSponsorSurface('delivery');
  await renderSponsorSurface('customer');
 }
-async function boot(){let n=0;const t=setInterval(async()=>{try{await mount()}catch(e){}if(document.getElementById('jptBannerControlV3')||++n>80)clearInterval(t)},500)}
+async function boot(){
+ let n=0;
+ const tryMount=async()=>{try{await mount()}catch(e){}};
+ await tryMount();
+ const mo=new MutationObserver(()=>{if(!document.getElementById('jptBannerControlV3'))tryMount()});
+ mo.observe(document.documentElement,{attributes:true,attributeFilter:['class']});
+ const t=setInterval(async()=>{
+  await tryMount();
+  if(document.getElementById('jptBannerControlV3')||++n>120){
+   clearInterval(t);
+   if(document.getElementById('jptBannerControlV3'))mo.disconnect();
+  }
+ },500);
+}
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',boot):boot();
 })();
