@@ -9,13 +9,12 @@
 if(window.__JPT_BANNER_CONTROL_CENTER_V3__) return;
 window.__JPT_BANNER_CONTROL_CENTER_V3__=true;
 
-const OUT=[
- {code:'JPT-001',name:'Jeet Punjabi Tadka',id:'B01'},
- {code:'SOP-002',name:'Shan-e-Punjab',id:'B02'},
- {code:'PFA-003',name:'Punjabi Food Adda',id:'B03'},
- {code:'NME-004',name:'99 Meal Express',id:'B04'},
- {code:'TOP-005',name:'Taste of Punjab',id:'B05'}
-];
+const FIXED_IDS={
+ 'JPT-001':'B01','SOP-002':'B02','PFA-003':'B03','NME-004':'B04','TOP-005':'B05'
+};
+const PAGE_SIZE=25;
+let outletPage=1,outletSearch='';
+const controlId=o=>FIXED_IDS[o.code]||('OUT-'+String(o.code||'').replace(/[^A-Za-z0-9_-]/g,'').slice(0,24));
 const CAMPAIGNS='campaigns';
 const OUTLETS='outlets';
 const SPONSOR_TABLES={delivery:'delivery_partner_sponsor_ads',customer:'checkout_sponsor_ads'};
@@ -105,17 +104,24 @@ async function uploadMedia(file,bucket,folder){
  return {path,url};
 }
 
-async function loadOutletData(){
+async function loadOutletData(page=1,search=''){
  const c=sb();if(!c)throw new Error('Supabase client not ready');
- const ids=OUT.map(x=>x.code);
- const [or,cr]=await Promise.all([
-  c.from(OUTLETS).select('code,name,banner_url,logo_url').in('code',ids),
-  c.from(CAMPAIGNS).select('id,outlet_id,title,active,start_at,end_at,priority,banner_url,video_url,schedule_json,created_at').in('outlet_id',ids).order('priority',{ascending:false}).order('created_at',{ascending:false})
- ]);
- if(or.error)throw or.error;if(cr.error)throw cr.error;
- const outlets=Object.fromEntries((or.data||[]).map(x=>[x.code,x]));
- const media=(cr.data||[]).filter(x=>x.schedule_json?.campaign_type==='media');
- return {outlets,media};
+ const from=(page-1)*PAGE_SIZE,to=from+PAGE_SIZE-1;
+ let oq=c.from(OUTLETS).select('code,name,banner_url,logo_url',{count:'exact'}).order('name',{ascending:true}).range(from,to);
+ const term=String(search||'').trim().replace(/[,%()]/g,' ').replace(/\s+/g,' ').trim();
+ if(term)oq=oq.or('code.ilike.%'+term+'%,name.ilike.%'+term+'%');
+ const or=await oq;
+ if(or.error)throw or.error;
+ const pageOut=(or.data||[]).map(x=>({code:x.code,name:x.name||x.code,id:controlId(x),banner_url:x.banner_url||null,logo_url:x.logo_url||null}));
+ const ids=pageOut.map(x=>x.code);
+ let media=[];
+ if(ids.length){
+  const cr=await c.from(CAMPAIGNS).select('id,outlet_id,title,active,start_at,end_at,priority,banner_url,video_url,schedule_json,created_at').in('outlet_id',ids).order('priority',{ascending:false}).order('created_at',{ascending:false});
+  if(cr.error)throw cr.error;
+  media=(cr.data||[]).filter(x=>x.schedule_json?.campaign_type==='media');
+ }
+ const outlets=Object.fromEntries(pageOut.map(x=>[x.code,x]));
+ return {outlets,media,items:pageOut,total:Number(or.count||0),page,totalPages:Math.max(1,Math.ceil(Number(or.count||0)/PAGE_SIZE))};
 }
 
 function live(row){
@@ -149,7 +155,7 @@ async function saveOutletBanner(code,file,title,ed,preview,msgEl){
   priority:100,
   banner_url:isVideo?null:up.url,
   video_url:isVideo?up.url:null,
-  schedule_json:{version:2,campaign_type:'media',media_type:isVideo?'video':'image',video_url:isVideo?up.url:null,image_url:isVideo?null:up.url,placement:'top',banner_control_id:OUT.find(x=>x.code===code)?.id||null}
+  schedule_json:{version:2,campaign_type:'media',media_type:isVideo?'video':'image',video_url:isVideo?up.url:null,image_url:isVideo?null:up.url,placement:'top',banner_control_id:FIXED_IDS[code]||('OUT-'+String(code||'').replace(/[^A-Za-z0-9_-]/g,'').slice(0,24))}
  };
  const ins=await sb().from(CAMPAIGNS).insert(row);
  if(ins.error)throw new Error('BANNER SAVE FAILED: '+ins.error.message);
@@ -231,10 +237,29 @@ function renderOutletCard(o,data,ed){
  return box;
 }
 
-async function bootOutlet(){
+async function bootOutlet(reset=false){
  const root=document.getElementById('jptBccOutletList');if(!root)return;
- root.innerHTML='<div class="jpt-bcc-small">Loading five outlet banner records…</div>';
- try{const data=await loadOutletData();root.innerHTML='';OUT.forEach(o=>root.appendChild(renderOutletCard(o,data,editor())))}catch(e){root.innerHTML='<div class="jpt-bcc-status">'+esc(e.message||String(e))+'</div>'}
+ if(reset){outletPage=1;outletSearch=''}
+ root.innerHTML='<div class="jpt-bcc-small">Loading outlet directory…</div>';
+ try{
+  const data=await loadOutletData(outletPage,outletSearch);
+  root.innerHTML='';
+  const bar=document.createElement('div');bar.className='jpt-bcc-global';
+  bar.innerHTML='<div class="jpt-bcc-fields"><div><label>SEARCH OUTLETS</label><input data-search placeholder="Search by outlet name or code" value="'+esc(outletSearch)+'"></div><div><label>DIRECTORY</label><div class="jpt-bcc-small">'+Number(data.total||0)+' outlet(s) • Page '+data.page+' / '+data.totalPages+' • 25 per page</div></div></div><div class="jpt-bcc-actions"><button type="button" class="push" data-search-btn>SEARCH</button><button type="button" data-clear>RESET</button><button type="button" data-prev>← PREVIOUS</button><button type="button" data-next>NEXT →</button></div>';
+  root.appendChild(bar);
+  const list=document.createElement('div');list.dataset.cards='1';root.appendChild(list);
+  if(!data.items.length)list.innerHTML='<div class="jpt-bcc-status">No outlets found for this search.</div>';
+  else data.items.forEach(o=>list.appendChild(renderOutletCard(o,data,editor())));
+  const search=bar.querySelector('[data-search]');
+  const goSearch=()=>{outletSearch=search.value.trim();outletPage=1;bootOutlet()};
+  bar.querySelector('[data-search-btn]').onclick=goSearch;
+  search.onkeydown=e=>{if(e.key==='Enter')goSearch()};
+  bar.querySelector('[data-clear]').onclick=()=>{outletSearch='';outletPage=1;bootOutlet()};
+  bar.querySelector('[data-prev]').onclick=()=>{if(outletPage>1){outletPage--;bootOutlet()}};
+  bar.querySelector('[data-next]').onclick=()=>{if(outletPage<data.totalPages){outletPage++;bootOutlet()}};
+  bar.querySelector('[data-prev]').disabled=outletPage<=1;
+  bar.querySelector('[data-next]').disabled=outletPage>=data.totalPages;
+ }catch(e){root.innerHTML='<div class="jpt-bcc-status">'+esc(e.message||String(e))+'</div>'}
 }
 
 async function renderSponsorSurface(kind){
@@ -305,10 +330,10 @@ async function mount(){
  const box=document.createElement('section');box.id='jptBannerControlV3';box.innerHTML=`
  <div class="jpt-bcc">
   <h3>🎛️ Banner Control Center V3</h3>
-  <div class="jpt-bcc-sub">Single-banner authority • 5 fixed outlet codes • large preview • image/video zoom • drag/center • Push • ON/OFF • Delete. Existing menu/order system is not touched.</div>
-  <div class="jpt-bcc-tabs"><button class="on" data-tab="outlets">🏪 5 OUTLET BANNERS</button><button data-tab="delivery">🛵 DELIVERY ADS</button><button data-tab="customer">🧾 CHECKOUT / TRACKING</button></div>
+  <div class="jpt-bcc-sub">Central outlet banner authority • searchable/paginated outlet directory • one live banner per outlet • large preview • image/video zoom • drag/center • Push • ON/OFF • Delete. Existing menu/order system is not touched.</div>
+  <div class="jpt-bcc-tabs"><button class="on" data-tab="outlets">🏪 OUTLET DIRECTORY</button><button data-tab="delivery">🛵 DELIVERY ADS</button><button data-tab="customer">🧾 CHECKOUT / TRACKING</button></div>
   <div data-view="outlets">
-   <div class="notice">Each outlet has exactly <b>one live banner position</b>. Use the code shown on the card so there is no confusion about which outlet you are editing.</div>
+   <div class="notice">Each outlet has exactly <b>one live banner position</b>. The directory is loaded from the central <b>outlets</b> table, so adding outlets does not require adding new hard-coded cards. Search by name/code and manage one outlet at a time.</div>
    <div id="jptBccOutletList"></div>
   </div>
   <div data-view="delivery" style="display:none"><div class="jpt-bcc-global"><b>Delivery Partner Advertisement</b><div class="jpt-bcc-sub">One live advertisement position. Upload a new image/video to replace the current one.</div><div id="jptBccDelivery"></div></div></div>
