@@ -92,7 +92,7 @@ async function mount(){
   const recs=Object.fromEntries((or.data||[]).map(x=>[x.outlet_id,x]));
   const by={};ids.forEach(id=>{by[id]=[]});
   (cr.data||[]).forEach(c=>{if(by[c.outlet_id]){const m=mediaOf(c);if(m&&active(c))by[c.outlet_id].push(m)}});
-  ids.forEach(id=>by[id].sort((a,b)=>b.priority-a.priority));
+  ids.forEach(id=>{by[id].sort((a,b)=>b.priority-a.priority);by[id]=by[id].slice(0,1)});
   list.innerHTML=ids.map(id=>{
    const o=OUT[id],r=recs[id]||{},legacy=r.banner_url||r.cover_image||r.banner_image||r.image_url||r.image||fallback[id]||'';
    return '<article class="jpt-os-card" style="--os-accent:'+o.accent+'">'+
