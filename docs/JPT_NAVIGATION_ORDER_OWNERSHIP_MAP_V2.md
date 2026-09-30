@@ -52,3 +52,12 @@ Before promoting anything to main:
 - back/navigation behavior
 
 No GREEN claim until these are runtime-tested.
+
+
+## Media + Settings ownership checkpoint — 30 Sep 2026
+- admin.html still loads legacy writers alongside the controlled Banner Control V4: jpt-outlet-media-controller-v1.js, jpt-sponsor-manager-v2.js, jpt-sponsor-media-manager-v4.js, and jpt-banner-control-center-v4.js.
+- Banner Control V4 explicitly hides the legacy Sponsor Manager V2 and Sponsor Media Manager V4 DOM owners; their files remain retained for rollback and historical data dependency audit.
+- jpt-outlet-media-controller-v1 cannot yet be removed because current customer index.html still reads its records for the existing #heroTrack surface. The canonical #videoBanner reader separately rejects controller=jpt-outlet-media-v1 records.
+- Customer media surfaces remain distinct: #heroTrack (legacy outlet-media surface), #videoBanner (media-hotfix-v4 canonical Home Hero), and #highlightGrid (controlled customer outlet showcase).
+- No deletion, disablement, schema/RLS change, or customer order/menu change is authorized from this checkpoint.
+- Safe next boundary: runtime-test the three customer media surfaces and Banner V4 E2E, then define migration/retirement of legacy writers only after their stored records and readers are proven non-dependent.
