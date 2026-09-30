@@ -237,6 +237,63 @@ async function bootOutlet(){
  try{const data=await loadOutletData();root.innerHTML='';const ed=editor();OUT.forEach(o=>root.appendChild(renderOutletCard(o,data,ed)))}catch(e){root.innerHTML='<div class="jpt-bcc-status">'+esc(e.message||String(e))+'</div>'}
 }
 
+async function renderSponsorSurface(kind){
+ const root=document.getElementById(kind==='delivery'?'jptBccDelivery':'jptBccCustomer');if(!root)return;
+ const table=SPONSOR_TABLES[kind],bucket=SPONSOR_BUCKETS[kind];
+ root.innerHTML='<div class="jpt-bcc-small">Loading current advertisement…</div>';
+ try{
+  const q=await sb().from(table).select('*').order('sort_order',{ascending:true}).order('created_at',{ascending:false});
+  if(q.error)throw q.error;
+  const row=(q.data||[]).find(x=>x.is_active)||q.data?.[0]||null;
+  const wrap=document.createElement('div');
+  wrap.innerHTML=`
+   <div class="jpt-bcc-preview" data-preview></div>
+   <div class="jpt-bcc-tools"><button type="button" data-zout>− Zoom</button><button type="button" data-center>Center</button><button type="button" data-zin>＋ Zoom</button><button type="button" data-play>▶ Play/Pause</button></div>
+   <div class="jpt-bcc-fields">
+    <div><label>BANNER TITLE</label><input data-title value="${esc(row?.title||'')}"></div>
+    <div><label>SPONSOR NAME</label><input data-sponsor value="${esc(row?.sponsor_name||'')}"></div>
+    <div><label>NEW IMAGE / VIDEO</label><input data-file type="file" accept="image/*,video/*"></div>
+    <div><label>TARGET</label><select data-target><option value="all">All live users</option><option value="outlet">Selected outlet</option></select></div>
+   </div>
+   <div class="jpt-bcc-actions"><button class="push" type="button" data-push>⬆ PUSH / SAVE</button><button class="onoff" type="button" data-toggle>${row?.is_active?'TURN OFF':'TURN ON'}</button><button class="danger" type="button" data-delete>DELETE</button></div>
+   <div class="jpt-bcc-status" data-msg></div>
+   <div class="jpt-bcc-small">Current code: ${kind==='delivery'?'DEL-01':'CHK-01'} • ${row?.target_all_live?'ALL LIVE':((row?.outlet_ids||[]).join(', ')||'ALL LIVE')}</div>`;
+  root.innerHTML='';root.appendChild(wrap);
+  const p=wrap.querySelector('[data-preview]'),ed=editor(),m=wrap.querySelector('[data-msg]');
+  if(row?.media_url)mediaPreview(row.media_url,row.media_type==='video',p);
+  const file=wrap.querySelector('[data-file]');
+  file.onchange=()=>{const f=file.files?.[0];if(f){ed.set(f,p);msg(m,'Preview ready. Check framing, then PUSH / SAVE.',true)}};
+  wrap.querySelector('[data-zin]').onclick=()=>ed.zoomIn(p);
+  wrap.querySelector('[data-zout]').onclick=()=>ed.zoomOut(p);
+  wrap.querySelector('[data-center]').onclick=()=>ed.center(p);
+  wrap.querySelector('[data-play]').onclick=()=>{const v=p.querySelector('video');if(v)(v.paused?v.play():v.pause())};
+  wrap.querySelector('[data-push]').onclick=async()=>{
+   const b=wrap.querySelector('[data-push]'),f=file.files?.[0];b.disabled=true;
+   try{
+    if(!f)throw new Error('Choose an image or video first.');
+    const isVideo=/^video\\//i.test(f.type)||/\\.(mp4|webm|ogg)$/i.test(f.name);
+    if(isVideo&&f.size>60*1024*1024)throw new Error('Video must be under 60MB.');
+    const prepared=await ed.blob(f),up=await uploadMedia(prepared,bucket,'manager-v3/'+kind);
+    const current=await sb().from(table).select('id').eq('is_active',true);
+    if(current.data?.length){const off=await sb().from(table).update({is_active:false}).in('id',current.data.map(x=>x.id));if(off.error)throw off.error}
+    const targetAll=wrap.querySelector('[data-target]').value==='all';
+    const rowData={title:wrap.querySelector('[data-title]').value.trim()||'Sponsor Banner',sponsor_name:wrap.querySelector('[data-sponsor]').value.trim(),media_type:isVideo?'video':'image',media_url:up.url,video_url:isVideo?up.url:null,poster_url:isVideo?null:up.url,target_all_live:targetAll,outlet_ids:targetAll?[]:[outletCode()],is_active:true,sort_order:0,starts_at:null,ends_at:null,created_by:(await sb().auth.getUser()).data.user?.id||null,schedule_json:{slot:1,media_kind:isVideo?'video':'image',single_position:true}};
+    const ins=await sb().from(table).insert(rowData);if(ins.error)throw new Error('DATABASE SAVE FAILED: '+ins.error.message);
+    msg(m,'✅ Pushed live • '+(isVideo?'VIDEO':'IMAGE'),true);await renderSponsorSurface(kind);
+   }catch(e){msg(m,e.message||String(e),false)}finally{b.disabled=false}
+  };
+  wrap.querySelector('[data-toggle]').onclick=async()=>{
+   if(!row?.id){msg(m,'No saved banner found.',false);return}
+   const next=!row.is_active,q=await sb().from(table).update({is_active:next}).eq('id',row.id);if(q.error){msg(m,q.error.message,false);return}await renderSponsorSurface(kind)
+  };
+  wrap.querySelector('[data-delete]').onclick=async()=>{
+   if(!row?.id){msg(m,'No saved banner found.',false);return}
+   if(!confirm('Remove this live advertisement?'))return;
+   const q=await sb().from(table).update({is_active:false}).eq('id',row.id);if(q.error){msg(m,q.error.message,false);return}await renderSponsorSurface(kind)
+  };
+ }catch(e){root.innerHTML='<div class="jpt-bcc-status">'+esc(e.message||String(e))+'</div>'}
+}
+
 async function mount(){
  const h=document.querySelector('#settings')||document.querySelector('#settingsPanel')||document.querySelector('.settings-panel');if(!h||document.getElementById('jptBannerControlV3'))return;
  if(!(await central()))return;
@@ -260,6 +317,8 @@ async function mount(){
  h.appendChild(box);
  box.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{box.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('on',x===b));box.querySelectorAll('[data-view]').forEach(v=>v.style.display=v.dataset.view===b.dataset.tab?'block':'none')});
  await bootOutlet();
+ await renderSponsorSurface('delivery');
+ await renderSponsorSurface('customer');
 }
 async function boot(){let n=0;const t=setInterval(async()=>{try{await mount()}catch(e){}if(document.getElementById('jptBannerControlV3')||++n>80)clearInterval(t)},500)}
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',boot):boot();
