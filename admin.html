@@ -569,7 +569,6 @@ function renderOrderSummaries(rows){
 }
 
 let orderChannel=null;
-let orderAlarmTimer=null;
 let jptNewOrderAudio=null;
 const JPT_NEW_ORDER_AUDIO='./ringtones/1000449570.mp4';
 function ensureNewOrderAudio(){
@@ -599,10 +598,8 @@ function showOrderAlarm(order){
   try{navigator.vibrate?.([300,120,300]);}catch(e){}
   try{if('Notification' in window && Notification.permission==='granted') new Notification('JPT — NEW ORDER',{body:$('orderAlarmText').textContent});}catch(e){}
   try{const a=ensureNewOrderAudio();a.loop=true;a.muted=false;const p=a.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}
-  clearTimeout(orderAlarmTimer);orderAlarmTimer=null;
 }
 function stopOrderAlarm(){
-  clearTimeout(orderAlarmTimer);
   $('orderAlarm').style.display='none';
   $('orderAlarm').classList.remove('alarmPulse');
   try{navigator.vibrate?.(0)}catch(e){}
