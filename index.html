@@ -196,7 +196,9 @@ async function loadOutletDirectory(){
 async function loadAllOutletOffers(){
  offersByOutlet={};
  try{
-  const r=await sb.from('offers').select('outlet_id,title,code,promo_code,coupon_code,discount_percent,discount,max_discount,discount_cap,min_order,minimum_order,start_at,end_at,active,created_at').eq('active',true).order('outlet_id').order('created_at',{ascending:false}).limit(5000);
+  const visibleIds=Object.keys(OUTLETS).filter(id=>id!=='JPT-001').slice(0,12);
+  visibleIds.unshift('JPT-001');
+  const r=await sb.from('offers').select('outlet_id,title,code,promo_code,coupon_code,discount_percent,discount,max_discount,discount_cap,min_order,minimum_order,start_at,end_at,active,created_at').eq('active',true).in('outlet_id',[...new Set(visibleIds)]).order('outlet_id').order('created_at',{ascending:false}).limit(500);
   if(!r.error){
    (r.data||[]).forEach(row=>{
     const id=String(row.outlet_id||'').trim();
