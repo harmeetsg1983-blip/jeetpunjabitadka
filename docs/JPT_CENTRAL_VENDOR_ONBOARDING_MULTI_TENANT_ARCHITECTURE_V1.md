@@ -358,3 +358,12 @@ No financial feature is declared GREEN until server-side source-of-truth, audita
 - This confirms the client-side lifecycle wiring, but does NOT prove server authorization, outlet isolation, race handling, or post-completion location rejection because authoritative RPC bodies/RLS policies are not present in the repository evidence.
 - Required runtime/security gate remains: unauthorized rider cannot see/accept another rider's assignment; assignment remains tied to order/outlet; concurrent acceptance cannot create duplicate active assignment; unauthorized location writes are rejected; completed assignments cannot continue location writes; only eligible approved ONLINE riders receive offers.
 - No production code changed.
+
+
+## Phase F server-authority evidence search checkpoint — 01 Oct 2026
+- Repository search for delivery RPC/function definitions and RLS policy definitions did not locate authoritative `CREATE FUNCTION` / `CREATE POLICY` bodies for the delivery lifecycle RPCs.
+- Client source proves the intended RPC contract names and parameters, but cannot prove the underlying authorization or tenant-isolation behavior.
+- Delivery admin approval bridge also calls server RPCs (`delivery_partner_admin_queue`, `delivery_partner_admin_review`); their server authorization bodies are not independently available in repository source.
+- Therefore no client-side workaround, service-role bypass, or new duplicate delivery backend has been introduced.
+- Phase F security authority remains YELLOW/BLOCKED until authoritative backend function/RLS definitions or controlled runtime evidence are available.
+- No production code changed.
