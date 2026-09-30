@@ -43,7 +43,7 @@ function cropEditor(ref){
  }
  ref.file.onchange=()=>{
   const f=ref.file.files?.[0];if(!f)return;
-  const isVideo=/^video\\//i.test(f.type)||/\\.(mp4|webm|ogg)$/i.test(f.name);
+  const isVideo=/^video\\//i.test(f.type)||/\\.(mp4|webm|ogg|mov|m4v)$/i.test(f.name);
   if(isVideo){
     img=null;ready=true;ref.cropBox.style.display='block';ref.zoomIn.disabled=true;ref.zoomOut.disabled=true;ref.center.disabled=true;
     ref.zoomIn.style.opacity='.45';ref.zoomOut.style.opacity='.45';ref.center.style.opacity='.45';
@@ -100,11 +100,11 @@ if(settingsHost && !document.getElementById('jptSponsorLauncherV2')){
  css();
  const box=document.createElement('section');box.id='jptSponsorManager';
  box.innerHTML=`<div class="jpt-sm"><h3>✨ Sponsor Advertisement Manager V2</h3>
- <div class="sub">Central Owner controls Delivery Partner + Customer Tracking sponsor banners. Image-only • crop • zoom • drag • schedule • outlet targeting.</div>
+ <div class="sub">Central Owner controls Delivery Partner + Customer Tracking sponsor banners. Image + Video • image crop/zoom/drag • video preview • mute/sound • schedule • outlet targeting.</div>
  <div class="jpt-sm-tabs"><button id="jptSmDelivery" class="on">Delivery Partner</button><button id="jptSmCustomer">Customer Tracking</button></div>
  <div class="jpt-sm-grid"><div><label>Sponsor Name</label><input id="jptSmSponsor" placeholder="Sponsor / Brand"></div><div><label>Banner Title</label><input id="jptSmTitle" placeholder="Optional title"></div></div>
  <label>Banner Media</label><input id="jptSmFile" type="file" accept="image/*,video/*">
- <div id="jptSmCrop" class="jpt-crop" style="display:none"><canvas id="jptSmCanvas"></canvas><div class="jpt-crop-row"><button id="jptSmZoomOut">− Zoom</button><button id="jptSmCenter">Center</button><button id="jptSmZoomIn">＋ Zoom</button></div><div class="jpt-sm-note" style="margin-top:6px">Drag the image inside the frame to position it.</div></div>
+ <div id="jptSmCrop" class="jpt-crop" style="display:none"><canvas id="jptSmCanvas"></canvas><video id="jptSmVideoPreview" controls playsinline muted style="display:none;width:100%;max-height:280px;border-radius:10px;background:#050505"></video><div class="jpt-crop-row"><button id="jptSmZoomOut">− Zoom</button><button id="jptSmCenter">Center</button><button id="jptSmZoomIn">＋ Zoom</button></div><div class="jpt-sm-note" style="margin-top:6px">Image: drag/zoom/center. Video: preview + mute/sound; no destructive crop is applied.</div></div>
  <div class="jpt-sm-grid"><div><label>Sponsor Slot</label><select id="jptSmSlot"><option value="1">Slot 1</option><option value="2">Slot 2</option></select></div><div><label>Target</label><select id="jptSmTarget"><option value="all">All live users</option><option value="outlet">Selected outlet</option></select></div><div><label>Sort Order</label><input id="jptSmSort" type="number" value="0" min="0"></div></div>
  <div id="jptSmOutletWrap" style="display:none"><label>Outlet</label><select id="jptSmOutlet"></select></div>
  <div class="jpt-sm-grid"><div><label>Start (optional)</label><input id="jptSmStart" type="datetime-local"></div><div><label>End (optional)</label><input id="jptSmEnd" type="datetime-local"></div></div>
@@ -124,7 +124,7 @@ if(settingsHost && !document.getElementById('jptSponsorLauncherV2')){
   }catch(e){r.list.textContent=e.message||'Unable to load banners.'}
  }
  r.save.onclick=async()=>{
-  const file=r.file.files?.[0];if(!file){r.msg.textContent='Please choose a banner image.';return}
+  const file=r.file.files?.[0];if(!file){r.msg.textContent='Please choose an image or video.';return}
   r.save.disabled=true;r.msg.textContent='Preparing media...';
   try{
    const isVideo=/^video\//i.test(file.type)||/\.(mp4|webm|ogg)$/i.test(file.name);const blob=isVideo?file:await editor.exportBlob();const safe=isVideo?file:new File([blob],(file.name||'sponsor')+'.jpg',{type:'image/jpeg'});
@@ -135,7 +135,7 @@ if(settingsHost && !document.getElementById('jptSponsorLauncherV2')){
    const row={title:r.title.value.trim()||r.sponsor.value.trim()||'Sponsor Banner',sponsor_name:r.sponsor.value.trim(),media_type:isVideo?'video':'image',media_url:url,video_url:isVideo?url:null,poster_url:isVideo?null:url,target_all_live:targetAll,outlet_ids:targetAll?[]:[outlet],is_active:true,sort_order:Number(r.sort.value||0),starts_at:r.start.value?new Date(r.start.value).toISOString():null,ends_at:r.end.value?new Date(r.end.value).toISOString():null,created_by:(await sb().auth.getUser()).data.user?.id||null,schedule_json:{slot:Number(document.getElementById('jptSmSlot')?.value||1),muted:true}};
    const ins=await sb().from(table).insert(row);if(ins.error)throw new Error('DATABASE SAVE FAILED: '+ins.error.message);
    r.msg.textContent='Banner added successfully.';r.file.value='';r.crop.style.display='none';await refresh();
-  }catch(e){r.msg.textContent=e.message||'Upload failed.'}finally{r.save.disabled=false}
+  }catch(e){r.msg.textContent=(e?.message||'Upload failed.')+(String(e?.message||'').toLowerCase().includes('row-level security')?' — Supabase permission/RLS is blocking the save; this is not a video-file error.':'')}finally{r.save.disabled=false}
  };
  await refresh();
 }
