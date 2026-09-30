@@ -135,6 +135,9 @@
     var s = row && row.schedule_json && typeof row.schedule_json === 'object'
       ? row.schedule_json : {};
     if (s.campaign_type !== 'media') return null;
+    /* Legacy outlet-media-v1 owns the old heroTrack surface; never let it
+       leak into the canonical #videoBanner Home Hero reader. */
+    if (s.controller === 'jpt-outlet-media-v1') return null;
     if (s.surface && s.surface !== 'customer_home_hero') return null;
     if (s.banner_control_id || s.surface === 'customer_outlet_showcase') return null;
     var video = row.video_url || s.video_url || null;
