@@ -101,7 +101,7 @@ if(settingsHost && !document.getElementById('jptSponsorLauncherV2')){
  <div class="sub">Central Owner controls Delivery Partner + Customer Tracking sponsor banners. Image-only • crop • zoom • drag • schedule • outlet targeting.</div>
  <div class="jpt-sm-tabs"><button id="jptSmDelivery" class="on">Delivery Partner</button><button id="jptSmCustomer">Customer Tracking</button></div>
  <div class="jpt-sm-grid"><div><label>Sponsor Name</label><input id="jptSmSponsor" placeholder="Sponsor / Brand"></div><div><label>Banner Title</label><input id="jptSmTitle" placeholder="Optional title"></div></div>
- <label>Banner Media</label><input id="jptSmFile" type="file" accept="image/*,video/mp4,video/webm,video/ogg">
+ <label>Banner Media</label><input id="jptSmFile" type="file" accept="image/*,video/*">
  <div id="jptSmCrop" class="jpt-crop" style="display:none"><canvas id="jptSmCanvas"></canvas><div class="jpt-crop-row"><button id="jptSmZoomOut">− Zoom</button><button id="jptSmCenter">Center</button><button id="jptSmZoomIn">＋ Zoom</button></div><div class="jpt-sm-note" style="margin-top:6px">Drag the image inside the frame to position it.</div></div>
  <div class="jpt-sm-grid"><div><label>Sponsor Slot</label><select id="jptSmSlot"><option value="1">Slot 1</option><option value="2">Slot 2</option></select></div><div><label>Target</label><select id="jptSmTarget"><option value="all">All live users</option><option value="outlet">Selected outlet</option></select></div><div><label>Sort Order</label><input id="jptSmSort" type="number" value="0" min="0"></div></div>
  <div id="jptSmOutletWrap" style="display:none"><label>Outlet</label><select id="jptSmOutlet"></select></div>
