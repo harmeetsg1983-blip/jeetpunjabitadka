@@ -66,3 +66,13 @@ Design and implement a single-owner Order Command Center/navigation architecture
 - DELETE already had an explicit legacy mapping clear; this checkpoint aligns OFF with the same stale-media protection.
 - Commit: `6583258fc6f9520eee4e10707bec59ce55eddeb8`.
 - This is a source-level fix only. Banner save/render/delete E2E remains NOT GREEN until real runtime verification proves database state, customer rendering, OFF, Delete, storage cleanup, reopen persistence, and outlet isolation.
+
+
+## Outlet Media Push/Delete source-chain checkpoint — 01 Oct 2026
+- Banner Control Center V4 Push/Save is wired to the selected outlet's canonical database code (saveOutletBanner(o.code, ...)).
+- Published records use campaigns.outlet_id = code and schedule_json.campaign_type = media, surface = customer_outlet_showcase, with media type and storage bucket/path metadata.
+- Customer index.html reads the same campaigns.outlet_id and requires the same customer_outlet_showcase surface before rendering managed outlet showcase media.
+- DELETE is a real database + legacy mapping + storage cleanup operation, not a visual-only button. If storage cleanup fails after the live record is removed, the UI reports that cleanup failure rather than claiming complete deletion.
+- The controlled UI now explicitly shows media type, surface, LIVE/OFF state, canonical target outlet code/name, and keeps PUSH/SAVE, TURN ON/OFF, and DELETE actions together on the outlet card.
+- Video Zoom/Center is currently preview-only; editor().blob() returns the original video file, so video crop/position is not claimed as persistently encoded into the uploaded video.
+- Runtime E2E remains YELLOW/NOT GREEN until phone verification covers Push -> DB -> Customer render -> outlet isolation -> OFF -> Delete -> storage cleanup -> reopen.
