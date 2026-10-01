@@ -119,24 +119,10 @@ jobs:
           sponsor_text = sponsor.read_text(encoding="utf-8")
 
           # ------------------------------------------------------------
-          # 1. Customer order tracking bridge must be loaded.
-          #    It is an existing file. No new file is created.
+          # 1. Customer tracking uses the active platform architecture.
+          #    Do not inject the legacy tracking bridge from this repair.
           # ------------------------------------------------------------
 
-          tracking_script = '<script src="./customer-order-tracking-v106-v2.js?v=v106-tracking-v3"></script>'
-          sponsor_connector = '<script src="./jpt-customer-tracking-sponsor-connector-v2.js?v=3"></script>'
-
-          if tracking_script not in index_text:
-              if sponsor_connector not in index_text:
-                  raise SystemExit(
-                      "FAIL: expected existing customer sponsor connector was not found"
-                  )
-
-              index_text = index_text.replace(
-                  sponsor_connector,
-                  tracking_script + "\n" + sponsor_connector,
-                  1
-              )
 
           # ------------------------------------------------------------
           # 2. Replace ONLY the known bad sponsor placement logic.
@@ -196,7 +182,6 @@ jobs:
           echo "REPAIR SCOPE VALIDATION"
           echo "========================================"
 
-          grep -q 'customer-order-tracking-v106-v2.js?v=v106-tracking-v3' index.html
           grep -q 'jpt-customer-tracking-sponsor-connector-v2.js?v=3' index.html
 
           ! grep -q "getElementById('videoBanner')" jpt-customer-tracking-sponsor-slider-v3.js
@@ -225,7 +210,6 @@ jobs:
             delivery-partner-app.html \
             jpt-partner-final-touch-v10.js \
             jpt-sponsor-manager-v2.js \
-            customer-order-tracking-v106-v2.js \
             jpt-customer-tracking-sponsor-connector-v2.js \
             jpt-customer-tracking-sponsor-slider-v3.js \
             jpt-delivery-sponsor-connector-v2.js \
@@ -249,7 +233,6 @@ jobs:
           grep -q 'videoBanner' index.html
           grep -q 'PLACE ORDER' index.html
           grep -q 'jpt-customer-tracking-sponsor-connector-v2.js' index.html
-          grep -q 'customer-order-tracking-v106-v2.js' index.html
           echo "GREEN: customer core and tracking wiring present"
 
           echo "---- PARTNER APP ----"
