@@ -36,7 +36,7 @@ async function start(){
   const r=await q.from(TABLE).select('id,media_url,media_type,video_url,title,sponsor_name,target_all_live,outlet_ids,is_active,starts_at,ends_at,sort_order,schedule_json').eq('is_active',true).order('sort_order',{ascending:true}).order('created_at',{ascending:false});
   if(r.error)return;
   const now=Date.now(),id=outlet();
-  const rows=(r.data||[]).filter(x=>(!x.starts_at||new Date(x.starts_at).getTime()<=now)&&(!x.ends_at||new Date(x.ends_at).getTime()>=now)&&(x.target_all_live||(id&&Array.isArray(x.outlet_ids)&&x.outlet_ids.includes(id))));
+  const rows=(r.data||[]).filter(x=>(!x.starts_at||new Date(x.starts_at).getTime()<=now)&&(!x.ends_at||new Date(x.ends_at).getTime()>=now)&&(x.target_all_live||(id&&Array.isArray(x.outlet_ids)&&x.outlet_ids.includes(id)))).filter(x=>{const d=String(x.schedule_json?.central_media_destination||'');if(!d)return true;const wanted=Number(x.schedule_json?.slot||1)===2?'CHECKOUT-C2':'CHECKOUT-C1';return d===wanted;});
   const grouped=[
    rows.filter(x=>Number(x.schedule_json?.slot||1)===1).sort((a,b)=>Number(a.sort_order||0)-Number(b.sort_order||0)),
    rows.filter(x=>Number(x.schedule_json?.slot||1)===2).sort((a,b)=>Number(a.sort_order||0)-Number(b.sort_order||0))
