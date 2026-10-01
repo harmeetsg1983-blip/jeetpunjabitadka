@@ -385,3 +385,12 @@ No financial feature is declared GREEN until server-side source-of-truth, audita
 - Therefore current Finance/Reports values represent the latest loaded outlet-scoped order window, not a complete historical accounting period. The UI wording must not be interpreted as full-period settlement/accounting.
 - `jpt-partner-orders-ui-v1.js` separately loads the latest 50 outlet-scoped orders for its operations view; this does not change the Finance/Reports source.
 - No production code changed. Any future full-period reporting must first define an authoritative reporting period/query contract and pagination/aggregation behavior; do not silently increase limits and call it financial authority.
+
+
+## Phase I two-outlet negative-access evidence checkpoint — 01 Oct 2026
+- Repository search found no executable test/spec proving that a Partner authorized for outlet A is denied access to outlet B data, orders, menu, delivery assignments, or financial records.
+- Source evidence confirms the intended pattern: Partner runtime calls `partner_my_outlets`, and UI/client filters use the selected `outlet_id`; source comments explicitly state backend RPC/RLS is the security boundary.
+- However, no authoritative RLS policy/function bodies or two-account/two-outlet negative-access test result is present in the repository evidence audited here.
+- Therefore cross-outlet isolation remains NOT GREEN. It must not be inferred from UI outlet selectors or `.eq('outlet_id', ...)` client queries.
+- Required gate: two distinct outlet identities/accounts, positive access for each own outlet, negative read/write attempts against the other outlet, and evidence of server-side rejection.
+- No production code changed.
