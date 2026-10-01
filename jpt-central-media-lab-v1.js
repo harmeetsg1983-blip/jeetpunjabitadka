@@ -138,6 +138,7 @@ async function renderSponsorDestinations(){
  document.querySelectorAll('.cml-sp-toggle').forEach(b=>b.onclick=async()=>{const q=client();const r=await q.from(b.dataset.table).select('is_active').eq('id',b.dataset.id).single();if(r.error)throw r.error;const u=await q.from(b.dataset.table).update({is_active:!r.data.is_active}).eq('id',b.dataset.id);if(u.error)throw u.error;await renderSponsorDestinations()});
  document.querySelectorAll('.cml-sp-delete').forEach(b=>b.onclick=async()=>{const q=client();const u=await q.from(b.dataset.table).update({is_active:false}).eq('id',b.dataset.id);if(u.error)throw u.error;toast('Media deleted / OFF');await renderSponsorDestinations()});
 }
-\nwindow.JPTCentralMediaLab={machineId,slots,load,renderSponsorDestinations};
+
+window.JPTCentralMediaLab={machineId,slots,load,renderSponsorDestinations};
 document.addEventListener('DOMContentLoaded',()=>{if(document.getElementById('jptCentralMediaLab'))load().catch(e=>toast(e.message));});
 })();
