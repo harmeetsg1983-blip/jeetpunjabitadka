@@ -215,7 +215,7 @@ let heroTimer=null;
 function renderHero(){
  const today=new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short'});
  const media=campaigns.filter(activeWindow).filter(c=>c.schedule_json?.controller==='jpt-outlet-media-v1'&&(c.schedule_json.placement||'top')==='top').sort((a,b)=>Number(b.priority||0)-Number(a.priority||0));
- const active=media.length?media:campaigns.filter(activeWindow).filter(c=>c.schedule_json?.controller!=='jpt-outlet-media-v1').slice(0,5);
+ const active=media.length?media:campaigns.filter(activeWindow).filter(c=>c.schedule_json?.controller!=='jpt-outlet-media-v1'&&c.schedule_json?.campaign_type!=='media').slice(0,5);
  if(heroTimer){clearInterval(heroTimer);heroTimer=null}
  if(media.length){
    let n=0,timer=null;
