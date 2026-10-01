@@ -1,0 +1,15 @@
+{
+  "id":"./admin.html",
+  "name":"Jeet Punjabi Tadka — Restaurant Partner",
+  "short_name":"JPT Partner",
+  "start_url":"./admin.html",
+  "scope":"./",
+  "display":"standalone",
+  "orientation":"portrait",
+  "background_color":"#090909",
+  "theme_color":"#d8ae42",
+  "description":"Jeet Punjabi Tadka Restaurant Partner Dashboard",
+  "icons":[
+    {"src":"./jpt-partner-icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}
