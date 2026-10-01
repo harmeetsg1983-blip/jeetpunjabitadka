@@ -127,7 +127,7 @@ if(settingsHost && !document.getElementById('jptSponsorLauncherV2')){
   r.list.querySelectorAll('button[data-id]').forEach(b=>b.onclick=async()=>{const id=b.dataset.id;const table=DELIVERY_TABLE;if(b.dataset.action==='delete'){if(!confirm('Delete this sponsor banner permanently?'))return;const q=await sb().from(table).delete().eq('id',id);if(q.error)r.msg.textContent=q.error.message;else await refresh();return}const q=await sb().from(table).update({is_active:b.dataset.active!=='1'}).eq('id',id);if(q.error)r.msg.textContent=q.error.message;else await refresh()});
   }catch(e){r.list.textContent=e.message||'Unable to load banners.'}
  }
- r.save.type='button';r.delivery.type='button';r.customer.type='button';r.zoomout.type='button';r.center.type='button';r.zoomin.type='button';r.save.onclick=async()=>{
+ r.save.type='button';r.delivery.type='button';r.zoomout.type='button';r.center.type='button';r.zoomin.type='button';r.save.onclick=async()=>{
   const file=r.file.files?.[0];if(!file){r.msg.textContent='Please choose an image or video.';return}
   r.save.disabled=true;r.msg.textContent='Preparing media...';
   try{
