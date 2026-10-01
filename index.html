@@ -150,7 +150,9 @@ async function renderHighlights(){
   const isVideo=managed&&s.media_type==='video';
   const bg=managed&&!isVideo?(s.image_url||managed.banner_url||''):(rec.cover_image||rec.banner_image||rec.image_url||rec.image||ROYAL_MEDIA[id]||'');
   const style=`border-color:${o.accent};${bg?`background-image:url('${esc(bg)}')`:''}`;
-  const media=isVideo&&managed?.video_url?`<video autoplay muted playsinline loop preload="metadata" aria-label="${esc(rec.name||o.name)} banner" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none"><source src="${esc(managed.video_url)}"></video>`:(bg?'':'');
+  const fr=isVideo?(s.frame||{}):{};
+  const tx=isVideo?'transform:translate('+Number(fr.x||0)+'%,'+Number(fr.y||0)+'%) scale('+Math.max(.25,Math.min(4,Number(fr.scale||1)))+');transform-origin:center center;':'';
+  const media=isVideo&&managed?.video_url?'<video autoplay muted playsinline loop preload="metadata" aria-label="'+esc(rec.name||o.name)+' banner" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none;'+tx+'"><source src="'+esc(managed.video_url)+'"></video>':(bg?'':'');
   return `<div class="highlight" style="${style}" onclick="switchOutlet('${id}')">${media}<b style="color:${o.accent}">${esc(rec.name||o.name)}</b><small>${id} • Direct outlet ordering</small><div class="offer" style="border:1px solid ${o.accent}">${esc(label)}</div></div>`
  }).join('');
 }
