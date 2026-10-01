@@ -197,6 +197,26 @@
     var img = document.createElement('img');
     img.setAttribute('data-jpt-v106-media-v4', '1');
     setupImage(box, img, src, id);
+    img.addEventListener('error', function () {
+      loadOutletBanner(box, id);
+    }, { once: true });
+  }
+
+  async function loadOutletBanner(box, id) {
+    try {
+      var client = window.sb || window.supabaseClient;
+      if (!client) return;
+      var result = await client.from('outlets').select('banner_url').eq('code', id).maybeSingle();
+      var src = result.data && result.data.banner_url;
+      if (!src) return;
+      box.innerHTML = '';
+      var img = document.createElement('img');
+      img.setAttribute('data-jpt-v106-media-v4', '1');
+      setupImage(box, img, src, id);
+      img.addEventListener('error', function () {
+        box.innerHTML = '';
+      }, { once: true });
+    } catch (e) {}
   }
 
   function renderManagedMedia(box, media, id) {
