@@ -135,8 +135,10 @@
     var s = row && row.schedule_json && typeof row.schedule_json === 'object'
       ? row.schedule_json : {};
     if (s.campaign_type !== 'media') return null;
-    if (s.surface && s.surface !== 'customer_home_hero') return null;
-    if (s.banner_control_id || s.surface === 'customer_outlet_showcase') return null;
+    /* Dedicated outlet banners published by Banner Control Center use
+       surface=customer_outlet_showcase. Keep those eligible for the
+       lower outlet media slot; do not pull unrelated campaign media. */
+    if (s.surface && s.surface !== 'customer_home_hero' && s.surface !== 'customer_outlet_showcase') return null;
     var video = row.video_url || s.video_url || null;
     var image = row.banner_url || s.image_url || null;
     if (!video && !image) return null;
