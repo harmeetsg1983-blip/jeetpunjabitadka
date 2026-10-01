@@ -63,7 +63,7 @@ function editor(){
   const u=URL.createObjectURL(file);
   host.innerHTML='';
   if(isVideo){
-   video=document.createElement('video');video.src=u;video.controls=true;video.playsInline=true;video.muted=true;video.preload='metadata';video.style.width='100%';video.style.height='100%';video.style.objectFit='contain';video.style.display='block';video.style.transform='scale(1)';host.appendChild(video);
+   video=document.createElement('video');media=video;video.src=u;video.controls=true;video.playsInline=true;video.muted=true;video.preload='metadata';video.style.width='100%';video.style.height='100%';video.style.objectFit='contain';video.style.display='block';video.style.transform='scale(1)';host.appendChild(video);
   }else{
    const img=new Image();img.onload=()=>{media=img;draw(host)};img.onerror=()=>{host.innerHTML='<div class="jpt-bcc-empty"><b>PREVIEW FAILED</b>Selected image could not be displayed.</div>'};img.src=u;host.appendChild(img);
   }
