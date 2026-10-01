@@ -248,6 +248,7 @@ async function saveOutletBanner(code,file,title,ed,preview,msgEl){
   }
 
   msg(msgEl,'✅ LIVE PUBLISHED • '+code+' • '+(isVideo?'VIDEO':'IMAGE'),true);
+  window.dispatchEvent(new CustomEvent('jpt:banner-published',{detail:{outletId:code}}));
   return up.url;
  }catch(e){
   // If DB publication failed, remove the just-uploaded object so failed attempts do not accumulate.
