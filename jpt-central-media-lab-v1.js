@@ -47,7 +47,7 @@ function card(o,slot,row){
 }
 async function rowsFor(code){
  const sb=client(); if(!sb) throw new Error('Supabase client unavailable');
- const r=await sb.from(TABLE).select('id,title,is_active,media_url,media_type,schedule_json,updated_at').eq('is_active',true).limit(200);
+ const r=await sb.from(TABLE).select('id,title,is_active,media_url,media_type,schedule_json,updated_at,created_at').limit(500).order('created_at',{ascending:false});
  if(r.error) throw r.error;
  return (r.data||[]).filter(x=>{
    const s=x.schedule_json||{};
