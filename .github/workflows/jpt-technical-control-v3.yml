@@ -372,9 +372,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git commit -m "Repair customer sponsor placement"
-          git push origin HEAD:main
 
-          echo "GREEN: controlled repair committed to main"
+          echo "GREEN: controlled repair prepared locally only"
+          echo "GREEN: no push to main permitted by controlled workflow"
 
       - name: Final status
         shell: bash
