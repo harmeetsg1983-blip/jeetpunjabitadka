@@ -71,3 +71,12 @@ No GREEN claim until these are runtime-tested.
 - Partner Timing Manager V1 remains a separate Settings functional module and writes timing settings for the active outlet; it must retain its own ownership until its backend contract is independently audited.
 - Campaign Media Layer V4 is a separate campaign/creative workflow and is not equivalent to the outlet-banner control surface.
 - Therefore a future Settings Hub should become a navigation/ownership shell over these verified functional modules, not a second implementation of their business logic. No existing module is authorized for deletion from this checkpoint.
+
+
+## Sponsor Slot 1/2 persistence checkpoint — 01 Oct 2026
+- Source audit found the active Banner Control Center V4 had collapsed sponsor persistence to Slot 1: its UI exposed no slot selector, every save wrote `schedule_json.slot=1`, and it deactivated all active rows in the table.
+- This conflicted with the existing customer tracking runtime, which explicitly reads Slot 1 and Slot 2 separately from `checkout_sponsor_ads.schedule_json.slot`.
+- Controlled fix: Banner Control Center V4 now exposes Slot 1/Slot 2, loads the selected slot's saved record, deactivates only the selected slot when replacing it, and persists the selected slot in `schedule_json`.
+- No schema, RLS, Customer App ordering, or delivery/order business logic changed.
+- Commit: `83f62ed30eae8d4429f91e4dea29153245e779b9`.
+- Runtime persistence test remains required before GREEN: save Slot 1 + Slot 2, reopen Settings, verify both records and customer rendering, toggle/delete each independently, and verify outlet targeting/schedule behavior.
