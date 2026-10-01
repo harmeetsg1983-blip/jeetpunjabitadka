@@ -213,26 +213,22 @@ async function loadAllOutletOffers(){
 let heroTimer=null;
 function renderHero(){
  const today=new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short'});
- /* Outlet media banners belong to the dedicated lower media slot.
-    Do not promote them into the top promotional hero. */
- const active=campaigns.filter(activeWindow).filter(c=>c.schedule_json?.controller!=='jpt-outlet-media-v1').slice(0,5);
+ const media=campaigns.filter(activeWindow).filter(c=>c.schedule_json?.controller==='jpt-outlet-media-v1'&&(c.schedule_json.placement||'top')==='top').sort((a,b)=>Number(b.priority||0)-Number(a.priority||0));
+ const active=media.length?media:campaigns.filter(activeWindow).filter(c=>c.schedule_json?.controller!=='jpt-outlet-media-v1').slice(0,5);
  if(heroTimer){clearInterval(heroTimer);heroTimer=null}
- let n=0;
- const render=()=>{
-   if(!active.length){
-     $('heroTrack').innerHTML='<div class="heroSlide active"><h2>🎉 Fresh Punjabi Taste</h2><p>Special offers and festival greetings from Jeet Punjabi Tadka.</p><span class="today">Today • '+today+' • Fresh Punjabi Taste</span></div>';
-     return;
-   }
-   const c=active[n%active.length],s=c.schedule_json||{},video=s.media_kind==='video',src=video?c.video_url:c.banner_url;
-   $('heroTrack').innerHTML=video
-     ? '<div class="heroSlide active" style="padding:0"><video autoplay muted playsinline preload="auto" style="width:100%;height:100%;min-height:150px;object-fit:cover"></video></div>'
-     : '<div class="heroSlide active"><h2>🎉 '+(c.title||'Fresh Punjabi Taste')+'</h2><p>'+(s.description||'Special offers and festival greetings from Jeet Punjabi Tadka.')+'</p><span class="today">Today • '+today+' • '+(c.title||'Fresh Punjabi Taste')+'</span></div>';
-   const el=$('heroTrack').querySelector(video?'video':'.heroSlide');
-   if(video&&el){el.src=src||'';el.play().catch(()=>{})}
- };
- render();
- if(active.length>1) heroTimer=setInterval(()=>{n=(n+1)%active.length;render()},10000);
+ if(media.length){
+   let n=0,timer=null;
+   const next=()=>{if(timer)clearTimeout(timer);const c=media[n%media.length],s=c.schedule_json||{},video=s.media_kind==='video',src=video?c.video_url:c.banner_url;
+     $('heroTrack').innerHTML=video?'<div class="heroSlide active" style="padding:0"><video autoplay muted playsinline preload="auto" style="width:100%;height:100%;min-height:150px;object-fit:cover"></video></div>':'<div class="heroSlide active" style="padding:0"><img style="width:100%;height:100%;min-height:150px;object-fit:cover" alt="Promotional banner"></div>';
+     const el=$('heroTrack').querySelector(video?'video':'img');if(!el||!src)return;el.src=src;
+     if(video){el.muted=s.muted!==false;el.onended=()=>{n=(n+1)%media.length;next()};el.play().catch(()=>{})}else timer=setTimeout(()=>{n=(n+1)%media.length;next()},10000);
+   };next();return;
+ }
+ const slides=active.length?active:[{title:'Fresh Punjabi Taste',description:'Special offers and festival greetings from Jeet Punjabi Tadka.'}];
+ $('heroTrack').innerHTML=slides.map((c,i)=>'<div class="heroSlide '+(i===0?'active':'')+'"><h2>🎉 '+esc(c.title||c.name||'Festival Special')+'</h2><p>'+esc(c.description||c.subtitle||'Festival and daily offer')+'</p><span class="today">Today • '+esc(today)+' • '+esc(c.today_offer||c.offer_text||offerText(c)||'Special Offer')+'</span></div>').join('');
+ if(slides.length>1){let n=0;heroTimer=setInterval(()=>{let a=document.querySelectorAll('.heroSlide');if(!a.length)return;n=(n+1)%a.length;a.forEach(x=>x.classList.remove('active'));a[n].classList.add('active')},5000)}
 }
+let jptMediaTimer=null,jptMediaIndex=0,jptMediaToken=0;
 function renderVideo(){
  /* Customer Home Hero media is owned by media-hotfix-v4.js.
     Keep the legacy renderer inert to prevent two controllers fighting
