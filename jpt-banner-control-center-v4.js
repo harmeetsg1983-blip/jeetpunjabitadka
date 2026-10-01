@@ -318,18 +318,33 @@ async function outletDelete(code,row,msgEl){
  const s=row.schedule_json&&typeof row.schedule_json==='object'?row.schedule_json:{};
  const path=s.storage_path||'';
  const bucket=s.storage_bucket||'menu-images';
+
+ // Preserve any other currently live canonical showcase record.
+ const siblings=await c.from(CAMPAIGNS).select('id,active,start_at,end_at,priority,created_at,banner_url,video_url,schedule_json')
+  .eq('outlet_id',code)
+  .eq('schedule_json->>campaign_type','media')
+  .eq('schedule_json->>surface','customer_outlet_showcase')
+  .neq('id',row.id);
+ if(siblings.error)throw new Error('CURRENT MEDIA READ FAILED: '+siblings.error.message);
+ const survivor=(siblings.data||[])
+  .filter(x=>live(x))
+  .sort((a,b)=>(Number(b.priority||0)-Number(a.priority||0))||(Date.parse(b.created_at||0)-Date.parse(a.created_at||0)))[0]||null;
+ const survivorUrl=survivor?(survivor.video_url||survivor.banner_url||survivor.schedule_json?.video_url||survivor.schedule_json?.image_url||null):null;
+ const survivorPatch=survivor&&survivor.video_url?{banner_url:null}:{banner_url:survivorUrl};
+
  const r=await c.from(CAMPAIGNS).update({active:false}).eq('id',row.id).eq('outlet_id',code);
  if(r.error)throw new Error('BANNER OFF FAILED: '+r.error.message);
- const u=await c.from(OUTLETS).update({banner_url:null}).eq('code',code);
+
+ const u=await c.from(OUTLETS).update(survivor?survivorPatch:{banner_url:null}).eq('code',code);
  if(u.error){
   await c.from(CAMPAIGNS).update({active:true}).eq('id',row.id).eq('outlet_id',code);
-  throw new Error('OUTLET BANNER CLEAR FAILED: '+u.error.message);
+  throw new Error('OUTLET BANNER MAPPING FAILED: '+u.error.message);
  }
  if(path){
   const rm=await c.storage.from(bucket).remove([path]);
   if(rm.error)throw new Error('LIVE REMOVED, BUT MEDIA FILE CLEANUP FAILED: '+rm.error.message);
  }
- msg(msgEl,'🗑️ Banner, live record and media file removed.',true);
+ msg(msgEl,survivor?'🗑️ Selected banner removed; surviving live banner preserved.':'🗑️ Banner, live record and media file removed.',true);
 }
 
 function mediaPreview(url,isVideo,host){
