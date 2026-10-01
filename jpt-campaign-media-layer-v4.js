@@ -189,26 +189,6 @@ if(isAdmin && !document.getElementById('jptCampaignV4')){
   if(sel)sel.addEventListener('change',async()=>{renderOutlets('jpt4Outlets');renderOutlets('jpt4MOutlets');await freeItems();await refresh();});
 }
 
-if(isCustomer){
-  window.renderVideo=function(){
-    try{
-      const now=Date.now();
-      const media=(Array.isArray(window.campaigns)?window.campaigns:[]).filter(c=>{
-        const s=c&&c.schedule_json;
-        if(!s||typeof s!=='object'||s.campaign_type!=='media')return false;
-        // Home hero is isolated from outlet showcase media.
-        if(s.surface==='customer_outlet_showcase'||s.banner_control_id)return false;
-        if(s.surface&&s.surface!=='customer_home_hero')return false;
-        if(c.active===false)return false;
-        const st=c.start_at?Date.parse(c.start_at):-Infinity,en=c.end_at?Date.parse(c.end_at):Infinity;
-        return st<=now&&now<=en;
-      }).sort((a,b)=>Number(b.priority||0)-Number(a.priority||0));
-      const el=document.getElementById('videoBanner');if(!el)return;
-      if(!media.length){el.innerHTML='<div class="videoFallback"><div><b>🎬 Festival & Restaurant Video</b>No scheduled customer media is active.</div></div>';return;}
-      const c=media[0],s=c.schedule_json||{},src=c.video_url||s.video_url||null,img=c.banner_url||s.image_url||null;
-      el.innerHTML=src?`<video controls muted playsinline loop autoplay poster="${esc(img||'')}"><source src="${esc(src)}"></video>`:img?`<img src="${esc(img)}" alt="${esc(c.title||'Customer media')}">`:'';
-    }catch(e){console.warn('[JPT V4 customer media]',e);}
-  };
-  setTimeout(()=>window.renderVideo(),1500);
+/* Customer Home Hero rendering is owned by media-hotfix-v4.js.\n   This generic campaign layer remains data/control UI only on the customer surface.\n   Do not override window.renderVideo or write #videoBanner here. */
 }
 })();
