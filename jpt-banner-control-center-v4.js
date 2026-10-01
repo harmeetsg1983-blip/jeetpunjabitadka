@@ -447,9 +447,8 @@ async function mount(){
  const centralClass=document.documentElement.classList.contains('jpt-central-owner');
  if(!centralClass && !(await central()))return false;
  css();
- // Remove duplicate legacy managers visually; their files remain untouched for rollback.
- const old=document.getElementById('jptSponsorManager');if(old)old.style.display='none';
- const old4=document.getElementById('jptSponsorMediaManagerV4');if(old4)old4.style.display='none';
+ // Sponsor Manager V2 and Sponsor Media Manager V4 are active, separately owned sponsor surfaces.
+ // Do not hide them here; Settings Navigation routes to their existing containers.
 
  const box=document.createElement('section');box.id='jptBannerControlV3';box.innerHTML=`
  <div class="jpt-bcc">
