@@ -260,6 +260,7 @@ async function outletToggle(code,row,next,msgEl){
  const r=await c.from(CAMPAIGNS).update({active:next}).eq('id',row.id).eq('outlet_id',code);
  if(r.error)throw r.error;
  msg(msgEl,next?'✅ Banner ON':'Banner OFF',true);
+ window.dispatchEvent(new CustomEvent('jpt:banner-published',{detail:{outletId:code,active:next}}));
 }
 
 async function outletDelete(code,row,msgEl){
