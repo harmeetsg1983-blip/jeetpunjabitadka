@@ -88,14 +88,12 @@ function playQueue(host,queue){
  };
  if(queue.length)show();
 }
-async function mount(){
- const anchor=document.getElementById('highlightGrid');
- if(!anchor||document.getElementById('jptOutletShowcase'))return;
- const wrap=document.createElement('section');wrap.id='jptOutletShowcase';
- wrap.innerHTML='<div class="jpt-os-head"><b>🏪 Our Restaurants</b><small>VIDEO • POSTER</small></div><div class="jpt-os-list" id="jptOsList"></div>';
- anchor.parentNode.insertBefore(wrap,anchor);
- anchor.style.display='none';
- const list=wrap.querySelector('#jptOsList');
+let showcaseReady=false, showcaseBusy=false, showcaseRefreshTimer=null;
+async function refreshShowcase(){
+ if(showcaseBusy)return;
+ const wrap=document.getElementById('jptOutletShowcase'),list=document.getElementById('jptOsList');
+ if(!wrap||!list)return;
+ showcaseBusy=true;
  try{
   const sb=window.sb;
   const or=await sb.from('outlets').select('code,name,banner_url,logo_url').order('name',{ascending:true});
@@ -120,6 +118,28 @@ async function mount(){
   ids.forEach(id=>{const h=list.querySelector('[data-os-video="'+CSS.escape(id)+'"]');if(h&&by[id].length)playQueue(h,by[id]);});
   list.querySelectorAll('[data-os-open]').forEach(b=>b.onclick=()=>window.switchOutlet&&window.switchOutlet(b.dataset.osOpen));
  }catch(e){console.warn('[JPT Outlet Showcase]',e);}
+ finally{showcaseBusy=false;}
 }
+async function mount(){
+ const anchor=document.getElementById('highlightGrid');
+ if(!anchor)return;
+ let wrap=document.getElementById('jptOutletShowcase');
+ if(!wrap){
+  wrap=document.createElement('section');wrap.id='jptOutletShowcase';
+  wrap.innerHTML='<div class="jpt-os-head"><b>🏪 Our Restaurants</b><small>VIDEO • POSTER</small></div><div class="jpt-os-list" id="jptOsList"></div>';
+  anchor.parentNode.insertBefore(wrap,anchor);
+  anchor.style.display='none';
+ }
+ if(!showcaseReady){showcaseReady=true;await refreshShowcase();}
+}
+function scheduleShowcaseRefresh(){
+ if(!document.getElementById('jptOutletShowcase')){mount();return;}
+ clearTimeout(showcaseRefreshTimer);
+ showcaseRefreshTimer=setTimeout(()=>refreshShowcase(),150);
+}
+window.addEventListener('jpt:banner-published',scheduleShowcaseRefresh);
+window.addEventListener('jpt:outlet-changed',scheduleShowcaseRefresh);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleShowcaseRefresh()});
+setInterval(()=>{if(!document.hidden)refreshShowcase()},30000);
 let n=0;const t=setInterval(()=>{try{mount()}catch(e){}if(document.getElementById('jptOutletShowcase')||++n>30)clearInterval(t)},500);
 })();
