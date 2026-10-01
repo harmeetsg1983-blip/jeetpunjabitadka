@@ -284,6 +284,9 @@ async function outletToggle(code,row,next,msgEl){
   msg(msgEl,'Banner OFF',true);
   return;
  }
+ const outletBefore=await c.from(OUTLETS).select('banner_url').eq('code',code).maybeSingle();
+ if(outletBefore.error)throw new Error('CURRENT OUTLET READ FAILED: '+outletBefore.error.message);
+ const previousBannerUrl=outletBefore.data?.banner_url||null;
  const others=await c.from(CAMPAIGNS).select('id,active').eq('outlet_id',code).eq('schedule_json->>campaign_type','media').eq('schedule_json->>surface','customer_outlet_showcase').neq('id',row.id);
  if(others.error)throw new Error('CURRENT MEDIA READ FAILED: '+others.error.message);
  const activeOthers=(others.data||[]).filter(x=>x.active).map(x=>x.id).filter(Boolean);
@@ -302,6 +305,7 @@ async function outletToggle(code,row,next,msgEl){
  if(map.error){
   await c.from(CAMPAIGNS).update({active:false}).eq('id',row.id).eq('outlet_id',code);
   if(activeOthers.length)await c.from(CAMPAIGNS).update({active:true}).in('id',activeOthers).eq('outlet_id',code);
+  await c.from(OUTLETS).update({banner_url:previousBannerUrl}).eq('code',code);
   throw new Error('BANNER ON MAPPING RESTORE FAILED: '+map.error.message);
  }
  msg(msgEl,'Banner ON',true);
