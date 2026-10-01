@@ -319,7 +319,7 @@ function renderOutletCard(o,data,ed){
    <button class="danger" type="button" data-delete>DELETE LIVE BANNER</button>
   </div>
   <div class="jpt-bcc-status" data-msg></div>
-  <div class="jpt-bcc-list"><b>Current Media Record</b><div class="jpt-bcc-row">${url?'<img class="jpt-bcc-thumb" src="'+esc(url)+'">':'<div class="jpt-bcc-thumb"></div>'}<div><div>${esc(row?.title||'No saved media')}</div><div class="jpt-bcc-small">${row?.video_url?'VIDEO':'IMAGE'} • ${row?.active?'ON':'OFF'} • Priority ${Number(row?.priority||0)}</div></div></div></div>`;
+  <div class="jpt-bcc-list"><b>Current Media Record</b><div class="jpt-bcc-row">${url?'<img class="jpt-bcc-thumb" src="'+esc(url)+'">':'<div class="jpt-bcc-thumb"></div>'}<div><div>${esc(row?.title||'No saved media')}</div><div class="jpt-bcc-small">${row?.video_url?'🎬 VIDEO':'🖼️ IMAGE'} • 📍 ${esc(row?.schedule_json?.surface||'customer_outlet_showcase')} • ${row?.active?'🟢 LIVE / ON':'⚪ OFF'} • Priority ${Number(row?.priority||0)}</div><div class="jpt-bcc-small">TARGET: <b>${esc(o.code)}</b> • ${esc(o.name)} • PUSH publishes this outlet only.</div></div></div></div>`;
  const preview=box.querySelector('[data-preview]');
  if(url)mediaPreview(url,isVideo,preview);
  const state={row,code:o.code};
