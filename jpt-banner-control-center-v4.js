@@ -263,22 +263,48 @@ async function outletToggle(code,row,next,msgEl){
 
 async function outletDelete(code,row,msgEl){
  const c=sb();
- if(!row?.id)throw new Error('No saved banner found for this outlet.');
- const s=row.schedule_json&&typeof row.schedule_json==='object'?row.schedule_json:{};
- const path=s.storage_path||'';
- const bucket=s.storage_bucket||'menu-images';
- const r=await c.from(CAMPAIGNS).update({active:false}).eq('id',row.id).eq('outlet_id',code);
- if(r.error)throw new Error('BANNER OFF FAILED: '+r.error.message);
+ if(!code)throw new Error('Outlet code is required.');
+
+ /* Delete the complete outlet-showcase set, not just the first row shown
+    in the card. This prevents old uploaded media from surviving behind
+    the current record. */
+ const q=await c.from(CAMPAIGNS)
+   .select('id,active,banner_url,video_url,schedule_json')
+   .eq('outlet_id',code)
+   .eq('schedule_json->>campaign_type','media')
+   .eq('schedule_json->>surface','customer_outlet_showcase');
+ if(q.error)throw new Error('BANNER RECORD READ FAILED: '+q.error.message);
+
+ const rows=q.data||[];
+ const ids=rows.map(x=>x.id).filter(Boolean);
+ const files=[];
+ rows.forEach(x=>{
+   const s=x.schedule_json&&typeof x.schedule_json==='object'?x.schedule_json:{};
+   if(s.storage_path)files.push({bucket:s.storage_bucket||'menu-images',path:s.storage_path});
+ });
+
+ if(ids.length){
+   const off=await c.from(CAMPAIGNS).update({active:false}).in('id',ids).eq('outlet_id',code);
+   if(off.error)throw new Error('BANNER OFF FAILED: '+off.error.message);
+ }
+
  const u=await c.from(OUTLETS).update({banner_url:null}).eq('code',code);
- if(u.error){
-  await c.from(CAMPAIGNS).update({active:true}).eq('id',row.id).eq('outlet_id',code);
-  throw new Error('OUTLET BANNER CLEAR FAILED: '+u.error.message);
+ if(u.error)throw new Error('OUTLET BANNER CLEAR FAILED: '+u.error.message);
+
+ const grouped={};
+ files.forEach(x=>{
+   grouped[x.bucket]??=[];
+   grouped[x.bucket].push(x.path);
+ });
+ for(const bucket of Object.keys(grouped)){
+   const unique=[...new Set(grouped[bucket])];
+   if(unique.length){
+     const rm=await c.storage.from(bucket).remove(unique);
+     if(rm.error)throw new Error('LIVE RECORDS REMOVED, BUT MEDIA FILE CLEANUP FAILED: '+rm.error.message);
+   }
  }
- if(path){
-  const rm=await c.storage.from(bucket).remove([path]);
-  if(rm.error)throw new Error('LIVE REMOVED, BUT MEDIA FILE CLEANUP FAILED: '+rm.error.message);
- }
- msg(msgEl,'🗑️ Banner, live record and media file removed.',true);
+
+ msg(msgEl,'🗑️ All outlet banner records and uploaded media removed.',true);
 }
 
 function mediaPreview(url,isVideo,host){
