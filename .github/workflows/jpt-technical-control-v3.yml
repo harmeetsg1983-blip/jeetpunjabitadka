@@ -84,7 +84,7 @@ jobs:
           test -f admin.html
           test -f index.html
           test -f jpt-partner-final-touch-v10.js
-          test -f customer-order-tracking-v106-v2.js
+          # Legacy customer tracking bridge is preserved but not an active dependency.
           test -f jpt-customer-tracking-sponsor-slider-v3.js
           test -f delivery-partner-app.html
           test -f jpt-delivery-sponsor-slider-v3.js
