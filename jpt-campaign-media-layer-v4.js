@@ -128,7 +128,7 @@ if(isAdmin && !document.getElementById('jptCampaignV4')){
       const active=!!c.active;
       return `<div style="border:1px solid #3c321f;border-radius:10px;padding:10px;margin:8px 0;background:#121212;display:flex;justify-content:space-between;gap:10px;align-items:center">
         <div><b>${esc(c.title||'Campaign')}</b><div class="muted">${esc(type)} • priority ${Number(c.priority||0)}${c.start_at?' • '+esc(iso(c.start_at)):''}${c.end_at?' → '+esc(iso(c.end_at)):''}</div></div>
-        <button class="btn ${active?'gold':''}" data-jpt4-toggle="${esc(c.id)}" data-active="${active?'1':'0'}">${active?'ON':'OFF'}</button>
+        ${media&&(s.surface==='customer_outlet_showcase'||s.banner_control_id)?'<span class="muted">CONTROLLED BY BANNER V4</span>':`<button class="btn ${active?'gold':''}" data-jpt4-toggle="${esc(c.id)}" data-active="${active?'1':'0'}">${active?'ON':'OFF'}</button>`}
       </div>`;
     }).join('');
     list.querySelectorAll('[data-jpt4-toggle]').forEach(b=>b.onclick=async()=>{
