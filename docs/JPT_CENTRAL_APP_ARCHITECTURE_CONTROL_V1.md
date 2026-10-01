@@ -57,3 +57,12 @@ Design and implement a single-owner Order Command Center/navigation architecture
 - Therefore Phase I scale/security readiness is YELLOW/BLOCKED for production sign-off. No client workaround, service-role bypass, or invented audit/backup mechanism is authorized from this evidence alone.
 - Required future evidence: authoritative backend/RLS policies, idempotency strategy for transactional writes, auditable event/ledger path, backup/restore and recovery verification, and at least two-outlet negative-access testing.
 - No production code changed.
+
+
+## Banner V4 OFF stale-media guard checkpoint — 01 Oct 2026
+- Source audit found a concrete stale-media path: Banner Control Center V4 could deactivate the canonical showcase campaign while leaving the legacy `outlets.banner_url` mapping populated.
+- The active customer showcase reader falls back to `outlets.banner_url` when no active managed showcase campaign is available, so an OFF action could leave the previous banner visible.
+- Controlled fix: when V4 turns a saved outlet banner OFF, it now clears `outlets.banner_url`; if that mapping clear fails, the campaign is restored active and the OFF operation reports failure.
+- DELETE already had an explicit legacy mapping clear; this checkpoint aligns OFF with the same stale-media protection.
+- Commit: `6583258fc6f9520eee4e10707bec59ce55eddeb8`.
+- This is a source-level fix only. Banner save/render/delete E2E remains NOT GREEN until real runtime verification proves database state, customer rendering, OFF, Delete, storage cleanup, reopen persistence, and outlet isolation.
