@@ -198,12 +198,16 @@ async function deactivateOutletMedia(code){
  if(q.error)throw q.error;
 }
 
-async function saveOutletBanner(code,file,title,ed,preview,msgEl){
+function scheduleIso(value,label){if(!value)return null;const d=new Date(value);if(Number.isNaN(d.getTime()))throw new Error(label+' schedule is invalid.');return d.toISOString()}
+async function saveOutletBanner(code,file,title,startAt,endAt,ed,preview,msgEl){
  if(!file)throw new Error('Please choose an image or video.');
  const lower=String(file.name||'').toLowerCase();
  const isVideo=String(file.type||'').toLowerCase().startsWith('video/')||['.mp4','.webm','.ogg'].some(ext=>lower.endsWith(ext));
  if(isVideo&&file.size>60*1024*1024)throw new Error('Video must be under 60MB.');
  if(!isVideo&&file.size>12*1024*1024)throw new Error('Image must be under 12MB.');
+ const startIso=scheduleIso(startAt,'Start');
+ const endIso=scheduleIso(endAt,'End');
+ if(startIso&&endIso&&new Date(endIso).getTime()<=new Date(startIso).getTime())throw new Error('End schedule must be after Start schedule.');
  const prepared=await ed.blob(file);
  msg(msgEl,isVideo?'Preparing resumable video upload…':'Uploading image…',true);
  const up=await uploadMedia(prepared,'menu-images','outlet-banners/'+code,msgEl);
@@ -218,8 +222,8 @@ async function saveOutletBanner(code,file,title,ed,preview,msgEl){
    title:title||code+' Banner',
    message:'Outlet banner '+code,
    active:true,
-   start_at:null,
-   end_at:null,
+   start_at:startIso,
+   end_at:endIso,
    priority:100,
    banner_url:isVideo?null:up.url,
    video_url:isVideo?up.url:null,
@@ -312,6 +316,8 @@ function renderOutletCard(o,data,ed){
   <div class="jpt-bcc-fields">
    <div><label>BANNER TITLE</label><input data-title value="${esc(row?.title||o.name+' Banner')}"></div>
    <div><label>NEW IMAGE / VIDEO</label><input data-file type="file" accept="image/*,video/*"></div>
+   <div><label>START SCHEDULE (OPTIONAL)</label><input data-start type="datetime-local" value="${row?.start_at?esc(String(row.start_at).slice(0,16)):''}"></div>
+   <div><label>END SCHEDULE (OPTIONAL)</label><input data-end type="datetime-local" value="${row?.end_at?esc(String(row.end_at).slice(0,16)):''}"></div>
   </div>
   <div class="jpt-bcc-small">Code <b>${o.id}</b> हमेशा इसी outlet का रहेगा. Push करने पर पुराना active media OFF होगा और नया single live banner बनेगा.</div>
   <div class="jpt-bcc-actions">
@@ -320,7 +326,7 @@ function renderOutletCard(o,data,ed){
    <button class="danger" type="button" data-delete>DELETE LIVE BANNER</button>
   </div>
   <div class="jpt-bcc-status" data-msg></div>
-  <div class="jpt-bcc-list"><b>Current Media Record</b><div class="jpt-bcc-row">${url?'<img class="jpt-bcc-thumb" src="'+esc(url)+'">':'<div class="jpt-bcc-thumb"></div>'}<div><div>${esc(row?.title||'No saved media')}</div><div class="jpt-bcc-small">${row?.video_url?'🎬 VIDEO':'🖼️ IMAGE'} • 📍 ${esc(row?.schedule_json?.surface||'customer_outlet_showcase')} • ${row?.active?'🟢 LIVE / ON':'⚪ OFF'} • Priority ${Number(row?.priority||0)}</div><div class="jpt-bcc-small">TARGET: <b>${esc(o.code)}</b> • ${esc(o.name)} • PUSH publishes this outlet only.</div></div></div></div>`;
+  <div class="jpt-bcc-list"><b>Current Media Record</b><div class="jpt-bcc-row">${url?'<img class="jpt-bcc-thumb" src="'+esc(url)+'">':'<div class="jpt-bcc-thumb"></div>'}<div><div>${esc(row?.title||'No saved media')}</div><div class="jpt-bcc-small">${row?.video_url?'🎬 VIDEO':'🖼️ IMAGE'} • 📍 ${esc(row?.schedule_json?.surface||'customer_outlet_showcase')} • ${row?.active?(row?.start_at&&new Date(row.start_at).getTime()>Date.now()?'🟡 SCHEDULED':'🟢 LIVE / ON'):'⚪ OFF'} • Priority ${Number(row?.priority||0)} • ${row?.start_at?'START '+esc(String(row.start_at)):'NO START'} • ${row?.end_at?'END '+esc(String(row.end_at)):'NO END'}</div><div class="jpt-bcc-small">TARGET: <b>${esc(o.code)}</b> • ${esc(o.name)} • PUSH publishes this outlet only.</div></div></div></div>`;
  const preview=box.querySelector('[data-preview]');
  if(url)mediaPreview(url,isVideo,preview);
  const state={row,code:o.code};
@@ -336,7 +342,7 @@ function renderOutletCard(o,data,ed){
   let saveStep='start';
   try{
    saveStep='saveOutletBanner';
-   await saveOutletBanner(o.code,f,box.querySelector('[data-title]').value.trim(),ed,preview,m);
+   await saveOutletBanner(o.code,f,box.querySelector('[data-title]').value.trim(),box.querySelector('[data-start]').value,box.querySelector('[data-end]').value,ed,preview,m);
    saveStep='refresh';
    await bootOutlet();
   }catch(e){
