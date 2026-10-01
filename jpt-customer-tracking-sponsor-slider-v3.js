@@ -17,13 +17,11 @@ function mount(){
  const e=document.createElement('section');e.id='jptCustomerSponsorV4';e.innerHTML='<div id="jptSponsorSlot1" class="jpt-sv4"><span class="jpt-sv4-label">SPONSOR</span></div><div id="jptSponsorSlot2" class="jpt-sv4"><span class="jpt-sv4-label">SPONSOR</span></div>';
  document.body.appendChild(e);
  const place=()=>{
-   const modal=document.getElementById('modal'),tracker=document.getElementById('jptOrderTracker'),videoBanner=document.getElementById('videoBanner');
+   const modal=document.getElementById('modal'),tracker=document.getElementById('jptOrderTracker');
    const checkout=!!modal?.classList.contains('show'),tracking=!!tracker?.classList.contains('show');
-   const home=!checkout&&!tracking;
-   e.classList.toggle('on',checkout||tracking||home);
+   e.classList.toggle('on',checkout||tracking);
    if(checkout){const sheet=modal?.querySelector('.sheet');const first=sheet?.querySelector('.box');if(sheet&&first)e.parentNode!==sheet&&sheet.insertBefore(e,first)}
    else if(tracking){const top=tracker?.querySelector('.jpt-track-top');if(tracker&&top)e.parentNode!==tracker&&top.insertAdjacentElement('afterend',e)}
-   else if(home&&videoBanner){videoBanner.insertAdjacentElement('afterend',e)}
  };
  new MutationObserver(place).observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']});setInterval(place,1000);place();
  return e;
