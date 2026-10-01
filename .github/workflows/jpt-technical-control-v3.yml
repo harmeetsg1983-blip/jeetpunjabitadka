@@ -267,8 +267,9 @@ jobs:
 
           echo "---- CENTRAL SPONSOR MANAGER ----"
           grep -q 'delivery_partner_sponsor_ads' jpt-sponsor-manager-v2.js
-          grep -q 'checkout_sponsor_ads' jpt-sponsor-manager-v2.js
-          echo "GREEN: sponsor manager markers present"
+          ! grep -q 'checkout_sponsor_ads' jpt-sponsor-manager-v2.js
+          ! grep -q 'CUSTOMER_BUCKET' jpt-sponsor-manager-v2.js
+          echo "GREEN: sponsor manager is Delivery Partner-only"
 
           echo "---- CUSTOMER SPONSOR ----"
           grep -q 'checkout_sponsor_ads' jpt-customer-tracking-sponsor-slider-v3.js
