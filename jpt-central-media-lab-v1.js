@@ -86,7 +86,7 @@ async function save(code,slot,el){
  }
  const schedule={version:1,controller:'jpt-central-media-lab-v1',surface:'customer_outlet_media',slot,machine_id:id,outlet_code:code,media_type:kind||'image',image_url:kind==='image'?url:'',video_url:kind==='video'?url:'',placement:'customer_outlet_banner',start_at:el.querySelector('.cml-start').value||null,end_at:el.querySelector('.cml-end').value||null};
  if(!url){const old=await rowsFor(code);const hit=old.find(x=>(x.schedule_json||{}).slot===slot); if(hit){schedule.media_type=(hit.schedule_json||{}).media_type||hit.media_type||'image';schedule.image_url=(hit.schedule_json||{}).image_url||'';schedule.video_url=(hit.schedule_json||{}).video_url||'';url=hit.media_url||schedule.image_url||schedule.video_url;}}
- const ins=await sb.from(TABLE).insert({title:id,description:'Central Media Lab '+id,media_url:url,media_type:schedule.media_type,is_active:true,schedule_json:schedule}).select('id').single(); if(ins.error)throw ins.error;
+ const ins=await sb.from(TABLE).insert({title:id,description:'Central Media Lab '+id,media_url:url,media_type:schedule.media_type,is_active:true,start_at:schedule.start_at,end_at:schedule.end_at,schedule_json:schedule}).select('id').single(); if(ins.error)throw ins.error;
  const old=await sb.from(TABLE).select('id').eq('is_active',true).limit(300); if(old.data)for(const x of old.data){const s=x.schedule_json||{};if(s.controller==='jpt-central-media-lab-v1'&&s.outlet_code===code&&s.slot===slot&&x.id!==ins.data.id)await sb.from(TABLE).update({is_active:false}).eq('id',x.id);}
  toast(id+' saved');
  await load();
