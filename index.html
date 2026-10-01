@@ -131,28 +131,12 @@ async function renderHighlights(){
  const grid=$('highlightGrid');
  if(title&&grid){const show=outletId==='JPT-001'; title.style.display=show?'':'none'; grid.style.display=show?'':'none';}
  const ids=Object.keys(OUTLETS).filter(id=>id!=='JPT-001').slice(0,12);
- const showcaseByOutlet={};
- try{
-  const cr=ids.length?await sb.from('campaigns').select('*').in('outlet_id',ids):{data:[],error:null};
-  if(!cr.error)(cr.data||[]).filter(activeWindow).filter(c=>{
-   const s=c.schedule_json||{};
-   return s.campaign_type==='media'&&s.surface==='customer_outlet_showcase';
-  }).sort((a,b)=>Number(b.priority||0)-Number(a.priority||0)||String(b.created_at||'').localeCompare(String(a.created_at||''))).forEach(c=>{
-   const id=String(c.outlet_id||'').trim();
-   if(id&&!showcaseByOutlet[id])showcaseByOutlet[id]=c;
-  });
- }catch(e){}
  $('highlightGrid').innerHTML=ids.map(id=>{
   const o=OUTLETS[id], rec=outletRecords[id]||{}, os=(offersByOutlet[id]||[]).filter(activeWindow);
   const best=os[0], label=best?offerText(best):'View menu';
-  const managed=showcaseByOutlet[id];
-  const s=managed?.schedule_json||{};
-  const isVideo=managed&&s.media_type==='video';
-  const bg=managed&&!isVideo?(s.image_url||managed.banner_url||''):(rec.cover_image||rec.banner_image||rec.image_url||rec.image||ROYAL_MEDIA[id]||'');
+  const bg=rec.cover_image||rec.banner_image||rec.image_url||rec.image||ROYAL_MEDIA[id]||'';
   const style=`border-color:${o.accent};${bg?`background-image:url('${esc(bg)}')`:''}`;
-  const fr=isVideo?(s.frame||{}):{};
-  const tx=isVideo?'transform:translate('+Number(fr.x||0)+'%,'+Number(fr.y||0)+'%) scale('+Math.max(.25,Math.min(4,Number(fr.scale||1)))+');transform-origin:center center;':'';
-  const media=isVideo&&managed?.video_url?'<video autoplay muted playsinline loop preload="metadata" aria-label="'+esc(rec.name||o.name)+' banner" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none;'+tx+'"><source src="'+esc(managed.video_url)+'"></video>':(bg?'':'');
+  const media='';
   return `<div class="highlight" style="${style}" onclick="switchOutlet('${id}')">${media}<b style="color:${o.accent}">${esc(rec.name||o.name)}</b><small>${id} • Direct outlet ordering</small><div class="offer" style="border:1px solid ${o.accent}">${esc(label)}</div></div>`
  }).join('');
 }
