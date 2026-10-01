@@ -124,7 +124,7 @@ jobs:
           # ------------------------------------------------------------
 
           tracking_script = '<script src="./customer-order-tracking-v106-v2.js?v=v106-tracking-v3"></script>'
-          sponsor_connector = '<script src="./jpt-customer-tracking-sponsor-connector-v2.js?v=2"></script>'
+          sponsor_connector = '<script src="./jpt-customer-tracking-sponsor-connector-v2.js?v=3"></script>'
 
           if tracking_script not in index_text:
               if sponsor_connector not in index_text:
@@ -197,7 +197,7 @@ jobs:
           echo "========================================"
 
           grep -q 'customer-order-tracking-v106-v2.js?v=v106-tracking-v3' index.html
-          grep -q 'jpt-customer-tracking-sponsor-connector-v2.js?v=2' index.html
+          grep -q 'jpt-customer-tracking-sponsor-connector-v2.js?v=3' index.html
 
           ! grep -q "getElementById('videoBanner')" jpt-customer-tracking-sponsor-slider-v3.js
           ! grep -q 'querySelector('\''main'\'')' jpt-customer-tracking-sponsor-slider-v3.js
