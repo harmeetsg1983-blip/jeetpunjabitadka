@@ -243,6 +243,15 @@ async function saveOutletBanner(code,file,title,startAt,endAt,ed,preview,msgEl){
    }
   }
 
+  // Remove storage objects belonging only to retired showcase records.
+  // The new live object is excluded by its unique storage path.
+  const retiredPaths=[...new Set(previousRows.map(x=>x?.schedule_json?.storage_path).filter(p=>p&&p!==up.path))];
+  const cleanupErrors=[];
+  for(const retiredPath of retiredPaths){
+   const oldStorage=await sb().storage.from('menu-images').remove([retiredPath]);
+   if(oldStorage.error)cleanupErrors.push(retiredPath+': '+oldStorage.error.message);
+  }
+
   // Keep the legacy outlet field synchronized only after the campaign is live.
   const patch=isVideo?{banner_url:null}:{banner_url:up.url};
   const ou=await sb().from(OUTLETS).update(patch).eq('code',code);
@@ -252,7 +261,11 @@ async function saveOutletBanner(code,file,title,startAt,endAt,ed,preview,msgEl){
    throw new Error('OUTLET BANNER MAPPING FAILED: '+ou.error.message);
   }
 
-  msg(msgEl,'✅ LIVE PUBLISHED • '+code+' • '+(isVideo?'VIDEO':'IMAGE'),true);
+  if(cleanupErrors.length){
+   msg(msgEl,'⚠️ LIVE PUBLISHED • old media cleanup needs review: '+cleanupErrors.join(' | '),true);
+  }else{
+   msg(msgEl,'✅ LIVE PUBLISHED • '+code+' • '+(isVideo?'VIDEO':'IMAGE')+' • old media cleaned',true);
+  }
   return up.url;
  }catch(e){
   // If DB publication failed, remove the just-uploaded object so failed attempts do not accumulate.
