@@ -258,6 +258,13 @@ async function outletToggle(code,row,next,msgEl){
  const c=sb();if(!row?.id)throw new Error('No saved banner found for this outlet.');
  const r=await c.from(CAMPAIGNS).update({active:next}).eq('id',row.id).eq('outlet_id',code);
  if(r.error)throw r.error;
+ if(!next){
+  const clear=await c.from(OUTLETS).update({banner_url:null}).eq('code',code);
+  if(clear.error){
+   await c.from(CAMPAIGNS).update({active:true}).eq('id',row.id).eq('outlet_id',code);
+   throw new Error('BANNER OFF MAPPING CLEAR FAILED: '+clear.error.message);
+  }
+ }
  msg(msgEl,next?'✅ Banner ON':'Banner OFF',true);
 }
 
