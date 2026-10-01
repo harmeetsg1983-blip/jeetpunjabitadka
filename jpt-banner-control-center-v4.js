@@ -248,6 +248,7 @@ async function saveOutletBanner(code,file,title,ed,preview,msgEl){
   }
 
   msg(msgEl,'✅ LIVE PUBLISHED • '+code+' • '+(isVideo?'VIDEO':'IMAGE'),true);
+  window.dispatchEvent(new CustomEvent('jpt:banner-published',{detail:{outletId:code}}));
   return up.url;
  }catch(e){
   // If DB publication failed, remove the just-uploaded object so failed attempts do not accumulate.
@@ -259,6 +260,7 @@ async function outletToggle(code,row,next,msgEl){
  const r=await c.from(CAMPAIGNS).update({active:next}).eq('id',row.id).eq('outlet_id',code);
  if(r.error)throw r.error;
  msg(msgEl,next?'✅ Banner ON':'Banner OFF',true);
+ window.dispatchEvent(new CustomEvent('jpt:banner-published',{detail:{outletId:code,active:next}}));
 }
 
 async function outletDelete(code,row,msgEl){
