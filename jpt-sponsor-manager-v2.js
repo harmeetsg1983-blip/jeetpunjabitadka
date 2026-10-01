@@ -9,9 +9,7 @@ if(window.__JPT_SPONSOR_MANAGER_V2__) return;
 window.__JPT_SPONSOR_MANAGER_V2__=true;
 
 const DELIVERY_TABLE='delivery_partner_sponsor_ads';
-const CUSTOMER_TABLE='checkout_sponsor_ads';
 const DELIVERY_BUCKET='delivery-partner-sponsors';
-const CUSTOMER_BUCKET='checkout-sponsor-media';
 
 function sb(){return window.sb||window.supabaseClient||null}
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -108,7 +106,7 @@ if(settingsHost && !document.getElementById('jptSponsorLauncherV2')){
  const box=document.createElement('section');box.id='jptSponsorManager';
  box.innerHTML=`<div class="jpt-sm"><h3>✨ Sponsor Advertisement Manager V2</h3>
  <div class="sub">Central Owner controls Delivery Partner sponsor banners. Customer Tracking is owned by Sponsor Media Manager V4. Image + Video • image crop/zoom/drag • video preview • mute/sound • schedule • outlet targeting.</div>
- <div class="jpt-sm-tabs"><button type="button" id="jptSmDelivery" class="on">Delivery Partner</button><button type="button" id="jptSmCustomer" style="display:none!important" aria-hidden="true" tabindex="-1">Customer Tracking</button></div>
+ <div class="jpt-sm-tabs"><button type="button" id="jptSmDelivery" class="on">Delivery Partner</button></div>
  <div class="jpt-sm-grid"><div><label>Sponsor Name</label><input id="jptSmSponsor" placeholder="Sponsor / Brand"></div><div><label>Banner Title</label><input id="jptSmTitle" placeholder="Optional title"></div></div>
  <label>Banner Media</label><input id="jptSmFile" type="file" accept="image/*,video/*">
  <div id="jptSmCrop" class="jpt-crop" style="display:none"><canvas id="jptSmCanvas"></canvas><video id="jptSmVideoPreview" controls playsinline muted style="display:none;width:100%;max-height:280px;border-radius:10px;background:#050505"></video><div class="jpt-crop-row"><button type="button" id="jptSmZoomOut">− Zoom</button><button type="button" id="jptSmCenter">Center</button><button type="button" id="jptSmZoomIn">＋ Zoom</button></div><div class="jpt-sm-note" style="margin-top:6px">Image: drag/zoom/center. Video: preview + mute/sound; no destructive crop is applied.</div></div>
@@ -118,16 +116,15 @@ if(settingsHost && !document.getElementById('jptSponsorLauncherV2')){
  <button type="button" id="jptSmSave" class="jpt-sm-primary">ADD SPONSOR BANNER</button><div id="jptSmMsg" class="jpt-sm-note"></div>
  <div class="jpt-sm-list"><b>Saved Banners</b><div id="jptSmList" class="jpt-sm-note">Loading...</div></div></div>`;
  h.appendChild(box);
- const r={};['jptSmDelivery','jptSmCustomer','jptSmSponsor','jptSmSlot','jptSmTitle','jptSmFile','jptSmCrop','jptSmCanvas','jptSmZoomOut','jptSmCenter','jptSmZoomIn','jptSmTarget','jptSmOutletWrap','jptSmOutlet','jptSmSort','jptSmStart','jptSmEnd','jptSmSave','jptSmMsg','jptSmList'].forEach(id=>r[id.replace('jptSm','').toLowerCase()]=document.getElementById(id));
- let mode='delivery',editor=cropEditor({file:r.file,cropBox:r.crop,canvas:r.canvas,zoomOut:r.zoomout,center:r.center,zoomIn:r.zoomin,preview:r.preview||document.createElement('img')});
+ const r={};['jptSmDelivery','jptSmSponsor','jptSmSlot','jptSmTitle','jptSmFile','jptSmCrop','jptSmCanvas','jptSmZoomOut','jptSmCenter','jptSmZoomIn','jptSmTarget','jptSmOutletWrap','jptSmOutlet','jptSmSort','jptSmStart','jptSmEnd','jptSmSave','jptSmMsg','jptSmList'].forEach(id=>r[id.replace('jptSm','').toLowerCase()]=document.getElementById(id));
+ let editor=cropEditor({file:r.file,cropBox:r.crop,canvas:r.canvas,zoomOut:r.zoomout,center:r.center,zoomIn:r.zoomin,preview:r.preview||document.createElement('img')});
  async function fillOutlets(){await outlets({outlet:r.outlet})} await fillOutlets();
  r.target.onchange=()=>r.outletwrap.style.display=r.target.value==='outlet'?'block':'none';
- const setMode=x=>{mode=x;r.delivery.classList.toggle('on',x==='delivery');r.customer.classList.toggle('on',x==='customer');refresh()};
- r.delivery.onclick=()=>setMode('delivery');r.customer.onclick=()=>setMode('delivery');
+ r.delivery.onclick=()=>refresh();
  async function refresh(){
-  try{const rows=await load(mode==='delivery'?DELIVERY_TABLE:CUSTOMER_TABLE);
+  try{const rows=await load(DELIVERY_TABLE);
   r.list.innerHTML=rows.length?rows.map(x=>`<div class="jpt-sm-item"><img class="jpt-sm-thumb" src="${esc(x.media_url)}"><div><b>${esc(x.sponsor_name||x.title||'Sponsor')}</b><div class="jpt-sm-note">${esc(x.title||'')} · ${x.is_active?'ON':'OFF'} · order ${x.sort_order??0}</div><span class="jpt-sm-chip">${x.target_all_live?'ALL LIVE':(x.outlet_ids||[]).join(', ')}</span></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="jpt-sm-danger" data-id="${esc(x.id)}" data-active="${x.is_active?'1':'0'}" data-action="toggle">${x.is_active?'TURN OFF':'TURN ON'}</button><button type="button" data-id="${esc(x.id)}" data-action="delete" style="background:#3a1010;color:#ffb8b8;border:1px solid #933;border-radius:9px;padding:8px 10px;font-weight:800">DELETE</button></div></div>`).join(''):'No sponsor banners yet.';
-  r.list.querySelectorAll('button[data-id]').forEach(b=>b.onclick=async()=>{const id=b.dataset.id;const table=mode==='delivery'?DELIVERY_TABLE:CUSTOMER_TABLE;if(b.dataset.action==='delete'){if(!confirm('Delete this sponsor banner permanently?'))return;const q=await sb().from(table).delete().eq('id',id);if(q.error)r.msg.textContent=q.error.message;else await refresh();return}const q=await sb().from(table).update({is_active:b.dataset.active!=='1'}).eq('id',id);if(q.error)r.msg.textContent=q.error.message;else await refresh()});
+  r.list.querySelectorAll('button[data-id]').forEach(b=>b.onclick=async()=>{const id=b.dataset.id;const table=DELIVERY_TABLE;if(b.dataset.action==='delete'){if(!confirm('Delete this sponsor banner permanently?'))return;const q=await sb().from(table).delete().eq('id',id);if(q.error)r.msg.textContent=q.error.message;else await refresh();return}const q=await sb().from(table).update({is_active:b.dataset.active!=='1'}).eq('id',id);if(q.error)r.msg.textContent=q.error.message;else await refresh()});
   }catch(e){r.list.textContent=e.message||'Unable to load banners.'}
  }
  r.save.type='button';r.delivery.type='button';r.customer.type='button';r.zoomout.type='button';r.center.type='button';r.zoomin.type='button';r.save.onclick=async()=>{
@@ -135,7 +132,7 @@ if(settingsHost && !document.getElementById('jptSponsorLauncherV2')){
   r.save.disabled=true;r.msg.textContent='Preparing media...';
   try{
    const isVideo=/^video\//i.test(file.type)||/\.(mp4|webm|ogg)$/i.test(file.name);const blob=isVideo?file:await editor.exportBlob();const safe=isVideo?file:new File([blob],(file.name||'sponsor')+'.jpg',{type:'image/jpeg'});
-   const bucket=mode==='delivery'?DELIVERY_BUCKET:CUSTOMER_BUCKET,table=mode==='delivery'?DELIVERY_TABLE:CUSTOMER_TABLE;
+   const bucket=DELIVERY_BUCKET,table=DELIVERY_TABLE;
    const ext=isVideo?((file.name.match(/\.(mp4|webm|ogg)$/i)||['.mp4'])[0].toLowerCase()):'.jpg';const path='sponsors/'+Date.now()+'-'+Math.random().toString(36).slice(2,9)+ext;
    if(isVideo&&safe.size>60*1024*1024)throw new Error('Video must be under 60MB');if(!isVideo&&safe.size>8*1024*1024)throw new Error('Image must be under 8MB');const up=await sb().storage.from(bucket).upload(path,safe,{upsert:false,contentType:safe.type||'application/octet-stream'});if(up.error)throw new Error('MEDIA UPLOAD FAILED: '+up.error.message);
    const url=sb().storage.from(bucket).getPublicUrl(path).data.publicUrl,targetAll=r.target.value==='all',outlet=r.outlet.value||currentOutlet();
