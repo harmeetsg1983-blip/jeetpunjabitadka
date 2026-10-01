@@ -231,46 +231,11 @@ function renderHero(){
 }
 let jptMediaTimer=null,jptMediaIndex=0,jptMediaToken=0;
 function renderVideo(){
- /* Customer Home Hero media is owned by media-hotfix-v4.js.
-    Keep the legacy renderer inert to prevent two controllers fighting
-    over the same #videoBanner surface. */
+ /* Customer Home Hero media is exclusively owned by media-hotfix-v4.js.
+    Keep this legacy call as a no-op compatibility shim so the existing
+    loadManagedMenu() flow does not create a second writer for #videoBanner. */
  return;
- /* legacy renderer retained below for rollback/reference */
- const media=[];
- (campaigns||[]).filter(activeWindow).filter(c=>{const s=c.schedule_json;return !(s&&s.controller==='jpt-outlet-media-v1'&&((s.placement||'top')==='top'))}).slice().sort((a,b)=>Number(a.sort_order??9999)-Number(b.sort_order??9999)).forEach(c=>{
-   const s=c.schedule_json||{};
-   const place=s.controller==='jpt-outlet-media-v1'?(s.placement||'lower'):'lower';
-   if(place!=='lower')return;
-   const video=c.video_url||c.video||c.video_banner_url||c.media_video_url;
-   const image=c.image_url||c.banner_image||c.media_url||c.banner_url||c.video_thumbnail||c.thumbnail_url;
-   if(video) media.push({type:'video',src:video,poster:image||'',muted:s.muted!==false});
-   else if(image) media.push({type:'image',src:image});
- });
- /* JPT legacy/customer campaign media is intentionally handled by the same lower queue. */
- 
-
- if(!media.length){
-   $('videoBanner').innerHTML='<div class="videoFallback"><div><b>🎬 Festival & Restaurant Media</b>Campaign image/video will appear here.</div></div>';
-   return;
- }
- if(jptMediaTimer){clearTimeout(jptMediaTimer);jptMediaTimer=null}
- jptMediaIndex=0;const token=++jptMediaToken;
- const show=()=>{
-   if(token!==jptMediaToken)return;
-   const m=media[jptMediaIndex%media.length];
-   if(m.type==='video'){
-     $('videoBanner').innerHTML='<video autoplay muted playsinline preload="auto"'+(m.poster?' poster="'+esc(m.poster)+'"':'')+' aria-label="Restaurant promotional video"><source src="'+esc(m.src)+'" type="video/mp4"></video>';
-     const v=$('videoBanner').querySelector('video');
-     if(!v)return;
-     v.muted=true;v.controls=false;v.playsInline=true;
-     v.addEventListener('ended',()=>{jptMediaIndex=(jptMediaIndex+1)%media.length;show()},{once:true});
-     v.addEventListener('error',()=>{jptMediaIndex=(jptMediaIndex+1)%media.length;show()},{once:true});
-     v.play().catch(()=>{jptMediaTimer=setTimeout(()=>{jptMediaIndex=(jptMediaIndex+1)%media.length;show()},10000)});
-   }else{
-     $('videoBanner').innerHTML='<img src="'+esc(m.src)+'" alt="Restaurant promotional banner">';
-     jptMediaTimer=setTimeout(()=>{jptMediaIndex=(jptMediaIndex+1)%media.length;show()},10000);
-   }
- };
+}
  show();
 }
 function renderCheckout(){
