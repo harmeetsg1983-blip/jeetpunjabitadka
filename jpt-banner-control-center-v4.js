@@ -266,6 +266,7 @@ async function saveOutletBanner(code,file,title,startAt,endAt,ed,preview,msgEl){
   }else{
    msg(msgEl,'✅ LIVE PUBLISHED • '+code+' • '+(isVideo?'VIDEO':'IMAGE')+' • old media cleaned',true);
   }
+  window.dispatchEvent(new CustomEvent('jpt:banner-published',{detail:{outletId:code}}));
   return up.url;
  }catch(e){
   // If DB publication failed, remove the just-uploaded object so failed attempts do not accumulate.
@@ -283,6 +284,7 @@ async function outletToggle(code,row,next,msgEl){
    throw new Error('BANNER OFF MAPPING CLEAR FAILED: '+clear.error.message);
   }
   msg(msgEl,'Banner OFF',true);
+  window.dispatchEvent(new CustomEvent('jpt:banner-published',{detail:{outletId:code,active:false}}));
   return;
  }
  const outletBefore=await c.from(OUTLETS).select('banner_url').eq('code',code).maybeSingle();
@@ -310,6 +312,7 @@ async function outletToggle(code,row,next,msgEl){
   throw new Error('BANNER ON MAPPING RESTORE FAILED: '+map.error.message);
  }
  msg(msgEl,'Banner ON',true);
+ window.dispatchEvent(new CustomEvent('jpt:banner-published',{detail:{outletId:code,active:true}}));
 }
 
 async function outletDelete(code,row,msgEl){
