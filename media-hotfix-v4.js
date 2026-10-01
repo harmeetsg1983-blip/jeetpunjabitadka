@@ -312,9 +312,24 @@
     mainBox();
   });
 
+  /* Banner/managed-media publication can change while the Customer App
+     remains open. Refresh only the canonical media box; never touch menu/cart/order state. */
+  window.addEventListener('jpt:banner-published', function () {
+    mainBox();
+  });
+
   window.addEventListener('popstate', function () {
     setTimeout(mainBox, 0);
   });
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) setTimeout(mainBox, 0);
+  });
+
+  /* Read-time safety net for an admin publishing from another tab/device. */
+  setInterval(function () {
+    if (!document.hidden) mainBox();
+  }, 30000);
 
   if (document.readyState === 'loading') {
     document.addEventListener(
