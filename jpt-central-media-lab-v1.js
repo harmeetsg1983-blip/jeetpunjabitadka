@@ -49,10 +49,12 @@ async function rowsFor(code){
  const sb=client(); if(!sb) throw new Error('Supabase client unavailable');
  const r=await sb.from(TABLE).select('id,title,is_active,media_url,media_type,schedule_json,updated_at,created_at').limit(500).order('created_at',{ascending:false});
  if(r.error) throw r.error;
- return (r.data||[]).filter(x=>{
+ const latest=new Map();
+ (r.data||[]).filter(x=>{
    const s=x.schedule_json||{};
    return s.controller==='jpt-central-media-lab-v1' && s.surface==='customer_outlet_media' && String(s.outlet_code||'').toUpperCase()===String(code).toUpperCase();
- });
+ }).forEach(x=>{const k=String((x.schedule_json||{}).slot||'');if(k&&!latest.has(k))latest.set(k,x);});
+ return Array.from(latest.values());
 }
 async function load(){
  const r=root(); r.innerHTML='<h2 style="margin:0;color:#d8ae42">CENTRAL MEDIA LAB</h2><div class="muted" style="margin-top:4px">Customer outlet media • Campaign Hero remains separate</div><div class="two" style="margin-top:10px"><div><label class="muted">Outlet</label><select id="cmlOutlet" class="select"></select></div><div><label class="muted">Target</label><select id="cmlTarget" class="select"><option value="all">ALL OUTLETS</option><option value="selected">SELECTED OUTLET</option></select></div></div><div id="cmlSlots"></div>';
