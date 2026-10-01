@@ -77,13 +77,14 @@ function editor(){
  function zoom(host,d){scale=Math.max(.25,Math.min(4,scale+d));if(type==='video'&&video)video.style.transform='scale('+scale+')';else draw(host)}
  function center(host){scale=1;ox=0;oy=0;if(type==='video'&&video)video.style.transform='scale(1)';else draw(host)}
  function wire(host){
-  host.onpointerdown=e=>{if(type!=='image'||!media)return;drag=true;lx=e.clientX;ly=e.clientY;host.setPointerCapture(e.pointerId)};
+  host.onpointerdown=e=>{if(!media)return;drag=true;lx=e.clientX;ly=e.clientY;host.setPointerCapture(e.pointerId)};
   host.onpointermove=e=>{if(!drag)return;ox+=e.clientX-lx;oy+=e.clientY-ly;lx=e.clientX;ly=e.clientY;draw(host)};
   host.onpointerup=()=>drag=false;host.onpointercancel=()=>drag=false;
  }
  return {
   set(file,host){const t=setPreview(host,file);wire(host);return t},
   zoomIn(host){zoom(host,.15)},zoomOut(host){zoom(host,-.15)},center(host){center(host)},
+  frame(host){return {type,scale:Number(scale.toFixed(3)),x:Number((ox/Math.max(1,host.clientWidth)*100).toFixed(3)),y:Number((oy/Math.max(1,host.clientHeight)*100).toFixed(3))}},
   async blob(file){
    if(type==='video')return file;
    if(!media)throw new Error('Choose an image first.');
@@ -222,7 +223,7 @@ async function saveOutletBanner(code,file,title,ed,preview,msgEl){
    priority:100,
    banner_url:isVideo?null:up.url,
    video_url:isVideo?up.url:null,
-   schedule_json:{version:4,campaign_type:'media',surface:'customer_outlet_showcase',media_type:isVideo?'video':'image',video_url:isVideo?up.url:null,image_url:isVideo?null:up.url,storage_bucket:'menu-images',storage_path:up.path,placement:'outlet_showcase',publication:'published',banner_control_id:FIXED_IDS[code]||('OUT-'+String(code||'').replace(/[^A-Za-z0-9_-]/g,'').slice(0,24))}
+   schedule_json:{version:4,campaign_type:'media',surface:'customer_outlet_showcase',media_type:isVideo?'video':'image',video_url:isVideo?up.url:null,image_url:isVideo?null:up.url,storage_bucket:'menu-images',storage_path:up.path,placement:'outlet_showcase',publication:'published',frame:ed.frame(preview),banner_control_id:FIXED_IDS[code]||('OUT-'+String(code||'').replace(/[^A-Za-z0-9_-]/g,'').slice(0,24))}
   };
   const ins=await sb().from(CAMPAIGNS).insert(row);
   if(ins.error)throw new Error('BANNER SAVE FAILED: '+ins.error.message);
