@@ -103,7 +103,7 @@ async function mount(){
    const r=recs[id]||{},legacy=r.banner_url||fallback[id]||'',o={name:r.name||id,accent:accentFor(id,i)};
    return '<article class="jpt-os-card" style="--os-accent:'+o.accent+'">'+
     '<div class="jpt-os-name" style="color:'+o.accent+'">'+esc(o.name)+' <span>'+esc(id)+'</span></div>'+
-    '<div class="jpt-os-video" data-os-video="'+esc(id)+'">'+(legacy&&!by[id].length?'<img src="'+esc(legacy)+'" alt="'+esc(o.name)+' banner">':'<div class="jpt-os-empty"><div><b>🎬 OUTLET BANNER</b>Media is not published for this outlet.</div></div>')+'</div>'+
+    '<div class="jpt-os-poster" data-os-poster="'+esc(id)+'">'+(legacy?'<img src="'+esc(legacy)+'" alt="'+esc(o.name)+' main board">':'<div class="jpt-os-poster-empty">MAIN BOARD NOT CONFIGURED</div>')+'</div>'+(by[id].length?'<div class="jpt-os-video" data-os-video="'+esc(id)+'"></div>':'');'
     '<div class="jpt-os-footer"><b>LIVE BANNER • '+esc(id)+'</b><button type="button" data-os-open="'+esc(id)+'">VIEW MENU</button></div>'+
    '</article>';
   }).join('');
