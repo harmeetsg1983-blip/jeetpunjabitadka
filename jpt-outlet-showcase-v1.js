@@ -106,11 +106,11 @@ async function mount(){
   const cr=await sb.from('campaigns').select('*').in('outlet_id',ids);
   if(cr.error)throw cr.error;
   const recs=Object.fromEntries(rows.map(x=>[String(x.code),x]));
-  const by={};ids.forEach(id=>{by[id]=[]});
-  (cr.data||[]).forEach(c=>{const id=String(c.outlet_id||'');if(by[id]){const m=mediaOf(c);if(m&&active(c))by[id].push(m)}});
+  const by={};const hasShowcaseRecord={};ids.forEach(id=>{by[id]=[];hasShowcaseRecord[id]=false});
+  (cr.data||[]).forEach(c=>{const id=String(c.outlet_id||'');if(by[id]){const s=c&&typeof c.schedule_json==='object'?c.schedule_json:{};if(s.campaign_type==='media'&&(String(s.surface||'')==='customer_outlet_showcase'||!!s.banner_control_id))hasShowcaseRecord[id]=true;const m=mediaOf(c);if(m&&active(c))by[id].push(m)}});
   ids.forEach(id=>{by[id].sort((a,b)=>b.priority-a.priority);by[id]=by[id].slice(0,1)});
   list.innerHTML=ids.map((id,i)=>{
-   const r=recs[id]||{},legacy=r.banner_url||fallback[id]||'',o={name:r.name||id,accent:accentFor(id,i)};
+   const r=recs[id]||{},legacy=!hasShowcaseRecord[id]?(r.banner_url||fallback[id]||''):'',o={name:r.name||id,accent:accentFor(id,i)};
    return '<article class="jpt-os-card" style="--os-accent:'+o.accent+'">'+
     '<div class="jpt-os-name" style="color:'+o.accent+'">'+esc(o.name)+' <span>'+esc(id)+'</span></div>'+
     '<div class="jpt-os-video" data-os-video="'+esc(id)+'">'+(legacy&&!by[id].length?'<img src="'+esc(legacy)+'" alt="'+esc(o.name)+' banner">':'<div class="jpt-os-empty"><div><b>🎬 OUTLET BANNER</b>Media is not published for this outlet.</div></div>')+'</div>'+
