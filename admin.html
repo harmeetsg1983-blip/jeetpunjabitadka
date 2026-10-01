@@ -811,22 +811,18 @@ gate.style.display='grid';
 async function checkSession(){
 try{
 const result=await sb.auth.getSession();
-
-if(result.data && result.data.session){
-showApp();
-
-if(typeof reloadAll==='function'){
-await reloadAll();
-}
-
+if(!(result.data && result.data.session)){
+showLogin();
 return;
 }
-
-showLogin();
-
+const userResult=await sb.auth.getUser();
+if(userResult.error||!userResult.data?.user)throw (userResult.error||new Error('Authenticated user could not be verified.'));
+if(typeof reloadAll==='function')await reloadAll();
+showApp();
 }catch(error){
 showLogin();
-msg(error.message||'Session check failed.');
+msg('Security check failed. Please sign in again.');
+console.warn('[JPT Security] dashboard access denied:',error);
 }
 }
 
@@ -852,12 +848,11 @@ password:password
 
 if(result.error) throw result.error;
 
+if(!result.data?.user)throw new Error('Authenticated user was not returned.');
+if(typeof reloadAll==='function')await reloadAll();
+
 msg('');
 showApp();
-
-if(typeof reloadAll==='function'){
-await reloadAll();
-}
 
 }catch(error){
 
