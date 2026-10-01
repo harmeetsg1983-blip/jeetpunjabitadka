@@ -107,8 +107,8 @@ if(settingsHost && !document.getElementById('jptSponsorLauncherV2')){
  css();
  const box=document.createElement('section');box.id='jptSponsorManager';
  box.innerHTML=`<div class="jpt-sm"><h3>✨ Sponsor Advertisement Manager V2</h3>
- <div class="sub">Central Owner controls Delivery Partner + Customer Tracking sponsor banners. Image + Video • image crop/zoom/drag • video preview • mute/sound • schedule • outlet targeting.</div>
- <div class="jpt-sm-tabs"><button type="button" id="jptSmDelivery" class="on">Delivery Partner</button><button type="button" id="jptSmCustomer">Customer Tracking</button></div>
+ <div class="sub">Central Owner controls Delivery Partner sponsor banners. Customer Tracking is owned by Sponsor Media Manager V4. Image + Video • image crop/zoom/drag • video preview • mute/sound • schedule • outlet targeting.</div>
+ <div class="jpt-sm-tabs"><button type="button" id="jptSmDelivery" class="on">Delivery Partner</button><button type="button" id="jptSmCustomer" style="display:none!important" aria-hidden="true" tabindex="-1">Customer Tracking</button></div>
  <div class="jpt-sm-grid"><div><label>Sponsor Name</label><input id="jptSmSponsor" placeholder="Sponsor / Brand"></div><div><label>Banner Title</label><input id="jptSmTitle" placeholder="Optional title"></div></div>
  <label>Banner Media</label><input id="jptSmFile" type="file" accept="image/*,video/*">
  <div id="jptSmCrop" class="jpt-crop" style="display:none"><canvas id="jptSmCanvas"></canvas><video id="jptSmVideoPreview" controls playsinline muted style="display:none;width:100%;max-height:280px;border-radius:10px;background:#050505"></video><div class="jpt-crop-row"><button type="button" id="jptSmZoomOut">− Zoom</button><button type="button" id="jptSmCenter">Center</button><button type="button" id="jptSmZoomIn">＋ Zoom</button></div><div class="jpt-sm-note" style="margin-top:6px">Image: drag/zoom/center. Video: preview + mute/sound; no destructive crop is applied.</div></div>
@@ -123,7 +123,7 @@ if(settingsHost && !document.getElementById('jptSponsorLauncherV2')){
  async function fillOutlets(){await outlets({outlet:r.outlet})} await fillOutlets();
  r.target.onchange=()=>r.outletwrap.style.display=r.target.value==='outlet'?'block':'none';
  const setMode=x=>{mode=x;r.delivery.classList.toggle('on',x==='delivery');r.customer.classList.toggle('on',x==='customer');refresh()};
- r.delivery.onclick=()=>setMode('delivery');r.customer.onclick=()=>setMode('customer');
+ r.delivery.onclick=()=>setMode('delivery');r.customer.onclick=()=>setMode('delivery');
  async function refresh(){
   try{const rows=await load(mode==='delivery'?DELIVERY_TABLE:CUSTOMER_TABLE);
   r.list.innerHTML=rows.length?rows.map(x=>`<div class="jpt-sm-item"><img class="jpt-sm-thumb" src="${esc(x.media_url)}"><div><b>${esc(x.sponsor_name||x.title||'Sponsor')}</b><div class="jpt-sm-note">${esc(x.title||'')} · ${x.is_active?'ON':'OFF'} · order ${x.sort_order??0}</div><span class="jpt-sm-chip">${x.target_all_live?'ALL LIVE':(x.outlet_ids||[]).join(', ')}</span></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="jpt-sm-danger" data-id="${esc(x.id)}" data-active="${x.is_active?'1':'0'}" data-action="toggle">${x.is_active?'TURN OFF':'TURN ON'}</button><button type="button" data-id="${esc(x.id)}" data-action="delete" style="background:#3a1010;color:#ffb8b8;border:1px solid #933;border-radius:9px;padding:8px 10px;font-weight:800">DELETE</button></div></div>`).join(''):'No sponsor banners yet.';
