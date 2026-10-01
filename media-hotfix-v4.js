@@ -167,24 +167,85 @@
     }
   }
 
+  function renderFallbackMedia(box, id) {
+    if (id === 'JPT-001') {
+      box.innerHTML = '';
+      var video = document.createElement('video');
+      video.setAttribute('data-jpt-v106-media-v4', '1');
+      video.src = VIDEO;
+      setupVideo(box, video);
+      var play = function () {
+        video.muted = true;
+        video.play().catch(function () {});
+      };
+      video.addEventListener('loadeddata', play, { once: true });
+      video.addEventListener('error', function () {
+        box.innerHTML = '';
+      }, { once: true });
+      video.load();
+      play();
+      return;
+    }
+
+    var src = ASSETS[id];
+    box.innerHTML = '';
+    if (!src) {
+      box.style.background = '#090909';
+      return;
+    }
+
+    var img = document.createElement('img');
+    img.setAttribute('data-jpt-v106-media-v4', '1');
+    setupImage(box, img, src, id);
+  }
+
   function renderManagedMedia(box, media, id) {
     box.innerHTML = '';
+
     if (media.video) {
       var video = document.createElement('video');
       video.setAttribute('data-jpt-v106-media-v4', '1');
       video.src = media.video;
-      video.alt = '';
       setupVideo(box, video);
+
+      var settled = false;
+      var fallbackTimer = setTimeout(function () {
+        if (!settled) {
+          settled = true;
+          renderFallbackMedia(box, id);
+        }
+      }, 3000);
+
       video.addEventListener('loadeddata', function () {
+        if (settled) return;
+        settled = true;
+        clearTimeout(fallbackTimer);
         video.muted = true;
         video.play().catch(function () {});
       }, { once: true });
+
+      video.addEventListener('error', function () {
+        if (settled) return;
+        settled = true;
+        clearTimeout(fallbackTimer);
+        renderFallbackMedia(box, id);
+      }, { once: true });
+
       video.play().catch(function () {});
-    } else if (media.image) {
+      return;
+    }
+
+    if (media.image) {
       var img = document.createElement('img');
       img.setAttribute('data-jpt-v106-media-v4', '1');
       setupImage(box, img, media.image, id);
+      img.addEventListener('error', function () {
+        renderFallbackMedia(box, id);
+      }, { once: true });
+      return;
     }
+
+    renderFallbackMedia(box, id);
   }
 
   async function mainBox() {
@@ -201,63 +262,7 @@
       return;
     }
 
-    if (id === 'JPT-001') {
-      var video = box.querySelector('video');
-
-      if (!video) {
-        box.innerHTML = '';
-        video = document.createElement('video');
-        box.appendChild(video);
-      }
-
-      video.setAttribute(
-        'data-jpt-v106-media-v4',
-        '1'
-      );
-
-      setupVideo(box, video);
-
-      if (video.getAttribute('src') !== VIDEO) {
-        video.src = VIDEO;
-        video.load();
-      }
-
-      var play = function () {
-        video.muted = true;
-        video.play().catch(function () {});
-      };
-
-      video.addEventListener('loadeddata', play, {
-        once: true
-      });
-
-      play();
-
-      return;
-    }
-
-    var src = ASSETS[id];
-    if (!src) {
-      /* Clear stale media when the selected outlet has no media. */
-      box.innerHTML = '';
-      box.style.background = '#090909';
-      return;
-    }
-
-    var img = box.querySelector('img');
-
-    if (!img) {
-      box.innerHTML = '';
-      img = document.createElement('img');
-      box.appendChild(img);
-    }
-
-    img.setAttribute(
-      'data-jpt-v106-media-v4',
-      '1'
-    );
-
-    setupImage(box, img, src, id);
+    renderFallbackMedia(box, id);
   }
 
   function setupHighlights() {
