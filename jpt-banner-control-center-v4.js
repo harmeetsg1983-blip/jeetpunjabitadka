@@ -392,6 +392,7 @@ async function renderSponsorSurface(kind){
    <div class="jpt-bcc-fields">
     <div><label>BANNER TITLE</label><input data-title value="${esc(row?.title||'')}"></div>
     <div><label>SPONSOR NAME</label><input data-sponsor value="${esc(row?.sponsor_name||'')}"></div>
+    <div><label>SPONSOR SLOT</label><select data-slot><option value="1">Slot 1</option><option value="2">Slot 2</option></select></div>
     <div><label>NEW IMAGE / VIDEO</label><input data-file type="file" accept="image/*,video/*"></div>
     <div><label>TARGET</label><select data-target><option value="all">All live users</option><option value="outlet">Selected outlet</option></select></div>
    </div>
@@ -399,6 +400,9 @@ async function renderSponsorSurface(kind){
    <div class="jpt-bcc-status" data-msg></div>
    <div class="jpt-bcc-small">Current code: ${kind==='delivery'?'DEL-01':'CHK-01'} • ${row?.target_all_live?'ALL LIVE':((row?.outlet_ids||[]).join(', ')||'ALL LIVE')}</div>`;
   root.innerHTML='';root.appendChild(wrap);
+  const slotSelect=wrap.querySelector('[data-slot]');
+  const selectedSlot=Number(row?.schedule_json?.slot||1)===2?2:1;
+  slotSelect.value=String(selectedSlot);
   const p=wrap.querySelector('[data-preview]'),ed=editor(),m=wrap.querySelector('[data-msg]');
   if(row?.media_url)mediaPreview(row.media_url,row.media_type==='video',p);
   const file=wrap.querySelector('[data-file]');
@@ -415,10 +419,11 @@ async function renderSponsorSurface(kind){
     const isVideo=String(f.type||'').toLowerCase().startsWith('video/')||['.mp4','.webm','.ogg'].some(ext=>lower.endsWith(ext));
     if(isVideo&&f.size>60*1024*1024)throw new Error('Video must be under 60MB.');
     const prepared=await ed.blob(f),up=await uploadMedia(prepared,bucket,'manager-v3/'+kind,m);
-    const current=await sb().from(table).select('id').eq('is_active',true);
+    const slot=Number(slotSelect.value||1)===2?2:1;
+    const current=await sb().from(table).select('id').eq('is_active',true).eq('schedule_json->>slot',String(slot));
     if(current.data?.length){const off=await sb().from(table).update({is_active:false}).in('id',current.data.map(x=>x.id));if(off.error)throw off.error}
     const targetAll=wrap.querySelector('[data-target]').value==='all';
-    const rowData={title:wrap.querySelector('[data-title]').value.trim()||'Sponsor Banner',sponsor_name:wrap.querySelector('[data-sponsor]').value.trim(),media_type:isVideo?'video':'image',media_url:up.url,video_url:isVideo?up.url:null,poster_url:isVideo?null:up.url,target_all_live:targetAll,outlet_ids:targetAll?[]:[outletCode()],is_active:true,sort_order:0,starts_at:null,ends_at:null,created_by:(await sb().auth.getUser()).data.user?.id||null,schedule_json:{slot:1,media_kind:isVideo?'video':'image',single_position:true}};
+    const rowData={title:wrap.querySelector('[data-title]').value.trim()||'Sponsor Banner',sponsor_name:wrap.querySelector('[data-sponsor]').value.trim(),media_type:isVideo?'video':'image',media_url:up.url,video_url:isVideo?up.url:null,poster_url:isVideo?null:up.url,target_all_live:targetAll,outlet_ids:targetAll?[]:[outletCode()],is_active:true,sort_order:0,starts_at:null,ends_at:null,created_by:(await sb().auth.getUser()).data.user?.id||null,schedule_json:{slot,media_kind:isVideo?'video':'image',single_position:false,manager:'banner-control-center-v4'}};
     const ins=await sb().from(table).insert(rowData);if(ins.error)throw new Error('DATABASE SAVE FAILED: '+ins.error.message);
     msg(m,'✅ Pushed live • '+(isVideo?'VIDEO':'IMAGE'),true);await renderSponsorSurface(kind);
    }catch(e){msg(m,e.message||String(e),false)}finally{b.disabled=false}
