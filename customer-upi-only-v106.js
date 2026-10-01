@@ -14,35 +14,26 @@
     var p=document.getElementById('payment');
     if(!p) return;
 
+    // TEMPORARY TEST MODE: restore COD for controlled end-to-end order testing.
+    // Final launch can disable COD again from this single gate when explicitly requested.
+    var cod=null;
     Array.prototype.slice.call(p.options||[]).forEach(function(o){
-      if(
-        String(o.value||'').toUpperCase()==='COD' ||
-        /cash\s*on\s*delivery/i.test(o.textContent||'')
-      ){
-        o.remove();
+      if(String(o.value||'').toUpperCase()==='COD' || /cash\s*on\s*delivery/i.test(o.textContent||'')){
+        cod=o;
       }
     });
-
-    p.value='UPI';
-    p.disabled=true;
-    p.setAttribute('aria-disabled','true');
-    p.title='UPI payment is required for launch';
-
-    var box=p.parentElement;
-    if(box && !box.querySelector('.jpt-upi-required')){
-      var n=document.createElement('div');
-      n.className='jpt-upi-required';
-      n.style.cssText=
-        'margin-top:7px;padding:9px 10px;border:1px solid #d8ae42;' +
-        'border-radius:9px;background:#17130a;color:#f4d77a;' +
-        'font-size:12px;font-weight:800';
-
-      n.textContent=
-        'UPI payment required. Complete payment first. ' +
-        'Restaurant verifies the payment before accepting the order.';
-
-      box.appendChild(n);
+    if(!cod){
+      cod=document.createElement('option');
+      cod.value='COD';
+      cod.textContent='Cash on Delivery';
+      p.insertBefore(cod,p.firstChild||null);
     }
+    p.disabled=false;
+    p.removeAttribute('aria-disabled');
+    p.title='Cash on Delivery is temporarily enabled for controlled testing';
+
+    var note=p.parentElement&&p.parentElement.querySelector('.jpt-upi-required');
+    if(note)note.remove();
   }
 
   function installUPIFirst(){
