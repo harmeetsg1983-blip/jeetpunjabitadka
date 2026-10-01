@@ -78,7 +78,7 @@ function editor(){
  function center(host){scale=1;ox=0;oy=0;if(type==='video'&&video)video.style.transform='scale(1)';else draw(host)}
  function wire(host){
   host.onpointerdown=e=>{if(!media)return;drag=true;lx=e.clientX;ly=e.clientY;host.setPointerCapture(e.pointerId)};
-  host.onpointermove=e=>{if(!drag)return;ox+=e.clientX-lx;oy+=e.clientY-ly;lx=e.clientX;ly=e.clientY;draw(host)};
+  host.onpointermove=e=>{if(!drag)return;ox+=e.clientX-lx;oy+=e.clientY-ly;lx=e.clientX;ly=e.clientY;if(type==='video'&&video)video.style.transform='translate('+ox+'px,'+oy+'px) scale('+scale+')';else draw(host)};
   host.onpointerup=()=>drag=false;host.onpointercancel=()=>drag=false;
  }
  return {
