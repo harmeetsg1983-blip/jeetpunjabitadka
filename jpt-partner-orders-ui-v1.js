@@ -70,7 +70,8 @@ function itemsHtml(x){
 
 async function loadRows(){
  const q=window.sb.from('orders').select('*').order('created_at',{ascending:false}).limit(200);
- const r=central?q:q.eq('outlet_id',selectedOutlet());
+ const query=central?q:q.eq('outlet_id',selectedOutlet());
+ const r=await query;
  if(r.error)throw r.error;
  let rows=r.data||[];
  if(!central)rows=rows.filter(x=>String(x.outlet_id||'')===String(selectedOutlet()));
@@ -133,7 +134,7 @@ function render(){
 
 async function directAction(row,next,extra={}){
  const patch={status:next,updated_at:new Date().toISOString(),...extra};
- const q=window.sb.from('orders').update(patch).eq('id',row.id).eq('outlet_id',row.outlet_id);
+ const q=await window.sb.from('orders').update(patch).eq('id',row.id).eq('outlet_id',row.outlet_id);
  if(q.error)throw q.error;
  return true;
 }
