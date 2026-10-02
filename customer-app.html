@@ -24,7 +24,7 @@ button{display:block;width:100%;max-width:100%;border:1px solid #d8ae42;border-r
 </style>
 </head>
 <body>
-<iframe id="app" src="./index.html?v=customer-shell-2" title="Jeet Punjabi Tadka Customer App"></iframe>
+<iframe id="app" src="./index.html?v=customer-shell-3" title="Jeet Punjabi Tadka Customer App"></iframe>
 <div id="gate">
   <div class="card">
     <img class="logo" src="./jpt-customer-icon-512.png" alt="Jeet Punjabi Tadka">
@@ -56,7 +56,7 @@ share.addEventListener('click',async function(){
   else if(navigator.clipboard){try{await navigator.clipboard.writeText(data.url);share.textContent='✓ LINK COPIED';setTimeout(()=>share.textContent='↗ SHARE APP',1600);}catch(_){}}
 });
 window.addEventListener('appinstalled',function(){hideGate();});
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./customer-app-sw.js?v=2',{scope:'./'}).catch(function(){});});}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./customer-app-sw.js?v=3',{scope:'./',updateViaCache:'none'}).catch(function(){});});}
 })();
 </script>
 </body>
