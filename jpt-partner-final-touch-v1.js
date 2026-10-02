@@ -59,7 +59,7 @@
 .jpt-ft-action{border:1px solid #4a3a19;border-radius:14px;background:linear-gradient(145deg,#151515,#0b0b0b);color:#fff;min-height:78px;padding:9px 5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-weight:800;font-size:10px}
 .jpt-ft-action b{font-size:23px;color:#f0c74f}
 .jpt-ft-orders{display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(90deg,#e7bd4c,#b8871e);color:#111;border-radius:13px;padding:13px 15px;margin:10px 0;font-weight:950;box-shadow:0 5px 18px rgba(216,174,66,.2)}
-.jpt-ft-orders button{border:0;background:transparent;color:#111;font-weight:950;font-size:14px}
+.jpt-ft-orders button{border:0;background:transparent;color:#111;font-weight:950;font-size:14px}.jpt-ft-order-alert{display:flex;align-items:center;gap:9px;min-width:0}.jpt-ft-order-bell{width:38px;height:38px;border-radius:11px;border:2px solid #111;background:#f7d66f;display:grid;place-items:center;font-size:21px;position:relative;flex:none}.jpt-ft-order-badge{position:absolute;right:-7px;top:-7px;min-width:21px;height:21px;padding:2px 5px;border-radius:99px;background:#111;color:#f7d66f;font-size:10px;display:none;place-items:center;font-weight:1000}.jpt-ft-order-bell.has-orders{animation:jptOrderBellPulse .8s infinite alternate}.jpt-ft-order-bell.has-orders .jpt-ft-order-badge{display:grid}@keyframes jptOrderBellPulse{from{transform:scale(1)}to{transform:scale(1.08);box-shadow:0 0 18px rgba(17,17,17,.45)}}.jpt-ft-order-copy{min-width:0}.jpt-ft-order-copy b{display:block}.jpt-ft-order-copy span{display:block;font-size:10px;font-weight:800;opacity:.72;margin-top:2px}
 .jpt-ft-section-title{display:flex;justify-content:space-between;align-items:center;margin:16px 2px 8px}
 .jpt-ft-section-title b{font-size:17px;color:#f0c74f}
 .jpt-ft-section-title span{font-size:10px;color:#888}
@@ -134,7 +134,7 @@
           <div class="jpt-ft-menu">☰</div>
           <img class="jpt-ft-logo" src="${esc(logo)}" onerror="this.style.display='none'">
           <div class="jpt-ft-title"><b>${esc(name)}</b><span>RESTAURANT PARTNER APP • ${esc(code)}</span></div>
-          <button class="jpt-ft-bell" onclick="showPanel('orders')">🔔</button>
+          
         </div>
         <div class="jpt-ft-context">${esc(name)} • ${esc(code)}</div>
       </div>
@@ -172,8 +172,8 @@
         <button class="jpt-ft-action" onclick="showPanel('settings')"><b>⚙</b>Settings</button>
       </div>
 
-      <div class="jpt-ft-orders">
-        <span>🧾 View Open Orders</span>
+      <div class="jpt-ft-orders" id="jptOpenOrdersBar">
+        <div class="jpt-ft-order-alert"><span class="jpt-ft-order-bell" id="jptOpenOrdersBell">🔔<span class="jpt-ft-order-badge" id="jptOpenOrdersBadge">0</span></span><div class="jpt-ft-order-copy"><b>🧾 View Open Orders</b><span id="jptOpenOrdersHint">All 5 personal outlets • Live orders</span></div></div>
         <button onclick="showPanel('orders')">Open Orders →</button>
       </div>
 
