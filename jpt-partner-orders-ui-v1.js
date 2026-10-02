@@ -14,10 +14,8 @@ const STYLE_ID='jpt-orders-central-v2-style';
 const ROOT_ID='jptOrdersCentralV2';
 const TABS_ID='jptOrdersCentralV2Tabs';
 const CENTRAL_RPC='partner_access_is_central_owner';
-const STATUSES=[
- ['new','NEW'],['accepted','ACCEPTED'],['preparing','PREPARING'],
- ['ready','READY'],['out_for_delivery','OUT FOR DELIVERY'],['completed','DELIVERED'],['cancelled','CANCELLED']
-];
+const STATUS_VIEWS=[['new','NEW'],['preparing','PREPARING'],['ready','READY'],['out_for_delivery','OUT FOR DELIVERY'],['delivered','DELIVERED'],['history','HISTORY']];
+const statusView=s=>{s=status(s);if(s==='accepted'||s==='preparing')return 'preparing';if(s==='completed')return 'delivered';return s};
 let timer=null,channel=null,rowsCache=[],outlets={},selected='new',central=false,lastNewest='';
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -29,45 +27,21 @@ const isCentral=async()=>{try{const r=await window.sb?.rpc(CENTRAL_RPC);return !
 function injectStyle(){
  if(document.getElementById(STYLE_ID))return;
  const s=document.createElement('style');s.id=STYLE_ID;s.textContent=`
- #${ROOT_ID}{margin-top:10px}
- .jpt-cob-head{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:8px 0}
- .jpt-cob-mode{padding:7px 10px;border:1px solid #5c4920;border-radius:99px;color:#f4d77a;background:#151515;font-size:11px;font-weight:900}
- .jpt-cob-tabs{display:flex;gap:7px;overflow:auto;padding:4px 0 10px;scrollbar-width:none}
- .jpt-cob-tabs::-webkit-scrollbar{display:none}
- .jpt-cob-tab{flex:0 0 auto;background:#151515;color:#ddd;border:1px solid #3a3a3a;border-radius:12px;padding:9px 12px;font-weight:900}
- .jpt-cob-tab.active{background:#d8ae42;color:#111;border-color:#d8ae42}
- .jpt-cob-list{display:grid;gap:10px}
- .jpt-cob-card{background:#101010;border:1px solid #39301d;border-radius:16px;padding:14px;box-shadow:0 8px 22px #0006}
- .jpt-cob-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
- .jpt-cob-no{font-size:18px;font-weight:950}
- .jpt-cob-status{font-size:10px;font-weight:950;border:1px solid #604d1c;border-radius:99px;padding:5px 9px;color:#d8ae42;white-space:nowrap}
- .jpt-cob-outlet{margin-top:5px;font-weight:950;color:#f4d77a}
- .jpt-cob-code{font-size:10px;color:#aaa}
- .jpt-cob-muted{color:#999;font-size:12px;margin-top:3px}
- .jpt-cob-items{margin:10px 0;padding:10px;border-radius:11px;background:#171717;border:1px solid #292929;line-height:1.55}
- .jpt-cob-total{font-size:18px;font-weight:950;color:#d8ae42}
- .jpt-cob-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px}
- .jpt-cob-actions button,.jpt-cob-actions select{padding:9px 10px;border-radius:10px;border:1px solid #3a3a3a;background:#151515;color:#fff}
- .jpt-cob-actions .primary{background:#d8ae42;color:#111;border-color:#d8ae42;font-weight:950}
- .jpt-cob-empty{padding:24px 12px;text-align:center;border:1px dashed #3a3a3a;border-radius:14px;color:#999}
- .jpt-cob-note{font-size:11px;color:#999;margin:5px 0 10px}
- @media(max-width:600px){.jpt-cob-card{padding:12px}.jpt-cob-no{font-size:16px}}
+ #jptOrdersCentralV2{margin-top:12px}.jpt-cob-head{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:8px 0 12px}.jpt-cob-title{font-size:19px;font-weight:950}.jpt-cob-sub{color:#888;font-size:11px;margin-top:3px}.jpt-cob-mode{padding:7px 11px;border:1px solid #5c4920;border-radius:99px;color:#f4d77a;background:#151515;font-size:10px;font-weight:950}
+ .jpt-cob-tabs{display:flex;gap:7px;overflow:auto;padding:3px 0 12px;scrollbar-width:none}.jpt-cob-tabs::-webkit-scrollbar{display:none}.jpt-cob-tab{flex:0 0 auto;background:#151515;color:#aaa;border:1px solid #343434;border-radius:13px;padding:10px 14px;font-weight:950;font-size:11px}.jpt-cob-tab.active{background:#f0c94a;color:#111;border-color:#f0c94a}
+ .jpt-cob-list{display:grid;gap:10px}.jpt-cob-card{background:#111;border:1px solid #302a1d;border-radius:18px;overflow:hidden;box-shadow:0 8px 24px #0005}.jpt-cob-main{padding:14px}.jpt-cob-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.jpt-cob-no{font-size:17px;font-weight:950}.jpt-cob-outlet{margin-top:5px;font-weight:950;color:#f4d77a}.jpt-cob-code{font-size:10px;color:#777;margin-top:2px}.jpt-cob-status{font-size:9px;font-weight:950;border:1px solid #604d1c;border-radius:99px;padding:5px 9px;color:#f4d77a;white-space:nowrap}
+ .jpt-cob-customer{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid #252525}.jpt-cob-customer-name{font-weight:900}.jpt-cob-muted{color:#888;font-size:10px;margin-top:3px}.jpt-cob-items{margin-top:11px;border:1px solid #292929;border-radius:13px;background:#171717;overflow:hidden}.jpt-cob-item{display:flex;justify-content:space-between;gap:10px;padding:10px 11px;border-bottom:1px solid #292929;font-size:12px}.jpt-cob-item:last-child{border-bottom:0}.jpt-cob-item-name{font-weight:800}.jpt-cob-item-price{color:#ddd;white-space:nowrap}
+ .jpt-cob-summary{margin-top:10px;border-top:1px solid #252525;padding-top:9px}.jpt-cob-line{display:flex;justify-content:space-between;gap:12px;padding:3px 0;color:#aaa;font-size:11px}.jpt-cob-line.discount{color:#79d99a}.jpt-cob-line.total{color:#fff;font-size:16px;font-weight:950;padding-top:8px;margin-top:5px;border-top:1px solid #343434}.jpt-cob-payment{display:inline-flex;margin-top:8px;padding:6px 9px;border-radius:9px;background:#191919;border:1px solid #292929;color:#bbb;font-size:10px;font-weight:900}.jpt-cob-actions{display:flex;gap:7px;flex-wrap:wrap;padding:11px 14px;background:#0c0c0c;border-top:1px solid #292929}.jpt-cob-actions button,.jpt-cob-actions select{padding:9px 11px;border-radius:10px;border:1px solid #393939;background:#151515;color:#fff;font-weight:850}.jpt-cob-actions .primary{background:#f0c94a;color:#111;border-color:#f0c94a;font-weight:950}.jpt-cob-empty{padding:35px 12px;text-align:center;border:1px dashed #343434;border-radius:15px;color:#777}.jpt-cob-history{color:#aaa;font-size:11px}@media(max-width:600px){.jpt-cob-main{padding:12px}.jpt-cob-no{font-size:15px}.jpt-cob-item{font-size:11px}}
  `;document.head.appendChild(s);
 }
-
 async function loadOutlets(){
  const r=await window.sb.from('outlets').select('code,name').order('name',{ascending:true});
  if(r.error)throw r.error;
  outlets=Object.fromEntries((r.data||[]).map(x=>[String(x.code),String(x.name||x.code)]));
 }
 
-function itemsHtml(x){
- let a=x?.items;
- if(typeof a==='string'){try{a=JSON.parse(a)}catch(e){a=[]}}
- if(!Array.isArray(a))a=[];
- return a.map(i=>`${esc(i.name||i.item_name||'Item')} × ${Number(i.qty??i.quantity??1)}`).join('<br>')||'Items not available';
-}
-
+function parseItems(x){let a=x?.items;if(typeof a==='string'){try{a=JSON.parse(a)}catch(e){a=[]}}return Array.isArray(a)?a:[]}
+function itemsHtml(x){return parseItems(x).map(i=>{const q=Number(i.qty??i.quantity??1),p=Number(i.price??i.unit_price??0);return `<div class="jpt-cob-item"><span class="jpt-cob-item-name">${esc(i.name||i.item_name||'Item')} <span class="jpt-cob-muted">× ${q}</span></span><span class="jpt-cob-item-price">${money(p*q)}</span></div>`}).join('')||'<div class="jpt-cob-item"><span class="jpt-cob-muted">Items not available</span></div>'}
 async function loadRows(){
  const q=window.sb.from('orders').select('*').order('created_at',{ascending:false}).limit(200);
  const query=central?q:q.eq('outlet_id',selectedOutlet());
@@ -80,14 +54,7 @@ async function loadRows(){
  return rows;
 }
 
-function renderTabs(){
- const el=document.getElementById(TABS_ID);if(!el)return;
- const counts=Object.fromEntries(STATUSES.map(x=>[x[0],0]));
- rowsCache.forEach(x=>{if(counts[x.__status]!==undefined)counts[x.__status]++});
- el.innerHTML=STATUSES.map(([k,label])=>`<button class="jpt-cob-tab ${selected===k?'active':''}" data-status="${k}">${label} <span>${counts[k]||0}</span></button>`).join('');
- el.querySelectorAll('[data-status]').forEach(b=>b.onclick=()=>{selected=b.dataset.status;render()});
-}
-
+function renderTabs(){const el=document.getElementById(TABS_ID);if(!el)return;const counts=Object.fromEntries(STATUS_VIEWS.map(x=>[x[0],0]));rowsCache.forEach(x=>{const v=statusView(x.__status);if(v==='history'){if(x.__status==='cancelled')counts.history++}else if(counts[v]!==undefined)counts[v]++});el.innerHTML=STATUS_VIEWS.map(([k,label])=>`<button class="jpt-cob-tab ${selected===k?'active':''}" data-status="${k}">${label} <span>${counts[k]||0}</span></button>`).join('');el.querySelectorAll('[data-status]').forEach(b=>b.onclick=()=>{selected=b.dataset.status;render()})}
 function ensureRoot(){
  const panel=document.getElementById('orders');if(!panel)return null;
  injectStyle();
@@ -111,27 +78,18 @@ function actionHtml(x){
 }
 
 function render(){
- const root=ensureRoot();if(!root)return;
- renderTabs();
- const filtered=rowsCache.filter(x=>x.__status===selected);
+ const root=ensureRoot();if(!root)return;renderTabs();
+ const filtered=rowsCache.filter(x=>selected==='history'?x.__status==='cancelled':statusView(x.__status)===selected);
  root.innerHTML=`
- <div class="jpt-cob-head"><div><b>Central Live Orders</b><div class="jpt-cob-note">${central?'ALL OUTLETS — outlet selection is not required':'SELECTED OUTLET — partner scope'}</div></div><span class="jpt-cob-mode">${central?'CENTRAL OWNER':'OUTLET PARTNER'}</span></div>
+ <div class="jpt-cob-head"><div><div class="jpt-cob-title">Orders</div><div class="jpt-cob-sub">${central?'Central • All outlets':'Outlet partner • Selected outlet'} • ${rowsCache.length} recent orders</div></div><span class="jpt-cob-mode">${central?'CENTRAL OWNER':'OUTLET PARTNER'}</span></div>
  <div class="jpt-cob-list">${filtered.length?filtered.map(x=>{
-   const st=x.__status,total=x.total??x.total_amount??x.grand_total??x.amount??0;
-   const outletId=String(x.outlet_id||'—'),outletName=outlets[outletId]||outletId;
-   const time=x.created_at?new Date(x.created_at).toLocaleString('en-IN'):'—';
-   const customer=x.customer_name||x.name||x.customer_phone||'Customer';
-   return `<article class="jpt-cob-card">
-    <div class="jpt-cob-top"><div><div class="jpt-cob-no">#${esc(x.order_no||x.order_number||x.order_id||x.id||'ORDER')}</div><div class="jpt-cob-outlet">${esc(outletName)}</div><div class="jpt-cob-code">Outlet Code: ${esc(outletId)}</div></div><div class="jpt-cob-status">${esc(st.replaceAll('_',' ').toUpperCase())}</div></div>
-    <div class="jpt-cob-muted">${esc(customer)} · ${esc(x.customer_phone||x.phone||'')} · ${esc(time)}</div>
-    <div class="jpt-cob-items">${itemsHtml(x)}</div>
-    <div class="jpt-cob-total">${money(total)}</div>
-    <div class="jpt-cob-actions">${actionHtml(x)}</div>
-   </article>`;
- }).join(''):`<div class="jpt-cob-empty">No ${esc(selected.replaceAll('_',' '))} orders right now.</div>`}</div>`;
+  const st=x.__status,total=Number(x.total??x.total_amount??0),sub=Number(x.subtotal??0),disc=Number(x.discount??0),del=Number(x.delivery_charge??0),oid=String(x.outlet_id||'—'),oname=outlets[oid]||oid,time=x.created_at?new Date(x.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'—',customer=x.customer_name||x.name||'Customer',phone=x.customer_phone||x.phone||'',payment=x.payment||'—',orderNo=x.order_no||x.order_number||x.order_id||x.id||'ORDER';
+  return `<article class="jpt-cob-card"><div class="jpt-cob-main"><div class="jpt-cob-top"><div><div class="jpt-cob-no">#${esc(orderNo)}</div><div class="jpt-cob-outlet">${esc(oname)}</div><div class="jpt-cob-code">Outlet Code: ${esc(oid)} • ${esc(time)}</div></div><div class="jpt-cob-status">${esc(st.replaceAll('_',' ').toUpperCase())}</div></div>
+  <div class="jpt-cob-customer"><div><div class="jpt-cob-customer-name">${esc(customer)}</div><div class="jpt-cob-muted">${esc(phone)}</div></div><div class="jpt-cob-payment">PAYMENT • ${esc(payment)}</div></div>
+  <div class="jpt-cob-items">${itemsHtml(x)}</div><div class="jpt-cob-summary"><div class="jpt-cob-line"><span>Item subtotal</span><span>${money(sub)}</span></div>${del?`<div class="jpt-cob-line"><span>Delivery charge</span><span>${money(del)}</span></div>`:''}${disc?`<div class="jpt-cob-line discount"><span>Discount</span><span>−${money(disc)}</span></div>`:''}<div class="jpt-cob-line total"><span>Total</span><span>${money(total)}</span></div></div></div>${selected==='history'?'<div class="jpt-cob-actions"><span class="jpt-cob-history">'+(st==='cancelled'?'CANCELLED ORDER':'COMPLETED ORDER')+'</span></div>':'<div class="jpt-cob-actions">'+actionHtml(x)+'</div>'}</article>`
+ }).join(''):'<div class="jpt-cob-empty">No '+esc(selected.replaceAll('_',' '))+' orders right now.</div>'}</div>`;
  root.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>doAction(b));
 }
-
 async function directAction(row,next,extra={}){
  const patch={status:next,updated_at:new Date().toISOString(),...extra};
  const q=await window.sb.from('orders').update(patch).eq('id',row.id).eq('outlet_id',row.outlet_id);
