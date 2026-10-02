@@ -118,7 +118,7 @@ async function doAction(btn){
     }catch(e){if(typeof window.toast==='function')window.toast('Delivery assignment check failed: '+(e?.message||e));}
    }
   }
-  if(typeof window.toast==='function'window.toast(act==='accept'?'Order accepted':act==='reject'?'Order rejected':act==='preparing'?'Order is PREPARING':act==='ready'?'Order marked READY':act==='out_for_delivery'?'Order moved to OUT FOR DELIVERY':'Order marked DELIVERED');
+  if(typeof window.toast==='function')window.toast(act==='accept'?'Order accepted':act==='reject'?'Order rejected':act==='preparing'?'Order is PREPARING':act==='ready'?'Order marked READY':act==='out_for_delivery'?'Order moved to OUT FOR DELIVERY':'Order marked DELIVERED');
   await load();
  }catch(e){if(typeof window.toast==='function')window.toast('Order update failed: '+(e?.message||e));}
  finally{btn.disabled=false}
