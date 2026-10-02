@@ -88,7 +88,18 @@ async function wire(){
    const id=b.dataset.id;
    if(b.dataset.action==='delete'){
     if(!confirm('Delete this sponsor media?'))return;
-    const q=await db().from(TABLE).delete().eq('id',id);if(q.error)throw q.error;
+    b.disabled=true;
+    try{
+      const existing=await db().from(TABLE).select('id,media_url,video_url').eq('id',id).maybeSingle();
+      if(existing.error)throw existing.error;
+      if(!existing.data)throw new Error('Sponsor media record was not found.');
+      const q=await db().from(TABLE).delete().eq('id',id);if(q.error)throw q.error;
+      const verify=await db().from(TABLE).select('id').eq('id',id).maybeSingle();if(verify.error)throw verify.error;
+      if(verify.data)throw new Error('Delete was not persisted in the database.');
+      const mediaUrl=existing.data.media_url||existing.data.video_url||'';
+      const prefix='/storage/v1/object/public/'+BUCKET+'/';
+      if(mediaUrl.includes(prefix)){const path=decodeURIComponent(mediaUrl.split(prefix)[1].split('?')[0]);const rm=await db().storage.from(BUCKET).remove([path]);if(rm.error)console.warn('[JPT Sponsor V4] storage cleanup failed:',rm.error)}
+    }finally{b.disabled=false}
    }else{
     const row=rows.find(x=>String(x.id)===String(id));
     const q=await db().from(TABLE).update({is_active:!row.is_active}).eq('id',id);if(q.error)throw q.error;
@@ -110,7 +121,7 @@ async function wire(){
    const url=db().storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
    const kind=type.value==='video'?'video':'image';
    const row={title:document.getElementById('jpt4Title').value.trim()||document.getElementById('jpt4Sponsor').value.trim()||'Sponsor Banner',sponsor_name:document.getElementById('jpt4Sponsor').value.trim(),media_type:kind,media_url:kind==='image'?url:null,video_url:kind==='video'?url:null,poster_url:kind==='image'?url:null,target_all_live:false,outlet_ids:[ctx.code],is_active:true,sort_order:Number(document.getElementById('jpt4Order').value||1),starts_at:document.getElementById('jpt4Start').value?new Date(document.getElementById('jpt4Start').value).toISOString():null,ends_at:document.getElementById('jpt4End').value?new Date(document.getElementById('jpt4End').value).toISOString():null,schedule_json:{version:5,slot:Number(slot.value),media_kind:kind,image_duration_sec:10,advance:'video-ended'}};
-   const ins=await db().from(TABLE).insert(row);if(ins.error)throw ins.error;
+   const ins=await db().from(TABLE).insert(row).select('id,media_url,video_url,is_active').maybeSingle();if(ins.error)throw ins.error;if(!ins.data?.id)throw new Error('Sponsor media database save could not be verified.');if((ins.data.media_url||ins.data.video_url)!==(kind==='image'?url:null) && kind==='image')throw new Error('Sponsor media URL verification failed.');if(kind==='video' && ins.data.video_url!==url)throw new Error('Sponsor video URL verification failed.');try{const head=await fetch(url,{method:'HEAD',cache:'no-store'});if(!head.ok)throw new Error('Uploaded media URL returned HTTP '+head.status)}catch(mediaVerify){console.warn('[JPT Sponsor V4] media URL HEAD verification:',mediaVerify)}
    msg.textContent='Saved + published for '+ctx.name+' ('+ctx.code+') • Sponsor Slot '+slot.value+'.';
    file.value='';preview.innerHTML='';
    await refreshList();
