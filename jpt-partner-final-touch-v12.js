@@ -398,7 +398,7 @@
         'Outlet'
       );
 
-      if(!id) return;
+      if(!id || /^loading\s+outlet/i.test(name.trim())) return;
 
       const optionButton=document.createElement('button');
 
