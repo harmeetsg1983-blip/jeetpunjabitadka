@@ -58,16 +58,42 @@ function jump(panel){
  if(typeof window.showPanel==='function')window.showPanel(panel);
 }
 
-function categoryDrawer(categories){
+async function categoryDrawer(categories){
  const d=document.createElement('div');d.className='cm-drawer';
- d.innerHTML='<div><button id="cmClose">← Back to menu</button><h3>Menu Categories</h3><p class="cm-sub">Jump directly to any category without scrolling through the full menu.</p><div id="cmCatButtons"></div></div>';
+ d.innerHTML='<div><button id="cmClose">← Back to menu</button><h3>Menu Categories</h3><p class="cm-sub">Jump, activate or deactivate a category without scrolling through the full menu.</p><div id="cmCatButtons">Loading categories…</div></div>';
  document.body.appendChild(d);
  const box=d.querySelector('#cmCatButtons');
- categories.forEach(cat=>{
-   const b=document.createElement('button');b.textContent=cat+'  →';
-   b.onclick=()=>{document.querySelectorAll('[data-cm-category]').forEach(x=>x.style.display=(x.dataset.cmCategory===cat?'':'none'));d.remove()};
-   box.appendChild(b);
- });
+ try{
+   const outletId=outlet();
+   const q=await sb().from('categories').select('id,name,sort_order,is_active').eq('outlet_id',outletId).order('sort_order').order('name');
+   if(q.error)throw q.error;
+   const dbCats=q.data||[];
+   const names=[...new Set([...dbCats.map(x=>String(x.name||'').trim()).filter(Boolean),...categories])];
+   box.innerHTML='';
+   names.forEach(name=>{
+     const row=dbCats.find(x=>String(x.name||'').trim()===name);
+     const wrap=document.createElement('div');wrap.style.cssText='display:grid;grid-template-columns:1fr auto;gap:7px;align-items:center;margin:7px 0';
+     const jumpBtn=document.createElement('button');jumpBtn.textContent=name+'  →';jumpBtn.style.margin='0';
+     jumpBtn.onclick=()=>{document.querySelectorAll('[data-cm-category]').forEach(x=>x.style.display=(x.dataset.cmCategory===name?'':'none'));d.remove()};
+     wrap.appendChild(jumpBtn);
+     if(row){
+       const active=row.is_active!==false;
+       const toggle=document.createElement('button');toggle.textContent=active?'ON':'OFF';toggle.style.cssText='width:auto;margin:0;text-align:center;padding:10px 12px;color:'+(active?'#8ff0b0':'#ffaaaa')+';border-color:'+(active?'#295d3c':'#703030');
+       toggle.onclick=async()=>{
+         toggle.disabled=true;
+         const r=await sb().from('categories').update({is_active:!active,updated_at:new Date().toISOString()}).eq('id',row.id).eq('outlet_id',outletId);
+         if(r.error){if(typeof window.toast==='function')window.toast('Category update failed: '+r.error.message);toggle.disabled=false;return}
+         if(typeof window.toast==='function')window.toast(active?'Category deactivated':'Category activated');
+         await render();
+         await categoryDrawer(categories);
+         d.remove();
+       };
+       wrap.appendChild(toggle);
+     }
+     box.appendChild(wrap);
+   });
+   if(!names.length)box.innerHTML='<div class="cm-sub">No categories found for this outlet.</div>';
+ }catch(e){box.innerHTML='<div class="notice danger">'+esc(e.message||'Category load failed')+'</div>'}
  d.querySelector('#cmClose').onclick=()=>d.remove();
  d.addEventListener('click',e=>{if(e.target===d)d.remove()});
 }
@@ -111,7 +137,21 @@ async function mount(){
     }).join(''):'<div class="notice">No items match the selected filters.</div>';
     root.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{cat=b.dataset.cat||'';render()});
     root.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{if(typeof window.editItem==='function')window.editItem(b.dataset.edit);});
-    root.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=async()=>{if(typeof window.toggleItem==='function')await window.toggleItem(b.dataset.toggle);await render();});
+    root.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=async()=>{
+  const id=b.dataset.toggle;b.disabled=true;b.textContent='Saving…';
+  try{
+    const item=rows.find(x=>String(x.id)===String(id));
+    if(!item)throw new Error('Menu item not found');
+    const next=item.available===false;
+    const r=await sb().from('menu_items').update({available:next,updated_at:new Date().toISOString()}).eq('id',item.id).eq('outlet_id',outlet());
+    if(r.error)throw r.error;
+    const verify=await sb().from('menu_items').select('id,available').eq('id',item.id).eq('outlet_id',outlet()).maybeSingle();
+    if(verify.error)throw verify.error;
+    if(Boolean(verify.data?.available)!==next)throw new Error('Status change could not be verified');
+    if(typeof window.toast==='function')window.toast(next?'Item turned ON':'Item turned OFF');
+    await render();
+  }catch(e){b.disabled=false;b.textContent=item?.available===false?'Turn ON':'Turn OFF';if(typeof window.toast==='function')window.toast('Item status update failed: '+(e.message||e));}
+});
    }catch(e){root.querySelector('#cmList').innerHTML='<div class="notice danger">'+esc(e.message||'Menu load failed')+'</div>'}
  }
  root.querySelector('#cmBack').onclick=()=>jump('home');
