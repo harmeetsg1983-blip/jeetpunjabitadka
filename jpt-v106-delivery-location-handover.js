@@ -59,7 +59,13 @@
           var client=sb();
           if(client){
             var r=await client.rpc('save_customer_delivery_location',{p_order_no:expected,p_phone:phone,p_lat:loc.lat,p_lng:loc.lng});
-            if(r.error||!(Array.isArray(r.data)?r.data[0]?.ok===true:r.data===true)) toast('Order placed, but location could not be attached. Please contact the restaurant.');
+            var attached=!r.error && (Array.isArray(r.data)?r.data[0]?.ok===true:r.data===true);
+            if(!attached && !r.error){
+              await new Promise(function(resolve){setTimeout(resolve,250);});
+              r=await client.rpc('save_customer_delivery_location',{p_order_no:expected,p_phone:phone,p_lat:loc.lat,p_lng:loc.lng});
+              attached=!r.error && (Array.isArray(r.data)?r.data[0]?.ok===true:r.data===true);
+            }
+            if(r.error||!attached) toast('Order placed, but location could not be attached. Please contact the restaurant.');
           }
           try{sessionStorage.removeItem(trackingKey)}catch(e){}
           pendingLocation=null;
