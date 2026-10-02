@@ -152,8 +152,15 @@ async function doAction(btn){
    await directAction(row,'accepted',{target_minutes:m,accepted_at:now.toISOString(),deadline_at:deadline.toISOString(),eta_minutes:m+20});
   }else{
    await directAction(row,act);
+   if(act==='ready'){
+    try{
+     const rr=await window.sb.rpc('delivery_offer_next',{p_order_id:Number(row.id)});
+     if(rr.error)throw rr.error;
+     if(typeof window.toast==='function')window.toast(rr.data?.status==='offered'?'Delivery partner offer sent':rr.data?.status==='no_online_rider'?'READY — no online delivery partner available':'Delivery assignment checked');
+    }catch(e){if(typeof window.toast==='function')window.toast('Delivery assignment check failed: '+(e?.message||e));}
+   }
   }
-  if(typeof window.toast==='function')window.toast(act==='accept'?'Order accepted':act==='reject'?'Order rejected':act==='preparing'?'Order is PREPARING':act==='ready'?'Order marked READY':act==='out_for_delivery'?'Order moved to OUT FOR DELIVERY':'Order marked DELIVERED');
+  if(typeof window.toast==='function'window.toast(act==='accept'?'Order accepted':act==='reject'?'Order rejected':act==='preparing'?'Order is PREPARING':act==='ready'?'Order marked READY':act==='out_for_delivery'?'Order moved to OUT FOR DELIVERY':'Order marked DELIVERED');
   await load();
  }catch(e){if(typeof window.toast==='function')window.toast('Order update failed: '+(e?.message||e));}
  finally{btn.disabled=false}
