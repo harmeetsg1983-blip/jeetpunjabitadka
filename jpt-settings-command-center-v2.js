@@ -18,7 +18,7 @@ const groups=[
  {key:'campaign',icon:'🎯',title:'Campaigns & Offers',desc:'Discount campaigns, Today Offer and customer media scheduling.',panel:'campaigns',targets:['jptCampaignV4']},
  {key:'menu',icon:'🍽️',title:'Menu & Images',desc:'Jump directly to professional Menu Management and image tools.',panel:'menu',targets:['jptCentralMenuPro']},
  {key:'access',icon:'🔐',title:'Partner Access & Onboarding',desc:'Outlet access, onboarding and partner permission controls.',targets:['jptPartnerOnboardPanel']},
- {key:'system',icon:'⚙️',title:'Dashboard System',desc:'Refresh the current outlet context and return to the dashboard home.',panel:'home',targets:[]}
+ {key:'notifications',icon:'🔔',title:'Notifications & Sound',desc:'Order ringtone, volume, message alerts and rider notifications.',targets:['jptPartnerNotificationCenterV1']},{key:'system',icon:'⚙️',title:'Dashboard System',desc:'Refresh the current outlet context and return to the dashboard home.',panel:'home',targets:[]}
 ];
 
 function addCss(){
