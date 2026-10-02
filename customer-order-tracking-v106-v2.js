@@ -14,6 +14,7 @@
   var DELIVERY_BUFFER=20;
   var timer=null, active=false, sbClient=null;
   var lastStatus='';
+  var lastAssignmentStatus='';
   var JPT_CUSTOMER_ACCEPTED_AUDIO='./ringtones/1000449572.mp4';
   var readySinceKey='jpt_v106_ready_since';
   function playCustomerAcceptedTone(){
@@ -128,6 +129,10 @@
       }
       html+='<div style="margin-top:10px">'+steps.map(function(x,i){return '<div class="jpt-track-line"><span class="jpt-track-dot '+(i<=info.step?'on':'')+'"></span><span>'+esc(x)+'</span></div>'}).join('')+'</div>';
     }
+    if(o&&o.assignment_status&&['accepted','picked_up','out_for_delivery'].indexOf(o.assignment_status)>=0){
+      html+='<div class="jpt-rider"><b>🚴 Delivery partner assigned</b><div style="margin-top:4px">'+esc(o.rider_name||'Delivery partner')+'</div>';
+      html+='<div class="jpt-rider-map">'+(o.rider_lat!=null&&o.rider_lng!=null?'📍 Live location available • '+esc(new Date(o.rider_location_at||Date.now()).toLocaleTimeString('en-IN')):'📍 Waiting for live location')+'</div></div>';
+    }
     if(info.ready)html+='<button id="jptConfirmDelivery" class="jpt-track-btn" type="button">I RECEIVED MY ORDER</button>';
     if(info.done)html+='<div class="jpt-track-done" style="margin-top:8px">✅ Delivery confirmed</div>';
     if(info.cancelled)html+='<div style="margin-top:8px;color:#ff9b8f;font-size:12px">This order is no longer active.</div>';
@@ -161,7 +166,12 @@
         var nextStatus=String(row.status||'').toLowerCase().trim().replace(/\s+/g,'_');
         if(lastStatus && lastStatus!=='accepted' && nextStatus==='accepted') playCustomerAcceptedTone();
         lastStatus=nextStatus;
-        o=Object.assign(o,row);save(o);render(o);
+        var tr=await sb.rpc('get_customer_delivery_tracking',{p_order_no:o.order_no,p_phone:o.phone});
+        var tracking=tr.error?{}:(Array.isArray(tr.data)?tr.data[0]:tr.data)||{};
+        var nextAssignment=String(tracking.assignment_status||'');
+        if(nextAssignment && nextAssignment!==lastAssignmentStatus && nextAssignment==='accepted') playCustomerAcceptedTone();
+        lastAssignmentStatus=nextAssignment;
+        o=Object.assign({},o,row,tracking);save(o);render(o);
         if(nextStatus==='delivered'){
           active=false;if(timer){clearInterval(timer);timer=null}
         }
