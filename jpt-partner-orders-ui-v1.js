@@ -54,7 +54,7 @@ async function loadRows(){
  return rows;
 }
 
-function renderTabs(){const el=document.getElementById(TABS_ID);if(!el)return;const counts=Object.fromEntries(STATUS_VIEWS.map(x=>[x[0],0]));rowsCache.forEach(x=>{const v=statusView(x.__status);if(v==='history'){if(x.__status==='cancelled')counts.history++}else if(counts[v]!==undefined)counts[v]++});el.innerHTML=STATUS_VIEWS.map(([k,label])=>`<button class="jpt-cob-tab ${selected===k?'active':''}" data-status="${k}">${label} <span>${counts[k]||0}</span></button>`).join('');el.querySelectorAll('[data-status]').forEach(b=>b.onclick=()=>{selected=b.dataset.status;render()})}
+function renderTabs(){const el=document.getElementById(TABS_ID);if(!el)return;const counts=Object.fromEntries(STATUS_VIEWS.map(x=>[x[0],0]));rowsCache.forEach(x=>{const v=statusView(x.__status);if(v==='history'||x.__status==='completed'||x.__status==='cancelled'){counts.history++}else if(counts[v]!==undefined)counts[v]++});el.innerHTML=STATUS_VIEWS.map(([k,label])=>`<button class="jpt-cob-tab ${selected===k?'active':''}" data-status="${k}">${label} <span>${counts[k]||0}</span></button>`).join('');el.querySelectorAll('[data-status]').forEach(b=>b.onclick=()=>{selected=b.dataset.status;render()})}
 function ensureRoot(){
  const panel=document.getElementById('orders');if(!panel)return null;
  injectStyle();
@@ -79,7 +79,7 @@ function actionHtml(x){
 
 function render(){
  const root=ensureRoot();if(!root)return;renderTabs();
- const filtered=rowsCache.filter(x=>selected==='history'?x.__status==='cancelled':statusView(x.__status)===selected);
+ const filtered=rowsCache.filter(x=>selected==='history'?(x.__status==='completed'||x.__status==='cancelled'):statusView(x.__status)===selected);
  root.innerHTML=`
  <div class="jpt-cob-head"><div><div class="jpt-cob-title">Orders</div><div class="jpt-cob-sub">${central?'Central • All outlets':'Outlet partner • Selected outlet'} • ${rowsCache.length} recent orders</div></div><span class="jpt-cob-mode">${central?'CENTRAL OWNER':'OUTLET PARTNER'}</span></div>
  <div class="jpt-cob-list">${filtered.length?filtered.map(x=>{
