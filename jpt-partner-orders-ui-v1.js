@@ -58,19 +58,24 @@ async function loadRows(){
 }
 
 function ensureCentralBell(){
- const existing=document.getElementById('jptCentralOrderBell');
- if(existing)return existing;
- const b=document.createElement('button');b.id='jptCentralOrderBell';b.type='button';
- b.style.cssText='position:fixed;right:16px;top:76px;z-index:9998;display:none;min-width:52px;height:52px;border-radius:50%;border:2px solid #d8ae42;background:#111;color:#f4d77a;font-size:24px;font-weight:950;box-shadow:0 0 18px rgba(216,174,66,.28);cursor:pointer';
- b.innerHTML='🔔<span id="jptCentralOrderBellCount" style="position:absolute;right:-4px;top:-5px;min-width:22px;height:22px;padding:2px 5px;border-radius:99px;background:#d8ae42;color:#111;font-size:11px;display:grid;place-items:center">0</span>';
- b.onclick=()=>{selected='new';try{window.showPanel?.('orders')}catch(e){};document.getElementById(ROOT_ID)?.scrollIntoView({behavior:'smooth',block:'start'});};
- document.body.appendChild(b);return b;
+ const b=document.getElementById('jptCentralOrderBell');
+ const host=document.getElementById('jptOpenOrdersBell');
+ if(!host)return null;
+ if(b && b.parentElement===host)return b;
+ if(b)b.remove();
+ host.id='jptOpenOrdersBell';
+ host.setAttribute('role','button');
+ host.setAttribute('aria-label','Open new orders');
+ host.onclick=()=>{selected='new';try{window.showPanel?.('orders')}catch(e){};document.getElementById(ROOT_ID)?.scrollIntoView({behavior:'smooth',block:'start'});};
+ return host;
 }
 function syncCentralBell(){
  const b=ensureCentralBell(),count=rowsCache.filter(x=>x.__status==='new'&&OWNER_OUTLET_CODES.has(String(x.outlet_id||''))).length;
- const badge=document.getElementById('jptCentralOrderBellCount');if(badge)badge.textContent=String(count);
- b.style.display=count?'grid':'none';
- if(count)b.classList.add('alarmPulse');else b.classList.remove('alarmPulse');
+ if(!b)return;
+ const badge=document.getElementById('jptOpenOrdersBadge');if(badge)badge.textContent=String(count);
+ b.classList.toggle('has-orders',count>0);
+ b.setAttribute('aria-label',count?('Open new orders: '+count):'Open orders');
+ const hint=document.getElementById('jptOpenOrdersHint');if(hint)hint.textContent=count?(count+' NEW order'+(count===1?'':'s')+' • All 5 outlets'):'All 5 personal outlets • Live orders';
 }
 
 function renderTabs(){const el=document.getElementById(TABS_ID);if(!el)return;const counts=Object.fromEntries(STATUS_VIEWS.map(x=>[x[0],0]));rowsCache.forEach(x=>{const v=statusView(x.__status);if(v==='history'||x.__status==='completed'||x.__status==='cancelled'){counts.history++}else if(counts[v]!==undefined)counts[v]++});el.innerHTML=STATUS_VIEWS.map(([k,label])=>`<button class="jpt-cob-tab ${selected===k?'active':''}" data-status="${k}">${label} <span>${counts[k]||0}</span></button>`).join('');el.querySelectorAll('[data-status]').forEach(b=>b.onclick=()=>{selected=b.dataset.status;render()})}
