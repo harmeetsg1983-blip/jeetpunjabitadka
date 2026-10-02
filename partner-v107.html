@@ -35,7 +35,13 @@ html,body{margin:0;width:100%;height:100%;background:#090909;overflow:hidden}
     if(boot) boot.style.display='none';
   }
 
-  frame.addEventListener('load',hideBoot,{once:true});
+  frame.addEventListener('load',function(){
+    hideBoot();
+    const q=new URLSearchParams(location.search);
+    if(q.get('push')==='order'){
+      try{frame.contentWindow.postMessage({type:'JPT_OPEN_ORDER',panel:'orders',orderId:q.get('order_id')||'',outletId:q.get('outlet_id')||'',orderNo:q.get('order_no')||''},location.origin);}catch(e){}
+    }
+  },{once:true});
 
   // Never leave the launcher covering the dashboard indefinitely.
   setTimeout(hideBoot,3000);
