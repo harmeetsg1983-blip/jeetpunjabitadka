@@ -39,7 +39,11 @@ html,body{margin:0;width:100%;height:100%;background:#090909;overflow:hidden}
     hideBoot();
     const q=new URLSearchParams(location.search);
     if(q.get('push')==='order'){
-      try{frame.contentWindow.postMessage({type:'JPT_OPEN_ORDER',panel:'orders',orderId:q.get('order_id')||'',outletId:q.get('outlet_id')||'',orderNo:q.get('order_no')||''},location.origin);}catch(e){}
+      try{
+        if(typeof frame.contentWindow.showPanel==='function') frame.contentWindow.showPanel('orders');
+        const orders=frame.contentWindow.document.getElementById('orders');
+        orders?.scrollIntoView({behavior:'instant',block:'start'});
+      }catch(e){}
     }
   },{once:true});
 
