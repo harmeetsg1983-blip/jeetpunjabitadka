@@ -17,7 +17,7 @@ const groups=[
  {key:'media',icon:'🎬',title:'Outlet Media & Banners',desc:'Customer-facing outlet banners, images, videos and scheduling.',panel:'campaigns',targets:['jptOutletMediaV1']},
  {key:'campaign',icon:'🎯',title:'Campaigns & Offers',desc:'Discount campaigns, Today Offer and customer media scheduling.',panel:'campaigns',targets:['jptCampaignV4']},
  {key:'menu',icon:'🍽️',title:'Menu & Images',desc:'Jump directly to professional Menu Management and image tools.',panel:'menu',targets:['jptCentralMenuPro']},
- {key:'access',icon:'🔐',title:'Partner Access & Onboarding',desc:'Outlet access, onboarding and partner permission controls.',targets:['jptPartnerOnboardingUIV2','jptPartnerPermissionUIV1']},
+ {key:'access',icon:'🔐',title:'Partner Access & Onboarding',desc:'Outlet access, onboarding and partner permission controls.',targets:['jptPartnerOnboardPanel']},
  {key:'system',icon:'⚙️',title:'Dashboard System',desc:'Refresh the current outlet context and return to the dashboard home.',panel:'home',targets:[]}
 ];
 
@@ -65,36 +65,31 @@ function locate(group){
 
 function openGroup(group){
  if(group.panel)panelSwitch(group.panel);
- const work=document.getElementById(rootId)?.querySelector('.sc-work');
- if(!work)return;
+ const root=document.getElementById(rootId);if(!root)return;
+ const work=root.querySelector('.sc-work');
  work.innerHTML='<button class="sc-back" type="button">← Back to Settings</button><div class="notice" style="margin:10px 0">Opening '+esc(group.title)+'…</div>';
  work.classList.add('active');
- document.getElementById(rootId)?.querySelector('.sc-grid')?.classList.add('jpt-sc-target-hidden');
- document.getElementById(rootId)?.querySelector('.sc-head')?.classList.add('jpt-sc-target-hidden');
-
+ root.querySelector('.sc-grid')?.classList.add('jpt-sc-target-hidden');
+ root.querySelector('.sc-head')?.classList.add('jpt-sc-target-hidden');
  const show=()=>{
-  const el=locate(group);
-  if(el){
-   if(group.panel==='menu'){
-    panelSwitch('menu');
-    work.innerHTML='<button class="sc-back" type="button">← Back to Settings</button><div class="notice" style="margin:10px 0">Menu Management is ready. Use the menu workspace directly.</div>';
-    el.scrollIntoView({behavior:'smooth',block:'start'});
-   }else{
-    el.style.display='';
-    work.innerHTML='<button class="sc-back" type="button">← Back to Settings</button>';
-    const holder=document.createElement('div');holder.className='jpt-sc-target';holder.style.marginTop='10px';
-    el.parentNode.insertBefore(holder,el);holder.appendChild(el);
-    el.classList.remove('jpt-sc-target-hidden');
-    holder.appendChild(el);
-   }
+  if(group.panel==='menu'){
+   panelSwitch('menu');
+   work.innerHTML='<button class="sc-back" type="button">← Back to Settings</button><div class="notice" style="margin:10px 0">Menu Management is ready. Use the menu workspace directly.</div>';
+   document.getElementById('jptCentralMenuPro')?.scrollIntoView({behavior:'smooth',block:'start'});
    work.querySelector('.sc-back').onclick=closeGroup;
    return true;
   }
-  return false;
+  const el=locate(group);
+  if(!el)return false;
+  el.style.display='';
+  work.innerHTML='<button class="sc-back" type="button">← Back to Settings</button><div class="notice" style="margin:10px 0">Direct control opened below. The existing manager DOM is preserved; no controls were rebuilt.</div>';
+  work.querySelector('.sc-back').onclick=closeGroup;
+  setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'start'}),50);
+  return true;
  };
  if(!show()){
-   const started=Date.now();
-   const t=setInterval(()=>{if(show()||Date.now()-started>5000)clearInterval(t)},200);
+  const started=Date.now();
+  const t=setInterval(()=>{if(show()||Date.now()-started>5000)clearInterval(t)},200);
  }
 }
 
