@@ -31,9 +31,9 @@ function injectStyle(){
  const s=document.createElement('style');s.id=STYLE_ID;s.textContent=`
  #jptOrdersCentralV2{margin-top:12px}.jpt-cob-head{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:8px 0 12px}.jpt-cob-title{font-size:19px;font-weight:950}.jpt-cob-sub{color:#888;font-size:11px;margin-top:3px}.jpt-cob-mode{padding:7px 11px;border:1px solid #5c4920;border-radius:99px;color:#f4d77a;background:#151515;font-size:10px;font-weight:950}
  .jpt-cob-tabs{display:flex;gap:7px;overflow:auto;padding:3px 0 12px;scrollbar-width:none}.jpt-cob-tabs::-webkit-scrollbar{display:none}.jpt-cob-tab{flex:0 0 auto;background:#151515;color:#aaa;border:1px solid #343434;border-radius:13px;padding:10px 14px;font-weight:950;font-size:11px}.jpt-cob-tab.active{background:#f0c94a;color:#111;border-color:#f0c94a}
- .jpt-cob-list{display:grid;gap:10px}.jpt-cob-card{background:#111;border:1px solid #302a1d;border-radius:18px;overflow:hidden;box-shadow:0 8px 24px #0005}.jpt-cob-main{padding:14px}.jpt-cob-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.jpt-cob-no{font-size:17px;font-weight:950}.jpt-cob-outlet{margin-top:5px;font-weight:950;color:#f4d77a}.jpt-cob-code{font-size:10px;color:#777;margin-top:2px}.jpt-cob-status{font-size:9px;font-weight:950;border:1px solid #604d1c;border-radius:99px;padding:5px 9px;color:#f4d77a;white-space:nowrap}
- .jpt-cob-customer{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid #252525}.jpt-cob-customer-name{font-weight:900}.jpt-cob-muted{color:#888;font-size:10px;margin-top:3px}.jpt-cob-items{margin-top:11px;border:1px solid #292929;border-radius:13px;background:#171717;overflow:hidden}.jpt-cob-item{display:flex;justify-content:space-between;gap:10px;padding:10px 11px;border-bottom:1px solid #292929;font-size:12px}.jpt-cob-item:last-child{border-bottom:0}.jpt-cob-item-name{font-weight:800}.jpt-cob-item-price{color:#ddd;white-space:nowrap}
- .jpt-cob-summary{margin-top:10px;border-top:1px solid #252525;padding-top:9px}.jpt-cob-line{display:flex;justify-content:space-between;gap:12px;padding:3px 0;color:#aaa;font-size:11px}.jpt-cob-line.discount{color:#79d99a}.jpt-cob-line.total{color:#fff;font-size:16px;font-weight:950;padding-top:8px;margin-top:5px;border-top:1px solid #343434}.jpt-cob-payment{display:inline-flex;margin-top:8px;padding:6px 9px;border-radius:9px;background:#191919;border:1px solid #292929;color:#bbb;font-size:10px;font-weight:900}.jpt-cob-actions{display:flex;gap:7px;flex-wrap:wrap;padding:11px 14px;background:#0c0c0c;border-top:1px solid #292929}.jpt-cob-actions button,.jpt-cob-actions select,.jpt-cob-actions input{padding:9px 11px;border-radius:10px;border:1px solid #393939;background:#151515;color:#fff;font-weight:850}.jpt-cob-actions .primary{background:#f0c94a;color:#111;border-color:#f0c94a;font-weight:950}.jpt-cob-prep{margin-top:10px;padding:9px 11px;border:1px solid #4a3a1b;border-radius:11px;background:#17130a;color:#f4d77a;font-weight:900;font-size:12px}.jpt-cob-prep b{font-size:16px}.jpt-cob-timepick{display:inline-flex;align-items:center;gap:5px}.jpt-cob-timepick button{min-width:34px}.jpt-cob-timepick input{width:54px;text-align:center;font-weight:950}.jpt-cob-empty{padding:35px 12px;text-align:center;border:1px dashed #343434;border-radius:15px;color:#777}.jpt-cob-history{color:#aaa;font-size:11px}@media(max-width:600px){.jpt-cob-main{padding:12px}.jpt-cob-no{font-size:15px}.jpt-cob-item{font-size:11px}}
+ .jpt-cob-list{display:grid;gap:10px}.jpt-cob-card{background:#111;border:1px solid #302a1d;border-radius:18px;overflow:hidden;box-shadow:0 8px 24px #0005}.jpt-cob-main{padding:14px}.jpt-cob-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.jpt-cob-no{font-size:11px;font-weight:800;color:#999}.jpt-cob-outlet{margin-top:3px;font-size:10px;font-weight:800;color:#d8ae42}.jpt-cob-code{font-size:9px;color:#666;margin-top:2px}.jpt-cob-status{font-size:9px;font-weight:950;border:1px solid #604d1c;border-radius:99px;padding:5px 9px;color:#f4d77a;white-space:nowrap}
+ .jpt-cob-customer{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid #252525}.jpt-cob-customer-name{font-size:11px;font-weight:800}.jpt-cob-muted{color:#888;font-size:9px;margin-top:2px}.jpt-cob-items{margin-top:11px;border:1px solid #292929;border-radius:13px;background:#171717;overflow:hidden}.jpt-cob-item{display:flex;justify-content:space-between;gap:10px;padding:10px 11px;border-bottom:1px solid #292929;font-size:12px}.jpt-cob-item:last-child{border-bottom:0}.jpt-cob-item-name{font-size:16px;line-height:1.25;font-weight:900;color:#fff}.jpt-cob-item-price{font-size:13px;color:#ddd;white-space:nowrap;font-weight:800}
+ .jpt-cob-summary{margin-top:10px;border-top:1px solid #252525;padding-top:9px}.jpt-cob-line{display:flex;justify-content:space-between;gap:12px;padding:3px 0;color:#aaa;font-size:11px}.jpt-cob-line.discount{color:#79d99a}.jpt-cob-line.total{color:#fff;font-size:16px;font-weight:950;padding-top:8px;margin-top:5px;border-top:1px solid #343434}.jpt-cob-payment{display:inline-flex;margin-top:8px;padding:6px 9px;border-radius:9px;background:#191919;border:1px solid #292929;color:#bbb;font-size:10px;font-weight:900}.jpt-cob-actions{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;padding:11px 14px;background:#0c0c0c;border-top:1px solid #292929}.jpt-cob-actions button,.jpt-cob-actions select,.jpt-cob-actions input{padding:9px 11px;border-radius:10px;border:1px solid #393939;background:#151515;color:#fff;font-weight:850}.jpt-cob-actions .primary{background:#f0c94a;color:#111;border-color:#f0c94a;font-weight:950}.jpt-cob-decision{display:flex;align-items:center;gap:6px;flex:0 0 auto}.jpt-cob-decision button{white-space:nowrap}.jpt-cob-prep{margin-top:10px;padding:9px 11px;border:1px solid #4a3a1b;border-radius:11px;background:#17130a;color:#f4d77a;font-weight:900;font-size:12px}.jpt-cob-prep b{font-size:18px}.jpt-cob-prep.late{border-color:#8b2d2d;background:#210b0b;color:#ff8f8f}.jpt-cob-timepick{display:inline-flex;align-items:center;gap:5px}.jpt-cob-timepick button{min-width:42px;min-height:42px;font-size:22px;font-weight:950;padding:4px 10px}.jpt-cob-timepick input{width:58px;min-height:42px;text-align:center;font-weight:950;font-size:16px}.jpt-cob-empty{padding:35px 12px;text-align:center;border:1px dashed #343434;border-radius:15px;color:#777}.jpt-cob-history{color:#aaa;font-size:11px}@media(max-width:600px){.jpt-cob-main{padding:12px}.jpt-cob-no{font-size:15px}.jpt-cob-item{font-size:11px}}
  `;document.head.appendChild(s);
 }
 async function loadOutlets(){
@@ -93,7 +93,7 @@ function ensureRoot(){
 
 function actionHtml(x){
  const id=esc(x.id||''),st=x.__status;
- if(st==='new')return `<div class="jpt-cob-timepick" aria-label="Preparation time"><button type="button" data-time="minus" data-id="${id}">−</button><input class="jpt-cob-minutes" data-id="${id}" type="number" min="5" max="120" step="5" value="${Number(x.target_minutes)||30}"><button type="button" data-time="plus" data-id="${id}">+</button><span class="jpt-cob-muted">min</span></div><button class="primary" data-act="accept" data-id="${id}">ACCEPT</button><button data-act="reject" data-id="${id}">REJECT</button>`;
+ if(st==='new')return `<div class="jpt-cob-timepick" aria-label="Preparation time"><button type="button" data-time="minus" data-id="${id}" aria-label="Decrease preparation time">−</button><input class="jpt-cob-minutes" data-id="${id}" type="number" min="5" max="120" step="5" value="${Number(x.target_minutes)||30}"><button type="button" data-time="plus" data-id="${id}" aria-label="Increase preparation time">+</button><span class="jpt-cob-muted">min</span></div><div class="jpt-cob-decision"><button class="primary" data-act="accept" data-id="${id}">ACCEPT</button><button data-act="reject" data-id="${id}">REJECT</button></div>`;
  if(st==='accepted'||st==='preparing')return `<button class="primary" data-act="ready" data-id="${id}">READY</button>`;
  if(st==='ready')return `<button class="primary" data-act="out_for_delivery" data-id="${id}">OUT FOR DELIVERY</button>`;
  if(st==='out_for_delivery')return `<button class="primary" data-act="completed" data-id="${id}">DELIVERED</button>`;
@@ -117,12 +117,16 @@ function render(){
    const input=b.parentElement.querySelector('.jpt-cob-minutes'); if(!input)return;
    let v=Number(input.value)||30; v=Math.max(5,Math.min(120,v+(b.dataset.time==='plus'?5:-5))); input.value=String(v);
  });
- root.querySelectorAll('.jpt-cob-countdown').forEach(el=>{
-   const box=el.closest('[data-deadline]'); const tick=()=>{
-     const ms=Math.max(0,new Date(box.dataset.deadline).getTime()-Date.now()),s=Math.floor(ms/1000),m=Math.floor(s/60),sec=s%60;
-     el.textContent=String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');
-   }; tick(); setInterval(tick,1000);
- });
+ if(window.__jptCountdownTimer)clearInterval(window.__jptCountdownTimer);
+ const tickCountdowns=()=>{
+   root.querySelectorAll('.jpt-cob-prep[data-deadline]').forEach(box=>{
+     const el=box.querySelector('.jpt-cob-countdown'); if(!el)return;
+     const ms=new Date(box.dataset.deadline).getTime()-Date.now(),s=Math.floor(Math.abs(ms)/1000),m=Math.floor(s/60),sec=s%60;
+     if(ms>0){box.classList.remove('late');el.textContent=String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');}
+     else{box.classList.add('late');el.textContent='LATE +'+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');}
+   });
+ };
+ tickCountdowns();window.__jptCountdownTimer=setInterval(tickCountdowns,1000);
 }
 async function directAction(row,next,extra={}){
  const patch={status:next,updated_at:new Date().toISOString(),...extra};
@@ -139,9 +143,14 @@ async function doAction(btn){
    if(!confirm('Reject this customer order?'))return;
    await directAction(row,'cancelled',{rejection_reason:'Rejected by restaurant'});
   }else if(act==='accept'){
-   const m=Math.max(5,Math.min(120,Number(btn.parentElement.querySelector('.jpt-cob-minutes')?.value||30)));
+   const m=Math.max(5,Math.min(120,Number(btn.closest('.jpt-cob-actions')?.querySelector('.jpt-cob-minutes')?.value||30)));
    const now=new Date(),deadline=new Date(now.getTime()+m*60000);
    await directAction(row,'accepted',{target_minutes:m,accepted_at:now.toISOString(),deadline_at:deadline.toISOString(),eta_minutes:m+20});
+   const verify=await window.sb.from('orders').select('status,target_minutes,accepted_at,deadline_at').eq('id',row.id).eq('outlet_id',row.outlet_id).maybeSingle();
+   if(verify.error)throw verify.error;
+   if(!verify.data || String(verify.data.status).toLowerCase()!=='accepted' || !verify.data.deadline_at)throw new Error('Server did not confirm order acceptance/timer');
+   Object.assign(row,verify.data);
+   selected='preparing';
   }else{
    await directAction(row,act);
    if(act==='ready'){
@@ -152,7 +161,7 @@ async function doAction(btn){
     }catch(e){if(typeof window.toast==='function')window.toast('Delivery assignment check failed: '+(e?.message||e));}
    }
   }
-  if(typeof window.toast==='function')window.toast(act==='accept'?'Order accepted':act==='reject'?'Order rejected':act==='preparing'?'Order is PREPARING':act==='ready'?'Order marked READY':act==='out_for_delivery'?'Order moved to OUT FOR DELIVERY':'Order marked DELIVERED');
+  if(typeof window.toast==='function')window.toast(act==='accept'?'Order accepted • timer started':act==='reject'?'Order rejected':act==='preparing'?'Order is PREPARING':act==='ready'?'Order marked READY':act==='out_for_delivery'?'Order moved to OUT FOR DELIVERY':'Order marked DELIVERED');
   await load();
  }catch(e){if(typeof window.toast==='function')window.toast('Order update failed: '+(e?.message||e));}
  finally{btn.disabled=false}
