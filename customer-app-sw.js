@@ -1,4 +1,4 @@
-const CACHE="jpt-customer-shell-v5";
+const CACHE="jpt-customer-shell-v6";
 const ASSETS=[
   "./customer-app.html",
   "./customer-manifest.webmanifest",
