@@ -68,8 +68,9 @@ main{padding-bottom:12px}.item{display:flex;gap:14px;padding:15px 14px;border:1p
    <div class="field"><label>Address</label><textarea id="address" class="area" placeholder="Delivery address"></textarea></div>
   </div>
   <div class="box"><h3>💳 Payment</h3>
-<select id="payment" class="select" disabled aria-disabled="true">
-<option value="UPI" selected>UPI Payment</option>
+<select id="payment" class="select" aria-label="Payment method">
+<option value="COD" selected>Cash on Delivery</option>
+<option value="UPI">UPI Payment</option>
 </select>
 <div id="upiBox" class="upiBox" style="display:block">
   <div style="font-weight:900;color:var(--accent);margin-bottom:6px">📲 Pay by UPI</div>
