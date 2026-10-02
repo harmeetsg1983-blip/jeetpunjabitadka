@@ -85,12 +85,29 @@
     document.querySelectorAll('.acceptBtn').forEach(b=>b.classList.add('alarmPulse'));
   }
 
+  async function notifyNewOrder(o){
+    try{
+      if(!('Notification' in window) || Notification.permission!=='granted') return false;
+      const title='JPT — NEW ORDER';
+      const body='New order '+(o?.order_no||'')+' received. Open Orders → ACCEPT / REJECT.';
+      const options={body,tag:'jpt-new-order-'+String(o?.id||o?.order_no||''),renotify:true,requireInteraction:true,vibrate:[450,150,450,150,700],data:{order_no:o?.order_no||'',outlet_id:o?.outlet_id||''}};
+      if(navigator.serviceWorker?.getRegistration){
+        const reg=await navigator.serviceWorker.getRegistration();
+        if(reg?.active){await reg.showNotification(title,options);return true;}
+      }
+      try{new Notification(title,options);return true}catch(e){}
+    }catch(e){}
+    return false;
+  }
+
   async function ring(o){
     if(!o || String(o.status||'').toLowerCase()!=='new')return;
     const prefs=await getPrefs(); if(prefs.orderNotifications===false)return;
     const id=String(o.id||o.order_no||''); if(!id)return;
-    if(activeId!==id){hardStop(false);activeId=id;persist(o);}
+    const isNewActive=activeId!==id;
+    if(isNewActive){hardStop(false);activeId=id;persist(o);}
     attention(o);
+    if(isNewActive) await notifyNewOrder(o);
     const g=generation;
     await play();
     if(g!==generation || activeId!==id)return;
