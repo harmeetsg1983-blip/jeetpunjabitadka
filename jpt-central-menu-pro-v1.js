@@ -83,6 +83,8 @@ async function categoryDrawer(categories){
          toggle.disabled=true;
          const r=await sb().from('categories').update({is_active:!active,updated_at:new Date().toISOString()}).eq('id',row.id).eq('outlet_id',outletId);
          if(r.error){if(typeof window.toast==='function')window.toast('Category update failed: '+r.error.message);toggle.disabled=false;return}
+         const verify=await sb().from('categories').select('id,is_active').eq('id',row.id).eq('outlet_id',outletId).maybeSingle();
+         if(verify.error||!verify.data||Boolean(verify.data.is_active)!==!active){if(typeof window.toast==='function')window.toast('Category state change could not be verified');toggle.disabled=false;return}
          if(typeof window.toast==='function')window.toast(active?'Category deactivated':'Category activated');
          await render();
          await categoryDrawer(categories);
