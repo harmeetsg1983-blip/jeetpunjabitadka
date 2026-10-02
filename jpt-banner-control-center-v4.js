@@ -254,6 +254,7 @@ async function saveOutletBanner(code,file,title,ed,preview,msgEl){
   try{await sb().storage.from('menu-images').remove([up.path])}catch(cleanup){}
   throw e;
 }
+}
 async function outletToggle(code,row,next,msgEl){
  const c=sb();if(!row?.id)throw new Error('No saved banner found for this outlet.');
  const r=await c.from(CAMPAIGNS).update({active:next}).eq('id',row.id).eq('outlet_id',code);
