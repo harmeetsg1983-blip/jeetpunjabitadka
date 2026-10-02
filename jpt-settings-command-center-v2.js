@@ -25,7 +25,7 @@ function addCss(){
  if(document.getElementById(cssId))return;
  const s=document.createElement('style');s.id=cssId;
  s.textContent=[
-  '#jptSettingsCenterV2{background:#090909;color:#fff;border:1px solid #30291c;border-radius:22px;padding:16px;box-shadow:0 18px 55px #0008}',
+  '#jptSettingsCenterV2{background:#090909;color:#fff;border:1px solid #30291c;border-radius:22px;padding:16px 16px 112px;box-shadow:0 18px 55px #0008}',
   '#jptSettingsCenterV2 .sc-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}',
   '#jptSettingsCenterV2 h2{margin:0;color:#f4d77a;font-size:22px}#jptSettingsCenterV2 .sc-sub{margin:4px 0 0;color:#999;font-size:11px}',
   '#jptSettingsCenterV2 .sc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}',
@@ -33,7 +33,7 @@ function addCss(){
   '#jptSettingsCenterV2 .sc-card:hover{border-color:#d4af37}#jptSettingsCenterV2 .sc-icon{font-size:22px}#jptSettingsCenterV2 .sc-title{font-weight:950;margin-top:7px;color:#f4d77a}#jptSettingsCenterV2 .sc-desc{font-size:10px;color:#999;margin-top:5px;line-height:1.35}',
   '#jptSettingsCenterV2 .sc-back{background:#171717;color:#fff;border:1px solid #444;border-radius:10px;padding:9px 12px;font-weight:900}',
   '#jptSettingsCenterV2 .sc-work{display:none}#jptSettingsCenterV2 .sc-work.active{display:block}.jpt-sc-target-hidden{display:none!important}',
-  '@media(max-width:700px){#jptSettingsCenterV2 .sc-grid{grid-template-columns:1fr}.jpt-sc-target{border-radius:16px!important}}'
+  '@media(max-width:700px){#jptSettingsCenterV2{padding:14px 12px 112px}#jptSettingsCenterV2 .sc-head{display:block;position:relative;padding-bottom:52px}#jptSettingsCenterV2 .sc-head #scHome{position:absolute;left:0;bottom:0;min-width:112px}#jptSettingsCenterV2 .sc-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#jptSettingsCenterV2 .sc-card{min-height:112px;padding:11px;border-radius:14px}#jptSettingsCenterV2 .sc-icon{font-size:19px}#jptSettingsCenterV2 .sc-title{font-size:13px;line-height:1.15;margin-top:6px}#jptSettingsCenterV2 .sc-desc{font-size:9px;line-height:1.25;margin-top:5px}.jpt-sc-target{border-radius:16px!important}} @media(max-width:340px){#jptSettingsCenterV2 .sc-grid{grid-template-columns:1fr}}'
  ].join('');
  document.head.appendChild(s);
 }
