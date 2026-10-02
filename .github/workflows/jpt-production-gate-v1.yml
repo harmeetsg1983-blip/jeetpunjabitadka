@@ -1,0 +1,80 @@
+name: JPT Production Gate V1 - Safe Preflight
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout production source
+        uses: actions/checkout@v4
+
+      - name: Verify protected core files
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in index.html customer-app.html customer-app-sw.js admin.html delivery-partner-app.html; do
+            test -f "$f"
+            echo "GREEN: $f present"
+          done
+
+      - name: Verify customer checkout safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq '<option value="COD"' index.html
+          grep -Fq '<option value="UPI"' index.html
+
+          if grep -Eqi 'UPI payment required|Complete payment first|jpt-upi-required' index.html; then
+            echo "RED: legacy UPI-only gate found in index.html"
+            exit 1
+          fi
+
+          echo "GREEN: COD + UPI payment choices present"
+          echo "GREEN: legacy UPI-only gate absent"
+
+      - name: Verify customer PWA install path
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'beforeinstallprompt' customer-app.html
+          grep -Fq 'serviceWorker.register' customer-app.html
+          grep -Fq 'customer-app-sw.js' customer-app.html
+          grep -Fq 'customer-app.html' customer-app-sw.js
+          echo "GREEN: customer PWA install/service-worker wiring present"
+
+      - name: Verify partner and delivery flow markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'outlet' admin.html
+          grep -Fq 'Orders' admin.html
+          grep -Fq 'delivery_offer_next' admin.html
+          grep -Fq 'delivery_offer_next' jpt-partner-orders-ui-v1.js
+          grep -Fq 'outlet' jpt-partner-orders-ui-v1.js
+          echo "GREEN: partner outlet/order/delivery-offer markers present"
+
+      - name: Verify root JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=0
+          while IFS= read -r -d '' f; do
+            node --check "$f" >/dev/null
+            count=$((count+1))
+          done < <(find . -maxdepth 1 -type f -name '*.js' -print0)
+          echo "GREEN: $count root JavaScript files passed node syntax validation"
+
+      - name: Report missing future production layers
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "INFO: This gate does not modify source, Supabase, or deployment."
+          echo "INFO: FCM/Sentry/Playwright are future reliability layers."
+          echo "GREEN: production source preflight completed"
