@@ -89,7 +89,7 @@ main{padding-bottom:12px}.item{display:flex;gap:14px;padding:15px 14px;border:1p
    <small style="color:#aaa">Delivery is FREE at ₹180 or above. Below ₹180, ₹30 delivery is added automatically.</small>
   </div>
   <button class="pay" style="position:sticky;bottom:10px;z-index:5;box-shadow:0 6px 18px #0008" onclick="if(jptCheckoutBusy)return;placeOrder()">PLACE ORDER</button>
-  <p class="meta">The order is saved with the selected outlet ID before direct WhatsApp confirmation opens.</p>
+  <p class="meta">Your order is saved directly in the restaurant system. You will stay on this screen for live order tracking.</p>
  </div>
 </div>
 </div>
@@ -101,7 +101,6 @@ main{padding-bottom:12px}.item{display:flex;gap:14px;padding:15px 14px;border:1p
 let jptCheckoutBusy=false;
 const sb=window.supabase.createClient(window.JPT_SUPABASE_URL,window.JPT_SUPABASE_PUBLISHABLE_KEY);
 window.sb=sb;
-const WA='9148161094';
 const OUTLETS={
  "JPT-001":{name:"Jeet Punjabi Tadka",accent:"#d8ae42"},
  "SOP-002":{name:"Shan-e-Punjab",accent:"#49b36a"},
@@ -366,8 +365,10 @@ async function placeOrder(){
  let gps=window.JPTDeliveryLocationSnapshot||null;
  let ord={order_no:'JPT-'+Date.now().toString().slice(-7),customer_name:$('custName').value.trim()||'Customer',customer_phone:phone,customer_address:$('address').value.trim(),items:rows.map(r=>({id:r.x.id,name:r.x.name,qty:r.q,price:Number(r.x.price)})),subtotal:c.subtotal,discount:c.discount,delivery_charge:c.delivery,total:c.total,status:'new',eta_minutes:45,notes:'',outlet_id:outletId,payment,order_type:'delivery',delivery_lat:gps?Number(gps.lat):null,delivery_lng:gps?Number(gps.lng):null,delivery_location_confirmed_at:gps?(gps.at||new Date().toISOString()):null};
  let result=await sb.from('orders').insert(ord);if(result.error){jptCheckoutBusy=false;return toast('Order save failed: '+result.error.message);}
- let msg=`NEW ORDER ${ord.order_no}%0A${encodeURIComponent(rows.map(r=>r.x.name+' x '+r.q).join('\\n'))}%0ASubtotal: ${encodeURIComponent(money(c.subtotal))}%0ADiscount: ${encodeURIComponent(money(c.discount))}%0ADelivery: ${encodeURIComponent(c.delivery?money(c.delivery):'FREE')}%0ATotal: ${encodeURIComponent(money(c.total))}%0AOutlet: ${encodeURIComponent(OUTLETS[outletId].name)}%0AOutlet ID: ${encodeURIComponent(outletId)}%0APayment: ${encodeURIComponent(payment)}%0ACustomer: ${encodeURIComponent(ord.customer_name)}%0APhone: ${phone}%0AAddress: ${encodeURIComponent(ord.customer_address)}`;
- window.open(`https://wa.me/91${WA}?text=${msg}`,'_blank');if(payment==='UPI')setTimeout(()=>openUpiPayment(ord.order_no,c.total,OUTLETS[outletId].name),250);cartState={};selectedPromo=null;updateCart();closeCart();toast(payment==='UPI'?'Order saved. Complete payment in your UPI app.':'Order placed successfully')
+ window.JPT_LAST_PLACED_ORDER={order_no:ord.order_no,phone:phone,created_at:new Date().toISOString(),outlet_id:outletId};
+ if(payment==='UPI')setTimeout(()=>openUpiPayment(ord.order_no,c.total,OUTLETS[outletId].name),250);
+ cartState={};selectedPromo=null;updateCart();closeCart();
+ toast(payment==='UPI'?'Order placed. Complete payment in your UPI app.':'Order placed successfully');
  }catch(e){console.error(e);toast('Order could not be completed. Please try again.')} finally {jptCheckoutBusy=false}
 }
 window.addEventListener('popstate',async e=>{if($('modal').classList.contains('show')){closeCart(true);return;}if(e.state&&e.state.outlet){const id=e.state.outlet;if(OUTLETS[id]&&id!==outletId){outletId=id;cartState={};selectedPromo=null;items=[];offers=[];campaigns=[];imageMap={};setTheme();renderOutlets();await loadManagedMenu();}}else if(outletId!=='JPT-001'){outletId='JPT-001';cartState={};selectedPromo=null;items=[];offers=[];campaigns=[];imageMap={};setTheme();renderOutlets();await loadManagedMenu();}});
