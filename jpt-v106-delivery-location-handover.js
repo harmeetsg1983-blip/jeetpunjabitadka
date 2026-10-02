@@ -67,6 +67,7 @@
           }
         }
         if(!validLocation(loc)){toast('Please tap “Use Current Location” before placing the delivery order.');return}
+        window.JPTDeliveryLocationSnapshot={lat:Number(loc.lat),lng:Number(loc.lng),at:loc.at||new Date().toISOString()};
         var phone=(document.getElementById('phone')?.value||'').trim();
         if(!phone){toast('Please enter your mobile number first.');return}
         var fixed=Date.now(), nativeNow=Date.now, expected='JPT-'+String(fixed).slice(-7);
@@ -75,14 +76,7 @@
           var result=await original.apply(this,arguments);
           var client=sb();
           if(client){
-            var r=await client.rpc('save_customer_delivery_location',{p_order_no:expected,p_phone:phone,p_lat:loc.lat,p_lng:loc.lng});
-            var attached=!r.error && (Array.isArray(r.data)?r.data[0]?.ok===true:r.data===true);
-            if(!attached && !r.error){
-              await new Promise(function(resolve){setTimeout(resolve,250);});
-              r=await client.rpc('save_customer_delivery_location',{p_order_no:expected,p_phone:phone,p_lat:loc.lat,p_lng:loc.lng});
-              attached=!r.error && (Array.isArray(r.data)?r.data[0]?.ok===true:r.data===true);
-            }
-            if(r.error||!attached) toast('Order placed, but location could not be attached. Please contact the restaurant.');
+            /* GPS is inserted atomically with the order by the native checkout. No post-insert attachment race. */
           }
           try{sessionStorage.removeItem(trackingKey)}catch(e){}
           pendingLocation=null;
