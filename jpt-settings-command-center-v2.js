@@ -64,6 +64,7 @@ function locate(group){
 }
 
 function openGroup(group){
+ if(group.key==='system'){panelSwitch('home');return}
  if(group.panel)panelSwitch(group.panel);
  const root=document.getElementById(rootId);if(!root)return;
  const work=root.querySelector('.sc-work');
