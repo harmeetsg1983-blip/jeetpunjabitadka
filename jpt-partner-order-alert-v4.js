@@ -6,7 +6,7 @@
   'use strict';
   if(window.JPTPartnerOrderAlertV4)return;
 
-  const DB='jptPartnerAlertDB', STORE='settings', KEY='jpt_v4_active_order', RING_MS=9000;
+  const DB='jptPartnerAlertDB', STORE='settings', KEY='jpt_v4_active_order', PREFS_KEY='notificationPrefs', RING_MS=9000;
   let audio=null, objectUrl=null, ringTimer=null, activeId=null, generation=0, armed=false;
 
   function stopAudio(){
@@ -26,6 +26,13 @@
     if(clearOrder){try{localStorage.removeItem(KEY)}catch(e){}}
   }
 
+  async function getPrefs(){
+    try{
+      const db=await new Promise((resolve,reject)=>{const q=indexedDB.open(DB,1);q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error)});
+      return await new Promise((resolve,reject)=>{const q=db.transaction(STORE,'readonly').objectStore(STORE).get(PREFS_KEY);q.onsuccess=()=>resolve(q.result||{});q.onerror=()=>reject(q.error)});
+    }catch(e){return {}}
+  }
+
   async function getRingtone(){
     try{
       const db=await new Promise((resolve,reject)=>{
@@ -40,14 +47,15 @@
   }
 
   async function arm(){
-    const g=generation, file=await getRingtone();
+    const g=generation, prefs=await getPrefs(), file=await getRingtone();
+    if(prefs.orderNotifications===false)return false;
     if(g!==generation || !file)return false;
     stopAudio();
     let a=null;
     try{
       objectUrl=URL.createObjectURL(file);
       a=new Audio(objectUrl); audio=a;
-      a.preload='auto'; a.playsInline=true; a.volume=1; a.muted=true;
+      a.preload='auto'; a.playsInline=true; a.volume=Math.max(0,Math.min(1,Number(prefs.ringVolume??100)/100)); a.muted=true;
       await a.play();
       if(g!==generation || audio!==a){try{a.pause()}catch(e){};return false;}
       a.pause(); a.currentTime=0; a.muted=false; armed=true; return true;
@@ -79,6 +87,7 @@
 
   async function ring(o){
     if(!o || String(o.status||'').toLowerCase()!=='new')return;
+    const prefs=await getPrefs(); if(prefs.orderNotifications===false)return;
     const id=String(o.id||o.order_no||''); if(!id)return;
     if(activeId!==id){hardStop(false);activeId=id;persist(o);}
     attention(o);
@@ -119,7 +128,8 @@
     }catch(e){}
   }
 
-  window.JPTPartnerOrderAlertV4={version:'4-single-owner',arm,ring,stop:hardStop,active:()=>activeId};
+  window.JPTPartnerOrderAlertV4={version:'4-single-owner',arm,ring,stop:hardStop,active:()=>activeId,getPrefs};
+  window.addEventListener('jpt:notification-settings',()=>{if(activeId!==null)arm()});
 
   let n=0, restored=false;
   const timer=setInterval(()=>{
