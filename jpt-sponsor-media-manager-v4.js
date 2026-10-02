@@ -46,7 +46,7 @@ async function run(){
  type.onchange=()=>{file.value='';img=null;videoUrl='';setMode(type.value);msg.textContent=type.value==='video'?'Video mode: choose an MP4/WebM/OGG.':'Image mode: choose an image for crop/zoom.'};
  file.onchange=()=>{
    const f=file.files?.[0];if(!f)return;
-   const isVideo=/^video\//i.test(f.type)||/\.(mp4|webm|ogg)$/i.test(f.name);
+   const isVideo=String(f.type||'').toLowerCase().startsWith('video/')||['mp4','webm','ogg'].includes(String(f.name||'').toLowerCase().split('.').pop());
    type.value=isVideo?'video':'image';setMode(type.value);
    if(isVideo){
      videoUrl=URL.createObjectURL(f);let v=document.getElementById('jpt4VideoPreview');v.src=videoUrl;v.muted=muted.checked;msg.textContent='Video selected. Zoom is for images; video will play to completion, then advance.';
@@ -80,7 +80,7 @@ async function run(){
    try{
      let outFile=f;if(kind==='image'){const b=await blob();outFile=new File([b],(f.name||'sponsor')+'.jpg',{type:'image/jpeg'})}
      if(kind==='video'&&f.size>60*1024*1024)throw new Error('Video must be under 60MB');
-     const path='checkout/'+Date.now()+'-'+f.name.replace(/[^a-zA-Z0-9._-]/g,'-');const up=await sb().storage.from(BUCKET).upload(path,outFile,{upsert:false,contentType:outFile.type||'application/octet-stream'});if(up.error)throw up.error;
+     const path='checkout/'+Date.now()+'-'+encodeURIComponent(f.name||'sponsor-media').replaceAll('%','-');const up=await sb().storage.from(BUCKET).upload(path,outFile,{upsert:false,contentType:outFile.type||'application/octet-stream'});if(up.error)throw up.error;
      const url=sb().storage.from(BUCKET).getPublicUrl(path).data.publicUrl,order=Number(document.getElementById('jpt4Order').value||1);
      const row={title:document.getElementById('jpt4Title').value.trim()||document.getElementById('jpt4Sponsor').value.trim()||'Sponsor Banner',sponsor_name:document.getElementById('jpt4Sponsor').value.trim(),media_type:kind,media_url:kind==='image'?url:null,video_url:kind==='video'?url:null,poster_url:kind==='image'?url:null,target_all_live:false,outlet_ids:[current.code],is_active:true,sort_order:order,starts_at:document.getElementById('jpt4Start').value?new Date(document.getElementById('jpt4Start').value).toISOString():null,ends_at:document.getElementById('jpt4End').value?new Date(document.getElementById('jpt4End').value).toISOString():null,schedule_json:{version:5,slot:slot,media_kind:kind,muted:muted.checked,image_duration_sec:10,advance:'video-ended'}};
      const ins=await sb().from(TABLE).insert(row);if(ins.error)throw ins.error;
