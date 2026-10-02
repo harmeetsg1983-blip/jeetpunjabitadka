@@ -78,6 +78,14 @@
     lock();
 
     async function refresh(){
+      if(hasCod(card)){
+        status.textContent='COD order detected. ACCEPT is unlocked.';
+        status.style.color='#7be19a';
+        btn.disabled=true;
+        btn.textContent='✓ COD — NO PAYMENT VERIFICATION';
+        findAcceptButtons(card).forEach(function(b){ b.disabled=false; b.style.opacity='1'; b.title=''; });
+        return;
+      }
       var verified=await fetchVerified(orderNo);
       if(verified){
         status.textContent='Payment verified and recorded. ACCEPT is unlocked.';
@@ -87,7 +95,7 @@
         findAcceptButtons(card).forEach(function(b){ b.disabled=false; b.style.opacity='1'; b.title=''; });
       }else{
         status.textContent=hasCod(card)
-          ? 'COD order detected. Launch mode is UPI-only; do not accept COD.'
+          ? 'COD order detected. No online payment verification is required.'
           : 'Not verified. Check the real merchant payment for the exact order amount.';
         status.style.color='#f4d77a';
         lock();
