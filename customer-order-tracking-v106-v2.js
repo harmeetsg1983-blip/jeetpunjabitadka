@@ -15,6 +15,8 @@
   var timer=null, active=false, sbClient=null;
   var lastStatus='';
   var lastAssignmentStatus='';
+  var noticeItems=[];
+  var noticeUnread=0;
   var JPT_CUSTOMER_ACCEPTED_AUDIO='./ringtones/1000449572.mp4';
   var readySinceKey='jpt_v106_ready_since';
   function playCustomerAcceptedTone(){
@@ -43,8 +45,31 @@
     if(document.getElementById('jptTrackStyleV4'))return;
     var s=document.createElement('style');s.id='jptTrackStyleV4';
     s.textContent=
-      '.jpt-track{position:fixed;left:50%;bottom:76px;transform:translateX(-50%);width:min(492px,calc(100% - 28px));z-index:180;background:#111;border:1px solid #d8ae42;border-radius:16px;box-shadow:0 10px 35px #000b;color:#fff;padding:14px;display:none}.jpt-track.show{display:block}.jpt-track-top{display:flex;justify-content:space-between;gap:10px;align-items:center}.jpt-track-title{font-weight:1000;color:#f4d77a;font-size:16px}.jpt-track-code{font-weight:950;color:#fff;font-size:12px}.jpt-track-close{background:#211b0d;border:1px solid #5b471c;color:#f4d77a;border-radius:8px;padding:6px 9px}.jpt-track-status{margin-top:10px;padding:10px;border-radius:10px;background:#171717;border:1px solid #332b1b}.jpt-track-line{display:flex;align-items:center;gap:8px;margin:8px 0}.jpt-track-dot{width:10px;height:10px;border-radius:50%;background:#555;flex:none}.jpt-track-dot.on{background:#d8ae42;box-shadow:0 0 9px #d8ae42}.jpt-track-sub{font-size:11px;color:#aaa;line-height:1.4}.jpt-track-eta{margin-top:10px;padding:11px;border-radius:11px;background:#211706;border:1px solid #d8ae42;text-align:center}.jpt-track-eta-title{font-size:11px;color:#aaa}.jpt-track-eta-time{font-size:24px;font-weight:1000;color:#f4d77a;margin-top:2px}.jpt-track-eta-note{font-size:10px;color:#bbb;margin-top:3px}.jpt-track-btn{width:100%;margin-top:10px;padding:11px;border:0;border-radius:10px;background:#f4d77a;color:#111;font-weight:1000}.jpt-track-wait{color:#f4d77a;font-weight:900}.jpt-track-done{color:#7be19a;font-weight:900}';
+      '.jpt-customer-bell{position:fixed;right:14px;top:14px;z-index:320;background:#111;border:1px solid #d8ae42;color:#f4d77a;border-radius:14px;padding:9px 12px;font-weight:1000;box-shadow:0 8px 24px #0009}.jpt-customer-bell .badge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:5px;border-radius:99px;background:#d8ae42;color:#111;font-size:10px}.jpt-customer-notices{position:fixed;right:14px;top:60px;z-index:319;width:min(330px,calc(100% - 28px));background:#111;border:1px solid #5b471c;border-radius:14px;box-shadow:0 10px 30px #000b;padding:10px;display:none}.jpt-customer-notices.show{display:block}.jpt-customer-notice{padding:9px;border-bottom:1px solid #292929}.jpt-customer-notice b{font-size:12px}.jpt-customer-notice span{display:block;color:#aaa;font-size:10px;margin-top:3px}'.jpt-track{position:fixed;left:50%;bottom:76px;transform:translateX(-50%);width:min(492px,calc(100% - 28px));z-index:180;background:#111;border:1px solid #d8ae42;border-radius:16px;box-shadow:0 10px 35px #000b;color:#fff;padding:14px;display:none}.jpt-track.show{display:block}.jpt-track-top{display:flex;justify-content:space-between;gap:10px;align-items:center}.jpt-track-title{font-weight:1000;color:#f4d77a;font-size:16px}.jpt-track-code{font-weight:950;color:#fff;font-size:12px}.jpt-track-close{background:#211b0d;border:1px solid #5b471c;color:#f4d77a;border-radius:8px;padding:6px 9px}.jpt-track-status{margin-top:10px;padding:10px;border-radius:10px;background:#171717;border:1px solid #332b1b}.jpt-track-line{display:flex;align-items:center;gap:8px;margin:8px 0}.jpt-track-dot{width:10px;height:10px;border-radius:50%;background:#555;flex:none}.jpt-track-dot.on{background:#d8ae42;box-shadow:0 0 9px #d8ae42}.jpt-track-sub{font-size:11px;color:#aaa;line-height:1.4}.jpt-track-eta{margin-top:10px;padding:11px;border-radius:11px;background:#211706;border:1px solid #d8ae42;text-align:center}.jpt-track-eta-title{font-size:11px;color:#aaa}.jpt-track-eta-time{font-size:24px;font-weight:1000;color:#f4d77a;margin-top:2px}.jpt-track-eta-note{font-size:10px;color:#bbb;margin-top:3px}.jpt-track-btn{width:100%;margin-top:10px;padding:11px;border:0;border-radius:10px;background:#f4d77a;color:#111;font-weight:1000}.jpt-track-wait{color:#f4d77a;font-weight:900}.jpt-track-done{color:#7be19a;font-weight:900}';
     document.head.appendChild(s);
+  }
+
+  function ensureCustomerBell(){
+    var bell=document.getElementById('jptCustomerBell');
+    if(!bell){
+      bell=document.createElement('button');bell.id='jptCustomerBell';bell.className='jpt-customer-bell';bell.type='button';
+      bell.innerHTML='Bell <span class="badge" id="jptCustomerBellCount">0</span>';
+      document.body.appendChild(bell);
+      var panel=document.createElement('div');panel.id='jptCustomerNoticePanel';panel.className='jpt-customer-notices';
+      document.body.appendChild(panel);
+      bell.onclick=function(){panel.classList.toggle('show');noticeUnread=0;updateCustomerBell()};
+    }
+    updateCustomerBell();
+  }
+  function updateCustomerBell(){
+    var count=document.getElementById('jptCustomerBellCount'),panel=document.getElementById('jptCustomerNoticePanel');
+    if(!count||!panel)return;
+    count.textContent=String(noticeUnread);count.style.display=noticeUnread?'inline-grid':'none';
+    panel.innerHTML=noticeItems.length?noticeItems.map(function(n){return '<div class="jpt-customer-notice"><b>'+esc(n.title)+'</b><span>'+esc(n.text)+'</span></div>'}).join(''):'<div class="jpt-customer-notice"><span>No new order notifications.</span></div>';
+  }
+  function addCustomerNotice(title,text){
+    noticeItems.unshift({title:title,text:text});noticeItems=noticeItems.slice(0,8);
+    noticeUnread=Math.min(9,noticeUnread+1);ensureCustomerBell();updateCustomerBell();
   }
 
   function ensureUI(){
@@ -55,6 +80,7 @@
     el.innerHTML='<div class="jpt-track-top"><div><div class="jpt-track-title">📦 Your Order</div><div id="jptTrackCode" class="jpt-track-code"></div></div><button id="jptTrackClose" class="jpt-track-close" type="button">✕</button></div><div id="jptTrackStatus" class="jpt-track-status"></div>';
     document.body.appendChild(el);
     el.querySelector('#jptTrackClose').onclick=function(){el.classList.remove('show')};
+    ensureCustomerBell();
     return el;
   }
 
@@ -164,11 +190,14 @@
       var row=Array.isArray(r.data)?r.data[0]:r.data;
       if(row){
         var nextStatus=String(row.status||'').toLowerCase().trim().replace(/\s+/g,'_');
+        if(!lastStatus)addCustomerNotice('Order placed','Your order is saved and waiting for restaurant acceptance.');
+        else if(nextStatus!==lastStatus){var titles={accepted:'Order accepted',preparing:'Order is being prepared',ready:'Order is READY',out_for_delivery:'Order is out for delivery',delivered:'Order delivered',cancelled:'Order cancelled'};addCustomerNotice(titles[nextStatus]||'Order status updated',statusInfo(row).sub);}
         if(lastStatus && lastStatus!=='accepted' && nextStatus==='accepted') playCustomerAcceptedTone();
         lastStatus=nextStatus;
         var tr=await sb.rpc('get_customer_delivery_tracking',{p_order_no:o.order_no,p_phone:o.phone});
         var tracking=tr.error?{}:(Array.isArray(tr.data)?tr.data[0]:tr.data)||{};
         var nextAssignment=String(tracking.assignment_status||'');
+        if(nextAssignment && nextAssignment!==lastAssignmentStatus){if(nextAssignment==='accepted')addCustomerNotice('Delivery partner assigned','A rider has been assigned to your order.');else if(nextAssignment==='picked_up')addCustomerNotice('Order picked up','Your delivery partner has picked up the order.');else if(nextAssignment==='out_for_delivery')addCustomerNotice('Rider is on the way','Your order is out for delivery.');}
         if(nextAssignment && nextAssignment!==lastAssignmentStatus && nextAssignment==='accepted') playCustomerAcceptedTone();
         lastAssignmentStatus=nextAssignment;
         o=Object.assign({},o,row,tracking);save(o);render(o);
