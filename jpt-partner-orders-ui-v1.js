@@ -14,9 +14,11 @@ const STYLE_ID='jpt-orders-central-v2-style';
 const ROOT_ID='jptOrdersCentralV2';
 const TABS_ID='jptOrdersCentralV2Tabs';
 const CENTRAL_RPC='partner_access_is_central_owner';
+const OWNER_OUTLET_CODES=new Set(['JPT-001','SOP-002','NME-004','PFA-003','TOP-005']);
 const STATUS_VIEWS=[['new','NEW'],['preparing','PREPARING'],['ready','READY'],['out_for_delivery','OUT FOR DELIVERY'],['delivered','DELIVERED'],['history','HISTORY']];
 const statusView=s=>{s=status(s);if(s==='accepted'||s==='preparing')return 'preparing';if(s==='completed')return 'delivered';return s};
 let timer=null,channel=null,rowsCache=[],outlets={},selected='new',central=false,lastNewest='';
+let pendingNew=new Map();
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
@@ -37,7 +39,7 @@ function injectStyle(){
 async function loadOutlets(){
  const r=await window.sb.from('outlets').select('code,name').order('name',{ascending:true});
  if(r.error)throw r.error;
- outlets=Object.fromEntries((r.data||[]).map(x=>[String(x.code),String(x.name||x.code)]));
+ outlets=Object.fromEntries((r.data||[]).filter(x=>OWNER_OUTLET_CODES.has(String(x.code))).map(x=>[String(x.code),String(x.name||x.code)]));
 }
 
 function parseItems(x){let a=x?.items;if(typeof a==='string'){try{a=JSON.parse(a)}catch(e){a=[]}}return Array.isArray(a)?a:[]}
@@ -48,10 +50,27 @@ async function loadRows(){
  const r=await query;
  if(r.error)throw r.error;
  let rows=r.data||[];
+ rows=rows.filter(x=>OWNER_OUTLET_CODES.has(String(x.outlet_id||'')));
  if(!central)rows=rows.filter(x=>String(x.outlet_id||'')===String(selectedOutlet()));
  rows.forEach(x=>x.__status=status(x.status));
  rowsCache=rows;
  return rows;
+}
+
+function ensureCentralBell(){
+ const existing=document.getElementById('jptCentralOrderBell');
+ if(existing)return existing;
+ const b=document.createElement('button');b.id='jptCentralOrderBell';b.type='button';
+ b.style.cssText='position:fixed;right:16px;top:76px;z-index:9998;display:none;min-width:52px;height:52px;border-radius:50%;border:2px solid #d8ae42;background:#111;color:#f4d77a;font-size:24px;font-weight:950;box-shadow:0 0 18px rgba(216,174,66,.28);cursor:pointer';
+ b.innerHTML='🔔<span id="jptCentralOrderBellCount" style="position:absolute;right:-4px;top:-5px;min-width:22px;height:22px;padding:2px 5px;border-radius:99px;background:#d8ae42;color:#111;font-size:11px;display:grid;place-items:center">0</span>';
+ b.onclick=()=>{selected='new';try{window.showPanel?.('orders')}catch(e){};document.getElementById(ROOT_ID)?.scrollIntoView({behavior:'smooth',block:'start'});};
+ document.body.appendChild(b);return b;
+}
+function syncCentralBell(){
+ const b=ensureCentralBell(),count=rowsCache.filter(x=>x.__status==='new'&&OWNER_OUTLET_CODES.has(String(x.outlet_id||''))).length;
+ const badge=document.getElementById('jptCentralOrderBellCount');if(badge)badge.textContent=String(count);
+ b.style.display=count?'grid':'none';
+ if(count)b.classList.add('alarmPulse');else b.classList.remove('alarmPulse');
 }
 
 function renderTabs(){const el=document.getElementById(TABS_ID);if(!el)return;const counts=Object.fromEntries(STATUS_VIEWS.map(x=>[x[0],0]));rowsCache.forEach(x=>{const v=statusView(x.__status);if(v==='history'||x.__status==='completed'||x.__status==='cancelled'){counts.history++}else if(counts[v]!==undefined)counts[v]++});el.innerHTML=STATUS_VIEWS.map(([k,label])=>`<button class="jpt-cob-tab ${selected===k?'active':''}" data-status="${k}">${label} <span>${counts[k]||0}</span></button>`).join('');el.querySelectorAll('[data-status]').forEach(b=>b.onclick=()=>{selected=b.dataset.status;render()})}
@@ -131,6 +150,8 @@ async function load(){
   await loadOutlets();
   await loadRows();
   const newest=rowsCache[0];
+  rowsCache.filter(x=>x.__status==='new'&&OWNER_OUTLET_CODES.has(String(x.outlet_id||''))).forEach(x=>pendingNew.set(String(x.id||x.order_no),x));
+  syncCentralBell();
   if(newest){
    const stamp=String(newest.created_at||'')+'|'+String(newest.id||'')+'|'+String(newest.outlet_id||'');
    if(lastNewest && stamp!==lastNewest && newest.__status==='new'){
@@ -150,8 +171,21 @@ async function load(){
 async function bindRealtime(){
  try{
   if(channel)await window.sb.removeChannel(channel);
-  const name='jpt-central-orders-'+Date.now();
-  channel=window.sb.channel(name).on('postgres_changes',{event:'INSERT',schema:'public',table:'orders'},()=>load()).on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders'},()=>load()).subscribe();
+  const name='jpt-central-orders-five-'+Date.now();
+  channel=window.sb.channel(name)
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'orders'},p=>{
+      const o=p?.new||{};
+      if(OWNER_OUTLET_CODES.has(String(o.outlet_id||'')) && String(o.status||'').toLowerCase()==='new'){
+        pendingNew.set(String(o.id||o.order_no),o);selected='new';try{window.showPanel?.('orders')}catch(e){};
+        if(typeof window.showOrderAlarm==='function')window.showOrderAlarm(o);
+      }
+      load().catch(()=>{});
+    })
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders'},p=>{
+      const o=p?.new||{};
+      if(OWNER_OUTLET_CODES.has(String(o.outlet_id||'')) && String(o.status||'').toLowerCase()!=='new')pendingNew.delete(String(o.id||o.order_no));
+      load().catch(()=>{});
+    }).subscribe();
  }catch(e){console.warn('[JPT Central Orders V2] realtime unavailable',e)}
 }
 
