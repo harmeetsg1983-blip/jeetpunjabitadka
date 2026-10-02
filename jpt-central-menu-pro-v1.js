@@ -138,9 +138,8 @@ async function mount(){
     root.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{cat=b.dataset.cat||'';render()});
     root.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{if(typeof window.editItem==='function')window.editItem(b.dataset.edit);});
     root.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=async()=>{
-  const id=b.dataset.toggle;b.disabled=true;b.textContent='Saving…';
+  const id=b.dataset.toggle;const item=rows.find(x=>String(x.id)===String(id));b.disabled=true;b.textContent='Saving…';
   try{
-    const item=rows.find(x=>String(x.id)===String(id));
     if(!item)throw new Error('Menu item not found');
     const next=item.available===false;
     const r=await sb().from('menu_items').update({available:next,updated_at:new Date().toISOString()}).eq('id',item.id).eq('outlet_id',outlet());
