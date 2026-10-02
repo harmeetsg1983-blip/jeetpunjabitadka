@@ -35,6 +35,7 @@
       navigator.geolocation.getCurrentPosition(function(pos){
         pendingLocation={lat:Number(pos.coords.latitude),lng:Number(pos.coords.longitude),at:new Date().toISOString()};
         try{sessionStorage.setItem(trackingKey,JSON.stringify(pendingLocation))}catch(e){}
+        box.dataset.jptLocationConfirmed='1';
         state.innerHTML='✅ Delivery location confirmed for this order.';
         toast('Delivery location confirmed.');
       },function(){state.textContent='Location permission was not granted. Please allow location to continue.';toast('Please allow location permission for delivery.');},{enableHighAccuracy:true,timeout:15000,maximumAge:0});
@@ -49,7 +50,23 @@
       window.placeOrder=async function(){
         var loc=pendingLocation;
         try{if(!loc){var raw=sessionStorage.getItem(trackingKey);if(raw)loc=JSON.parse(raw)} }catch(e){}
-        if(!loc){toast('Please tap “Use Current Location” before placing the delivery order.');return}
+        function validLocation(x){return x&&Number.isFinite(Number(x.lat))&&Number.isFinite(Number(x.lng))&&Number(x.lat)>=-90&&Number(x.lat)<=90&&Number(x.lng)>=-180&&Number(x.lng)<=180}
+        if(!validLocation(loc)){
+          var locationBox=document.getElementById('jptDeliveryLocationBox');
+          var locationConfirmed=locationBox&&locationBox.dataset.jptLocationConfirmed==='1';
+          if(locationConfirmed&&navigator.geolocation){
+            try{
+              loc=await new Promise(function(resolve,reject){
+                navigator.geolocation.getCurrentPosition(function(pos){
+                  resolve({lat:Number(pos.coords.latitude),lng:Number(pos.coords.longitude),at:new Date().toISOString()});
+                },reject,{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+              });
+              pendingLocation=loc;
+              try{sessionStorage.setItem(trackingKey,JSON.stringify(loc))}catch(e){}
+            }catch(e){}
+          }
+        }
+        if(!validLocation(loc)){toast('Please tap “Use Current Location” before placing the delivery order.');return}
         var phone=(document.getElementById('phone')?.value||'').trim();
         if(!phone){toast('Please enter your mobile number first.');return}
         var fixed=Date.now(), nativeNow=Date.now, expected='JPT-'+String(fixed).slice(-7);
