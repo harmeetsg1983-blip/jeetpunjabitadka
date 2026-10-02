@@ -53,7 +53,7 @@
     var bell=document.getElementById('jptCustomerBell');
     if(!bell){
       bell=document.createElement('button');bell.id='jptCustomerBell';bell.className='jpt-customer-bell';bell.type='button';
-      bell.innerHTML='Bell <span class="badge" id="jptCustomerBellCount">0</span>';
+      bell.innerHTML='🔔 <span class="badge" id="jptCustomerBellCount">0</span>';
       document.body.appendChild(bell);
       var panel=document.createElement('div');panel.id='jptCustomerNoticePanel';panel.className='jpt-customer-notices';
       document.body.appendChild(panel);
