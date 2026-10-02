@@ -33,7 +33,7 @@ function injectStyle(){
  .jpt-cob-tabs{display:flex;gap:7px;overflow:auto;padding:3px 0 12px;scrollbar-width:none}.jpt-cob-tabs::-webkit-scrollbar{display:none}.jpt-cob-tab{flex:0 0 auto;background:#151515;color:#aaa;border:1px solid #343434;border-radius:13px;padding:10px 14px;font-weight:950;font-size:11px}.jpt-cob-tab.active{background:#f0c94a;color:#111;border-color:#f0c94a}
  .jpt-cob-list{display:grid;gap:10px}.jpt-cob-card{background:#111;border:1px solid #302a1d;border-radius:18px;overflow:hidden;box-shadow:0 8px 24px #0005}.jpt-cob-main{padding:14px}.jpt-cob-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.jpt-cob-no{font-size:17px;font-weight:950}.jpt-cob-outlet{margin-top:5px;font-weight:950;color:#f4d77a}.jpt-cob-code{font-size:10px;color:#777;margin-top:2px}.jpt-cob-status{font-size:9px;font-weight:950;border:1px solid #604d1c;border-radius:99px;padding:5px 9px;color:#f4d77a;white-space:nowrap}
  .jpt-cob-customer{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid #252525}.jpt-cob-customer-name{font-weight:900}.jpt-cob-muted{color:#888;font-size:10px;margin-top:3px}.jpt-cob-items{margin-top:11px;border:1px solid #292929;border-radius:13px;background:#171717;overflow:hidden}.jpt-cob-item{display:flex;justify-content:space-between;gap:10px;padding:10px 11px;border-bottom:1px solid #292929;font-size:12px}.jpt-cob-item:last-child{border-bottom:0}.jpt-cob-item-name{font-weight:800}.jpt-cob-item-price{color:#ddd;white-space:nowrap}
- .jpt-cob-summary{margin-top:10px;border-top:1px solid #252525;padding-top:9px}.jpt-cob-line{display:flex;justify-content:space-between;gap:12px;padding:3px 0;color:#aaa;font-size:11px}.jpt-cob-line.discount{color:#79d99a}.jpt-cob-line.total{color:#fff;font-size:16px;font-weight:950;padding-top:8px;margin-top:5px;border-top:1px solid #343434}.jpt-cob-payment{display:inline-flex;margin-top:8px;padding:6px 9px;border-radius:9px;background:#191919;border:1px solid #292929;color:#bbb;font-size:10px;font-weight:900}.jpt-cob-actions{display:flex;gap:7px;flex-wrap:wrap;padding:11px 14px;background:#0c0c0c;border-top:1px solid #292929}.jpt-cob-actions button,.jpt-cob-actions select{padding:9px 11px;border-radius:10px;border:1px solid #393939;background:#151515;color:#fff;font-weight:850}.jpt-cob-actions .primary{background:#f0c94a;color:#111;border-color:#f0c94a;font-weight:950}.jpt-cob-empty{padding:35px 12px;text-align:center;border:1px dashed #343434;border-radius:15px;color:#777}.jpt-cob-history{color:#aaa;font-size:11px}@media(max-width:600px){.jpt-cob-main{padding:12px}.jpt-cob-no{font-size:15px}.jpt-cob-item{font-size:11px}}
+ .jpt-cob-summary{margin-top:10px;border-top:1px solid #252525;padding-top:9px}.jpt-cob-line{display:flex;justify-content:space-between;gap:12px;padding:3px 0;color:#aaa;font-size:11px}.jpt-cob-line.discount{color:#79d99a}.jpt-cob-line.total{color:#fff;font-size:16px;font-weight:950;padding-top:8px;margin-top:5px;border-top:1px solid #343434}.jpt-cob-payment{display:inline-flex;margin-top:8px;padding:6px 9px;border-radius:9px;background:#191919;border:1px solid #292929;color:#bbb;font-size:10px;font-weight:900}.jpt-cob-actions{display:flex;gap:7px;flex-wrap:wrap;padding:11px 14px;background:#0c0c0c;border-top:1px solid #292929}.jpt-cob-actions button,.jpt-cob-actions select,.jpt-cob-actions input{padding:9px 11px;border-radius:10px;border:1px solid #393939;background:#151515;color:#fff;font-weight:850}.jpt-cob-actions .primary{background:#f0c94a;color:#111;border-color:#f0c94a;font-weight:950}.jpt-cob-prep{margin-top:10px;padding:9px 11px;border:1px solid #4a3a1b;border-radius:11px;background:#17130a;color:#f4d77a;font-weight:900;font-size:12px}.jpt-cob-prep b{font-size:16px}.jpt-cob-timepick{display:inline-flex;align-items:center;gap:5px}.jpt-cob-timepick button{min-width:34px}.jpt-cob-timepick input{width:54px;text-align:center;font-weight:950}.jpt-cob-empty{padding:35px 12px;text-align:center;border:1px dashed #343434;border-radius:15px;color:#777}.jpt-cob-history{color:#aaa;font-size:11px}@media(max-width:600px){.jpt-cob-main{padding:12px}.jpt-cob-no{font-size:15px}.jpt-cob-item{font-size:11px}}
  `;document.head.appendChild(s);
 }
 async function loadOutlets(){
@@ -93,9 +93,8 @@ function ensureRoot(){
 
 function actionHtml(x){
  const id=esc(x.id||''),st=x.__status;
- if(st==='new')return `<select class="jpt-cob-minutes"><option>15</option><option>20</option><option>25</option><option selected>30</option><option>35</option><option>40</option><option>50</option><option>60</option></select><button class="primary" data-act="accept" data-id="${id}">ACCEPT</button><button data-act="reject" data-id="${id}">REJECT</button>`;
- if(st==='accepted')return `<button class="primary" data-act="preparing" data-id="${id}">START PREPARING</button>`;
- if(st==='preparing')return `<button class="primary" data-act="ready" data-id="${id}">READY</button>`;
+ if(st==='new')return `<div class="jpt-cob-timepick" aria-label="Preparation time"><button type="button" data-time="minus" data-id="${id}">−</button><input class="jpt-cob-minutes" data-id="${id}" type="number" min="5" max="120" step="5" value="${Number(x.target_minutes)||30}"><button type="button" data-time="plus" data-id="${id}">+</button><span class="jpt-cob-muted">min</span></div><button class="primary" data-act="accept" data-id="${id}">ACCEPT</button><button data-act="reject" data-id="${id}">REJECT</button>`;
+ if(st==='accepted'||st==='preparing')return `<button class="primary" data-act="ready" data-id="${id}">READY</button>`;
  if(st==='ready')return `<button class="primary" data-act="out_for_delivery" data-id="${id}">OUT FOR DELIVERY</button>`;
  if(st==='out_for_delivery')return `<button class="primary" data-act="completed" data-id="${id}">DELIVERED</button>`;
  return '';
@@ -110,9 +109,20 @@ function render(){
   const st=x.__status,total=Number(x.total??x.total_amount??0),sub=Number(x.subtotal??0),disc=Number(x.discount??0),del=Number(x.delivery_charge??0),oid=String(x.outlet_id||'—'),oname=outlets[oid]||oid,time=x.created_at?new Date(x.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'—',customer=x.customer_name||x.name||'Customer',phone=x.customer_phone||x.phone||'',payment=x.payment||'—',orderNo=x.order_no||x.order_number||x.order_id||x.id||'ORDER';
   return `<article class="jpt-cob-card"><div class="jpt-cob-main"><div class="jpt-cob-top"><div><div class="jpt-cob-no">#${esc(orderNo)}</div><div class="jpt-cob-outlet">${esc(oname)}</div><div class="jpt-cob-code">Outlet Code: ${esc(oid)} • ${esc(time)}</div></div><div class="jpt-cob-status">${esc(st.replaceAll('_',' ').toUpperCase())}</div></div>
   <div class="jpt-cob-customer"><div><div class="jpt-cob-customer-name">${esc(customer)}</div><div class="jpt-cob-muted">${esc(phone)}</div></div><div class="jpt-cob-payment">PAYMENT • ${esc(payment)}</div></div>
+  ${(st==='accepted'||st==='preparing')&&x.deadline_at?`<div class="jpt-cob-prep" data-deadline="${esc(x.deadline_at)}">PREPARING • <b class="jpt-cob-countdown">--:--</b> remaining</div>`:''}
   <div class="jpt-cob-items">${itemsHtml(x)}</div><div class="jpt-cob-summary"><div class="jpt-cob-line"><span>Item subtotal</span><span>${money(sub)}</span></div>${del?`<div class="jpt-cob-line"><span>Delivery charge</span><span>${money(del)}</span></div>`:''}${disc?`<div class="jpt-cob-line discount"><span>Discount</span><span>−${money(disc)}</span></div>`:''}<div class="jpt-cob-line total"><span>Total</span><span>${money(total)}</span></div></div></div>${selected==='history'?'<div class="jpt-cob-actions"><span class="jpt-cob-history">'+(st==='cancelled'?'CANCELLED ORDER':'COMPLETED ORDER')+'</span></div>':'<div class="jpt-cob-actions">'+actionHtml(x)+'</div>'}</article>`
  }).join(''):'<div class="jpt-cob-empty">No '+esc(selected.replaceAll('_',' '))+' orders right now.</div>'}</div>`;
  root.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>doAction(b));
+ root.querySelectorAll('[data-time]').forEach(b=>b.onclick=()=>{
+   const input=b.parentElement.querySelector('.jpt-cob-minutes'); if(!input)return;
+   let v=Number(input.value)||30; v=Math.max(5,Math.min(120,v+(b.dataset.time==='plus'?5:-5))); input.value=String(v);
+ });
+ root.querySelectorAll('.jpt-cob-countdown').forEach(el=>{
+   const box=el.closest('[data-deadline]'); const tick=()=>{
+     const ms=Math.max(0,new Date(box.dataset.deadline).getTime()-Date.now()),s=Math.floor(ms/1000),m=Math.floor(s/60),sec=s%60;
+     el.textContent=String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');
+   }; tick(); setInterval(tick,1000);
+ });
 }
 async function directAction(row,next,extra={}){
  const patch={status:next,updated_at:new Date().toISOString(),...extra};
@@ -129,7 +139,7 @@ async function doAction(btn){
    if(!confirm('Reject this customer order?'))return;
    await directAction(row,'cancelled',{rejection_reason:'Rejected by restaurant'});
   }else if(act==='accept'){
-   const m=Number(btn.parentElement.querySelector('.jpt-cob-minutes')?.value||30);
+   const m=Math.max(5,Math.min(120,Number(btn.parentElement.querySelector('.jpt-cob-minutes')?.value||30)));
    const now=new Date(),deadline=new Date(now.getTime()+m*60000);
    await directAction(row,'accepted',{target_minutes:m,accepted_at:now.toISOString(),deadline_at:deadline.toISOString(),eta_minutes:m+20});
   }else{
