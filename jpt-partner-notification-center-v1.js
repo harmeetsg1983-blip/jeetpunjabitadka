@@ -71,6 +71,7 @@ async function render(){
  const p=await prefs();
  root.innerHTML=
  '<div class="jpt-nc-title">🔔 Notification & Sound Center</div>'+
+ '<div class="jpt-nc-perm"><button id="jptAllowNotifications">🔔 Allow Order Notifications</button><span id="jptNotificationState">Checking…</span></div>'+
  '<div class="jpt-nc-sub">One notification system for all 5 personal outlets. The same saved Restaurant Partner ringtone is used centrally.</div>'+
  '<div class="jpt-nc-card"><div class="jpt-nc-section">Order notifications</div>'+
  row('Order notifications','Receive new-order notifications on this device.','orderNotifications',p.orderNotifications)+
@@ -91,6 +92,10 @@ async function render(){
  vol.oninput=async()=>{document.getElementById('jptNotifyVolumeValue').textContent=vol.value+'%';p.ringVolume=Number(vol.value);await savePrefs(p)};
  root.querySelectorAll('input[type=checkbox][data-key]').forEach(el=>el.onchange=async()=>{p[el.dataset.key]=el.checked;await savePrefs(p)});
  document.getElementById('jptTestRingtone').onclick=preview;
+ const perm=document.getElementById('jptAllowNotifications'), state=document.getElementById('jptNotificationState');
+ async function refreshPermission(){if(!('Notification' in window)){state.textContent='Notifications are not supported by this browser.';return} state.textContent='Permission: '+Notification.permission; perm.disabled=Notification.permission==='granted';}
+ perm.onclick=async()=>{try{const p=await Notification.requestPermission();state.textContent='Permission: '+p;if(p==='granted')await savePrefs(Object.assign({},p,{orderNotifications:true}))}catch(e){state.textContent='Permission request failed.'}};
+ refreshPermission();
  document.getElementById('jptAddRingtone').onclick=()=>document.getElementById('jptRingtoneFile').click();
  document.getElementById('jptRingtoneFile').onchange=async e=>{
   const file=e.target.files?.[0];if(!file)return;
@@ -105,7 +110,7 @@ function mount(){
  const settings=document.getElementById('settings');if(!settings||document.getElementById('jptPartnerNotificationCenterV1'))return false;
  const style=document.createElement('style');style.textContent=
  '#jptPartnerNotificationCenterV1{margin:14px 0;background:#0d0d0d;color:#fff;border:1px solid #3b321f;border-radius:20px;padding:14px}'+
- '.jpt-nc-title{font-size:20px;font-weight:950;color:#f4d77a}.jpt-nc-sub{font-size:11px;color:#999;margin:5px 0 12px;line-height:1.4}'+
+ '.jpt-nc-title{font-size:20px;font-weight:950;color:#f4d77a}.jpt-nc-perm{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0;padding:10px;border:1px solid #3a321f;border-radius:12px;background:#17140c}.jpt-nc-perm button{background:#f4d77a;color:#111;border:0;border-radius:10px;padding:9px 11px;font-weight:950}.jpt-nc-perm span{font-size:10px;color:#aaa}.jpt-nc-sub{font-size:11px;color:#999;margin:5px 0 12px;line-height:1.4}'+
  '.jpt-nc-card{background:#151515;border:1px solid #303030;border-radius:15px;margin-top:10px;padding:11px}.jpt-nc-section{font-weight:950;color:#f4d77a;margin-bottom:4px}'+
  '.jpt-nc-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid #292929;cursor:pointer}.jpt-nc-row:last-child{border-bottom:0}.jpt-nc-row span{display:flex;flex-direction:column}.jpt-nc-row small,.jpt-nc-volume small{color:#888;font-size:10px;margin-top:3px}.jpt-nc-row input{display:none}.jpt-nc-row i{width:44px;height:24px;border-radius:20px;background:#3a3a3a;position:relative;flex:0 0 auto}.jpt-nc-row i:after{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;border-radius:50%;background:#aaa;transition:.18s}.jpt-nc-row input:checked+i{background:#d8ae42}.jpt-nc-row input:checked+i:after{left:23px;background:#111}'+
  '.jpt-nc-volume{display:flex;align-items:center;gap:10px;padding:12px 2px;border-bottom:1px solid #292929}.jpt-nc-volume span{display:flex;flex-direction:column;min-width:120px}.jpt-nc-volume input{flex:1;accent-color:#d8ae42}.jpt-nc-volume strong{width:42px;text-align:right;color:#f4d77a;font-size:12px}'+
