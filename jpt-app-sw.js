@@ -13,7 +13,7 @@ self.addEventListener('fetch',e=>{
       const r=await fetch(e.request);
       const t=await r.text();
       const marker='<script src="./jpt-v106-delivery-location-handover.js?v=delivery1"></script>';
-      const inject='<script src="./customer-order-tracking-v106-v2.js?v=tracking-v3"></script>';
+      const inject='<script src="./customer-order-tracking-v106-v2.js?v=tracking-v11-rider"></script>';
       const body=t.includes(marker)?t.replace(marker,inject+marker):t;
       const h=new Headers(r.headers);
       h.set('Cache-Control','no-store');
