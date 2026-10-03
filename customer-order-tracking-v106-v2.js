@@ -149,10 +149,12 @@
           var s=row.start_at?Date.parse(row.start_at):-Infinity,e=row.end_at?Date.parse(row.end_at):Infinity;
           if(!(s<=now&&now<=e))return false;
           var j=row.schedule_json||{};
-          return j.surface==='customer_outlet_showcase' && (j.placement==='FIRST'||j.placement==null);
+          return String(row.outlet_id||'')===outletCode && j.surface==='customer_outlet_showcase' && j.placement==='FIRST';
         });
         var row=campaigns[0]||null;
-        var media=row?.video_url||row?.banner_url||outlet?.banner_url||'';
+        var outletMatches=!!outlet && String(outlet.code||'')===outletCode;
+        var media=row && String(row.outlet_id||'')===outletCode ? (row.video_url||row.banner_url||'') : '';
+        if(!media && outletMatches) media=outlet.banner_url||'';
         var data={code:outletCode,name:outlet?.name||OUTLET_FALLBACK_NAMES[outletCode]||'Restaurant Partner',url:media,isVideo:!!row?.video_url,title:row?.title||outlet?.name||OUTLET_FALLBACK_NAMES[outletCode]||'Restaurant Partner'};
         outletMediaCache[outletCode]=data;
         return data;
