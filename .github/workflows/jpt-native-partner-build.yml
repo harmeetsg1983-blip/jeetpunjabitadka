@@ -17,7 +17,7 @@ jobs:
       - name: Render Partner launcher logo
         run: |
           mkdir -p android-partner/app/src/main/res/drawable
-          convert -background none android-partner/app/src/main/res/drawable/jpt_partner_logo.svg -resize 512x512 android-partner/app/src/main/res/drawable/jpt_partner_logo.png
+          convert -background none android-partner/branding/jpt_partner_logo.svg -resize 512x512 android-partner/app/src/main/res/drawable/jpt_partner_logo.png
       - run: gradle -p android-partner :app:assembleDebug
       - uses: actions/upload-artifact@v4
         with:
