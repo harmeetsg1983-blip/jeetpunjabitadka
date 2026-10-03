@@ -3,14 +3,14 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 android {
-    namespace = "com.jeetpunjabitadka.partner"
+    namespace = "com.jeetpunjabitaka.partner.nativev1"
     compileSdk = 35
     defaultConfig {
-        applicationId = "com.jeetpunjabitadka.partner"
+        applicationId = "com.jeetpunjabitaka.partner.nativev1"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0-native-v1"
+        versionCode = 2
+        versionName = "1.0.1-native-v1"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
