@@ -1,4 +1,4 @@
-package com.jeetpunjabitaka.partner
+package com.jeetpunjabitadka.partner.nativev1
 
 import android.app.*
 import android.content.Intent
@@ -10,9 +10,14 @@ import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 
 class OrderAlertService : Service() {
-    companion object { const val START = "JPT_START_ORDER_ALERT"; const val STOP = "JPT_STOP_ORDER_ALERT"; private const val CHANNEL = "jpt_new_order"; private const val NOTIF = 7001
+    companion object {
+        const val START = "JPT_START_ORDER_ALERT"
+        const val STOP = "JPT_STOP_ORDER_ALERT"
+        private const val CHANNEL = "jpt_new_order"
+        private const val NOTIF = 7001
         private const val AUDIO_URL = "https://raw.githubusercontent.com/harmeetsg1983-blip/jeetpunjabitadka/main/1000449570.mp4"
     }
+
     private var player: MediaPlayer? = null
     private var wakeLock: PowerManager.WakeLock? = null
 
@@ -78,12 +83,20 @@ class OrderAlertService : Service() {
     }
 
     private fun stopAlert() {
-        player?.stop(); player?.release(); player = null
+        player?.stop()
+        player?.release()
+        player = null
         releaseWakeLock()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
-    override fun onDestroy() { player?.release(); player = null; releaseWakeLock(); super.onDestroy() }
+    override fun onDestroy() {
+        player?.release()
+        player = null
+        releaseWakeLock()
+        super.onDestroy()
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 }
