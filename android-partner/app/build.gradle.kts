@@ -5,7 +5,10 @@ plugins {
 android {
     namespace = "com.jeetpunjabitadka.partner.nativev1"
     compileSdk = 35
-    buildFeatures {\n        buildConfig = true\n    }\n    defaultConfig {
+    buildFeatures {
+        buildConfig = true
+    }
+    defaultConfig {
         applicationId = "com.jeetpunjabitadka.partner.nativev1"
         minSdk = 26
         targetSdk = 35
