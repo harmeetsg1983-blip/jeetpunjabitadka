@@ -16,6 +16,7 @@
   }
 
   function hardStop(clearOrder=true){
+    try{window.JPTNativeAlert?.stop?.()}catch(e){}
     generation++;
     clearTimeout(ringTimer); ringTimer=null; activeId=null; armed=false;
     stopAudio();
@@ -143,7 +144,7 @@
     const isNewActive=activeId!==id;
     if(isNewActive){hardStop(false);activeId=id;persist(o);}
     attention(o);
-    if(isNewActive) await notifyNewOrder(o);
+    if(isNewActive){try{window.JPTNativeAlert?.start?.(String(o.order_no||o.id||''))}catch(e){}; await notifyNewOrder(o);}
     const g=generation;
     await play();
     if(g!==generation || activeId!==id)return;
