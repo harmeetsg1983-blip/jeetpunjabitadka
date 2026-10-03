@@ -16,7 +16,7 @@
     const c=getClient();
     const [or,sr]=await Promise.all([
       c.from('outlets').select('code,name,is_active,status').in('code',['JPT-001','SOP-002','PFA-003','NME-004','TOP-005']).order('code'),
-      c.from('offers').select('id,outlet_id,title,code,discount_type,discount_value,discount_amount,min_order,max_order_amount,active,is_active,scratch_enabled,updated_at').in('outlet_id',['JPT-001','SOP-002','PFA-003','NME-004','TOP-005']).eq('scratch_enabled',true).order('outlet_id').order('id')
+      c.from('offers').select('id,outlet_id,title,code,discount_type,discount_value,discount_amount,min_order,max_order_amount,active,is_active,scratch_enabled,updated_at').in('outlet_id',['JPT-001','SOP-002','PFA-003','NME-004','TOP-005']).or('scratch_enabled.eq.true,code.like.JPT-SCRATCH-*').order('outlet_id').order('id')
     ]);
     if(or.error)throw or.error;if(sr.error)throw sr.error;
     outlets=(or.data||[]).filter(x=>x.is_active!==false);rows=sr.data||[];
@@ -34,7 +34,7 @@
   }
 
   function loadSelected(){
-    const r=rows.find(x=>x.outlet_id===selectedOutlet&&x.scratch_enabled);
+    const r=rows.find(x=>x.outlet_id===selectedOutlet&&x.code==='JPT-SCRATCH-'+selectedOutlet)||rows.find(x=>x.outlet_id===selectedOutlet&&x.scratch_enabled);
     document.getElementById('jptScratchPct').value=r?Number(r.discount_value||0):20;
     document.getElementById('jptScratchCap').value=r?Number(r.discount_amount||0):40;
     document.getElementById('jptScratchMin').value=r?Number(r.min_order||0):0;
@@ -59,8 +59,12 @@
     if(max!==null&&(max<min||max<0))return msg('Maximum eligible order must be >= minimum order.');
     const btn=document.getElementById('jptScratchSave');btn.disabled=true;msg('Saving…');
     try{
-      const c=getClient(),existing=rows.find(x=>x.outlet_id===selectedOutlet&&x.scratch_enabled);
-      const row={outlet_id:selectedOutlet,title:'Royal Gold Scratch Card — '+pct+'% OFF',code:'JPT-SCRATCH-'+selectedOutlet,discount_type:'percentage',discount_value:pct,discount_amount:cap,min_order:min,max_order_amount:max,active:active,is_active:active,scratch_enabled:active,updated_at:new Date().toISOString()};
+      const c=getClient(),code='JPT-SCRATCH-'+selectedOutlet;
+      // Keep exactly one controlled Scratch Card live per outlet. Legacy V106 scratch rows are disabled when this outlet is saved.
+      const off=await c.from('offers').update({active:false,is_active:false,scratch_enabled:false,updated_at:new Date().toISOString()}).eq('outlet_id',selectedOutlet).or('scratch_enabled.eq.true,code.like.JPT-SCRATCH-*');
+      if(off.error)throw off.error;
+      const existing=rows.filter(x=>x.outlet_id===selectedOutlet&&x.code===code).sort((a,b)=>Number(b.id)-Number(a.id))[0];
+      const row={outlet_id:selectedOutlet,title:'Royal Gold Scratch Card — '+pct+'% OFF',code,discount_type:'percentage',discount_value:pct,discount_amount:cap,min_order:min,max_order_amount:max,active:active,is_active:active,scratch_enabled:active,updated_at:new Date().toISOString()};
       const r=existing?.id?await c.from('offers').update(row).eq('id',existing.id).eq('outlet_id',selectedOutlet):await c.from('offers').insert(row);
       if(r.error)throw r.error;
       msg('Saved for '+outletName(selectedOutlet)+'.',true);await loadData();
