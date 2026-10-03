@@ -7,7 +7,7 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const money=v=>'₹'+Number(v||0).toLocaleString('en-IN',{maximumFractionDigits:2});
 
 function sb(){return window.sb||window.supabaseClient||null}
-function outlet(){return window.activeOutlet||document.getElementById('outletSelect')?.value||''}
+function outlet(){return document.getElementById('jptCentralMenuPro')?.querySelector('#cmOutlet')?.value||document.getElementById('outletSelect')?.value||window.activeOutlet||localStorage.getItem('jpt_admin_outlet')||''}
 
 function css(){
  if(document.getElementById('jptCentralMenuProCss'))return;
@@ -144,12 +144,14 @@ async function mount(){
   try{
     if(!item)throw new Error('Menu item not found');
     const next=item.available===false;
-    const r=await sb().from('menu_items').update({available:next,updated_at:new Date().toISOString()}).eq('id',item.id).eq('outlet_id',outlet());
+    const outletId=outlet();
+    if(!outletId)throw new Error('Outlet context is missing');
+    const r=await sb().from('menu_items').update({available:next,updated_at:new Date().toISOString()}).eq('id',item.id).eq('outlet_id',outletId).select('id,available').maybeSingle();
     if(r.error)throw r.error;
-    const verify=await sb().from('menu_items').select('id,available').eq('id',item.id).eq('outlet_id',outlet()).maybeSingle();
-    if(verify.error)throw verify.error;
-    if(Boolean(verify.data?.available)!==next)throw new Error('Status change could not be verified');
-    if(typeof window.toast==='function')window.toast(next?'Item turned ON':'Item turned OFF');
+    if(!r.data)throw new Error('No menu item was updated for this outlet');
+    if(Boolean(r.data.available)!==next)throw new Error('Availability change could not be verified');
+    item.available=next;
+    if(typeof window.toast==='function')window.toast(next?'Item turned ON — customer menu will show it':'Item turned OFF — customer menu will hide it');
     await render();
   }catch(e){b.disabled=false;b.textContent=item?.available===false?'Turn ON':'Turn OFF';if(typeof window.toast==='function')window.toast('Item status update failed: '+(e.message||e));}
 });
