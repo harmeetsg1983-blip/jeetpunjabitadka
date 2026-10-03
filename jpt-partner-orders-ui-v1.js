@@ -15,9 +15,9 @@ const ROOT_ID='jptOrdersCentralV2';
 const TABS_ID='jptOrdersCentralV2Tabs';
 const CENTRAL_RPC='partner_access_is_central_owner';
 const OWNER_OUTLET_CODES=new Set(['JPT-001','SOP-002','NME-004','PFA-003','TOP-005']);
-const STATUS_VIEWS=[['new','NEW'],['preparing','PREPARING'],['ready','READY'],['out_for_delivery','OUT FOR DELIVERY'],['delivered','DELIVERED'],['history','HISTORY']];
+const STATUS_VIEWS=[['preparing','PREPARING'],['ready','READY'],['out_for_delivery','OUT FOR DELIVERY'],['history','COMPLETED']];
 const statusView=s=>{s=status(s);if(s==='accepted'||s==='preparing')return 'preparing';if(s==='completed')return 'delivered';return s};
-let timer=null,channel=null,rowsCache=[],outlets={},selected='new',central=false,lastNewest='';
+let timer=null,channel=null,rowsCache=[],outlets={},selected='preparing',central=false,lastNewest='';
 const prepDrafts=new Map();
 let pendingNew=new Map();
 
@@ -129,6 +129,8 @@ function openOrderDetail(id){
 function ensureRoot(){
  const panel=document.getElementById('orders');if(!panel)return null;
  injectStyle();
+ const oldQueue=document.getElementById('orderQueueBar');if(oldQueue)oldQueue.style.display='none';
+ const oldAlarm=document.getElementById('orderAlarm');if(oldAlarm)oldAlarm.style.display='none';
  ensureOrderBellBar();
  const table=panel.querySelector('.tablewrap');if(table)table.style.display='none';
  let tabs=document.getElementById(TABS_ID);
@@ -142,9 +144,7 @@ function ensureRoot(){
 function actionHtml(x){
  const id=esc(x.id||''),st=x.__status;
  if(st==='new')return `<div class="jpt-cob-timepick" aria-label="Preparation time"><button type="button" data-time="minus" data-id="${id}" aria-label="Decrease preparation time">−</button><input class="jpt-cob-minutes" data-id="${id}" type="number" min="5" max="120" step="5" value="${Number(prepDrafts.get(String(x.id))??x.target_minutes??30)}"><button type="button" data-time="plus" data-id="${id}" aria-label="Increase preparation time">+</button><span class="jpt-cob-muted">min</span></div><div class="jpt-cob-decision"><button class="primary" data-act="accept" data-id="${id}">ACCEPT</button><button data-act="reject" data-id="${id}">REJECT</button></div>`;
- if(st==='accepted'||st==='preparing')return `<button class="primary" data-act="ready" data-id="${id}">READY</button>`;
- if(st==='ready')return `<button class="primary" data-act="out_for_delivery" data-id="${id}">OUT FOR DELIVERY</button>`;
- if(st==='out_for_delivery')return `<button class="primary" data-act="completed" data-id="${id}">DELIVERED</button>`;
+ if(st==='accepted'||st==='preparing'||st==='ready'||st==='out_for_delivery')return '<span class="jpt-cob-history">STATUS UPDATES ARE HANDLED BY THE DELIVERY FLOW</span>';
  return '';
 }
 
@@ -242,7 +242,7 @@ async function load(){
   if(newest){
    const stamp=String(newest.created_at||'')+'|'+String(newest.id||'')+'|'+String(newest.outlet_id||'');
    if(lastNewest && stamp!==lastNewest && newest.__status==='new'){
-    selected='new';
+    selected='preparing';
     try{window.showPanel?.('orders')}catch(e){}
     if(typeof window.showOrderAlarm==='function')window.showOrderAlarm(newest);
    }
@@ -264,8 +264,9 @@ async function bindRealtime(){
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'orders'},p=>{
       const o=p?.new||{};
       if(OWNER_OUTLET_CODES.has(String(o.outlet_id||'')) && String(o.status||'').toLowerCase()==='new'){
-        pendingNew.set(String(o.id||o.order_no),o);selected='new';try{window.showPanel?.('orders')}catch(e){};
+        pendingNew.set(String(o.id||o.order_no),o);selected='preparing';try{window.showPanel?.('orders')}catch(e){};
         if(typeof window.showOrderAlarm==='function')window.showOrderAlarm(o);
+        setTimeout(()=>{try{openOrderDetail(o.id)}catch(e){}},180);
       }
       load().catch(()=>{});
     })
