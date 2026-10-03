@@ -14,6 +14,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import com.jeetpunjabitadka.partner.nativev1.BuildConfig
 
 class MainActivity : AppCompatActivity() {
     private lateinit var web: WebView
@@ -128,55 +129,48 @@ class MainActivity : AppCompatActivity() {
     }
     private fun installNativeAlertBridge() {
         bridgeRunnable?.let { web.removeCallbacks(it) }
-        val runnable = object : Runnable {
+        val task = object : Runnable {
             override fun run() {
-                if (isFinishing || isDestroyed) return
-                web.evaluateJavascript("""(function(){
-                    if(!window.JPTNativeAlert)return;
-                    if(!window.__JPT_NATIVE_SESSION_SYNC){
-                        window.__JPT_NATIVE_SESSION_SYNC=true;
-                        const sync=async()=>{try{
-                            if(window.sb?.auth?.getSession){
-                                const r=await window.sb.auth.getSession();
-                                const s=r?.data?.session;
-                                if(s?.access_token) window.JPTNativeAlert.syncSession(String(s.access_token),String(s.refresh_token||""));
-                            }
-                        }catch(e){}};
-                        sync();
-                        setInterval(sync,30000);
-                    }
-                    if(window.__JPT_NATIVE_BRIDGE_INSTALLED)return;
-                    if(typeof window.showOrderAlarm!=="function")return;
-                    window.__JPT_NATIVE_BRIDGE_INSTALLED=true;
-                    const originalShow=window.showOrderAlarm;
-                    window.showOrderAlarm=function(o){
-                        try{window.JPTNativeAlert.start(String(o?.order_no||o?.id||"NEW ORDER"));}catch(e){}
-                        return originalShow.apply(this,arguments);
-                    };
-                    if(typeof window.orderAction==="function"){
-                        const originalAction=window.orderAction;
-                        window.orderAction=async function(id,status,extra){
-                            const r=await originalAction.apply(this,arguments);
-                            if(r!==false && String(status||"").toLowerCase()!=="new"){
-                                try{window.JPTNativeAlert.stop();}catch(e){}
-                            }
-                            return r;
-                        };
-                    }
-                })()""", null)
-                if (!isFinishing && !isDestroyed) {
-                    web.postDelayed(this, 1000)
-                }
+                web.evaluateJavascript("""
+                    (function(){
+                      try {
+                        if(window.JPTNativeAlert){
+                          window.__jptNativeAlert=window.JPTNativeAlert;
+                          if(window.showOrderAlarm && !window.__jptNativeAlarmHooked){
+                            const original=window.showOrderAlarm;
+                            window.showOrderAlarm=function(orderNo){
+                              try{window.__jptNativeAlert.start(String(orderNo||''));}catch(e){}
+                              return original.apply(this,arguments);
+                            };
+                            window.__jptNativeAlarmHooked=true;
+                          }
+                          if(window.sb && window.__jptNativeSessionSync===undefined){
+                            window.__jptNativeSessionSync=setInterval(async function(){
+                              try{
+                                const s=await window.sb.auth.getSession();
+                                const session=s&&s.data&&s.data.session;
+                                if(session&&session.access_token){
+                                  window.__jptNativeAlert.syncSession(session.access_token,session.refresh_token||'');
+                                }
+                              }catch(e){}
+                            },30000);
+                          }
+                          if(window.orderAction && !window.__jptNativeOrderHooked){
+                            const originalAction=window.orderAction;
+                            window.orderAction=async function(id,status){
+                              try{if(status&&status!=='new')window.__jptNativeAlert.stop();}catch(e){}
+                              return originalAction.apply(this,arguments);
+                            };
+                            window.__jptNativeOrderHooked=true;
+                          }
+                        }
+                      }catch(e){}
+                    })();
+                """.trimIndent(), null)
+                web.postDelayed(this, 10000)
             }
         }
-        bridgeRunnable = runnable
-        web.postDelayed(runnable, 1500)
-    }
-
-    override fun onDestroy() {
-        bridgeRunnable?.let { web.removeCallbacks(it) }
-        bridgeRunnable = null
-        web.destroy()
-        super.onDestroy()
+        bridgeRunnable = task
+        web.post(task)
     }
 }
