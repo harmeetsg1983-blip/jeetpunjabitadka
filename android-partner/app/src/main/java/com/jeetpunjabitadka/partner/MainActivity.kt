@@ -21,7 +21,12 @@ class MainActivity : AppCompatActivity() {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.mediaPlaybackRequiresUserGesture = false
-            webViewClient = WebViewClient()
+            webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView, url: String) {
+                    super.onPageFinished(view, url)
+                    installNativeAlertBridge()
+                }
+            }
             addJavascriptInterface(NativeAlertBridge(), "JPTNativeAlert")
             loadUrl(partnerUrl)
         }
@@ -35,6 +40,25 @@ class MainActivity : AppCompatActivity() {
         @JavascriptInterface fun stop() {
             startService(Intent(this@MainActivity, OrderAlertService::class.java).setAction(OrderAlertService.STOP))
         }
+    }
+
+    private fun installNativeAlertBridge() {
+        web.postDelayed(object : Runnable {
+            override fun run() {
+                web.evaluateJavascript("""(function(){
+                    if(window.__JPT_NATIVE_BRIDGE_INSTALLED)return;
+                    if(typeof window.showOrderAlarm!=="function")return;
+                    window.__JPT_NATIVE_BRIDGE_INSTALLED=true;
+                    const originalShow=window.showOrderAlarm;
+                    window.showOrderAlarm=function(o){try{window.JPTNativeAlert.start(String(o?.order_no||o?.id||"NEW ORDER"));}catch(e){};return originalShow.apply(this,arguments)};
+                    if(typeof window.orderAction==="function"){
+                        const originalAction=window.orderAction;
+                        window.orderAction=async function(id,status,extra){const r=await originalAction.apply(this,arguments);if(r!==false && String(status||"").toLowerCase()!=="new"){try{window.JPTNativeAlert.stop();}catch(e){}}return r};
+                    }
+                })()""", null)
+                if(!isFinishing) web.postDelayed(this, 1000)
+            }
+        }, 1500)
     }
 
     override fun onDestroy() {
