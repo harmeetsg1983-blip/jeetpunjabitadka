@@ -189,7 +189,7 @@
     }catch(e){}
   }
 
-  window.JPTPartnerOrderAlertV4={version:'4.4-no-fallback-beep',arm,ring,stop:hardStop,active:()=>activeId,getPrefs,resumeAudioFromGesture};
+  window.JPTPartnerOrderAlertV4={version:'4.5-sound-only-fallback',arm,ring,stop:hardStop,active:()=>activeId,getPrefs,resumeAudioFromGesture};
   window.addEventListener('jpt:notification-settings',()=>{if(activeId!==null)arm()});
 
   let n=0, restored=false;
