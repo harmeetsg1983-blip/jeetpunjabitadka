@@ -110,6 +110,13 @@ function ensureOrderDetailModal(){
  m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show')});
  return m;
 }
+function detailActionHtml(x){
+ const id=esc(x.id||''),st=x.__status;
+ if(st==='new')return actionHtml(x);
+ if(st==='accepted'||st==='preparing')return '<button class="primary" data-act="ready" data-id="'+id+'">READY</button>';
+ return '<span class="jpt-cob-history">Delivery flow will handle the remaining status changes.</span>';
+}
+
 function openOrderDetail(id){
  const row=rowsCache.find(x=>String(x.id)===String(id));if(!row)return;
  const m=ensureOrderDetailModal(),body=document.getElementById('jptOrderDetailBody');
@@ -120,7 +127,7 @@ function openOrderDetail(id){
  body.innerHTML='<div class="jpt-order-big-status"><b>'+esc(st.replaceAll('_',' ').toUpperCase())+'</b><div style="margin-top:5px;color:#aaa;font-size:12px">'+esc(row.created_at?new Date(row.created_at).toLocaleString('en-IN'):'')+'</div></div>'+
  '<div class="jpt-order-detail-card"><div style="font-size:12px;color:#aaa">CUSTOMER</div><div style="font-size:18px;font-weight:1000;margin-top:5px">'+esc(customer)+'</div><div style="margin-top:5px;color:#bbb">'+esc(phone)+'</div><div style="margin-top:8px;color:#bbb">'+esc(address)+'</div></div>'+
  '<div class="jpt-order-detail-card"><div style="font-size:12px;color:#aaa">ORDER ITEMS</div><div class="jpt-order-detail-items">'+parseItems(row).map(i=>{const q=Number(i.qty??i.quantity??1),p=Number(i.price??i.unit_price??0);return '<div class="jpt-order-detail-item"><div><b>'+esc(i.name||i.item_name||'Item')+'</b><div style="color:#aaa;margin-top:3px">Qty × '+q+'</div></div><strong>'+money(p*q)+'</strong></div>'}).join('')+'</div><div style="margin-top:12px;color:#bbb">Item subtotal <span style="float:right">'+money(sub)+'</span></div>'+(del?'<div style="margin-top:6px;color:#bbb">Delivery <span style="float:right">'+money(del)+'</span></div>':'')+(disc?'<div style="margin-top:6px;color:#7bd99a">Discount <span style="float:right">−'+money(disc)+'</span></div>':'')+'<div class="jpt-order-detail-total"><span>Total</span><span>'+money(total)+'</span></div><div style="margin-top:8px;color:#aaa;font-size:11px">Payment • '+esc(payment)+'</div></div>'+
- '<div class="jpt-order-detail-card"><div style="font-size:12px;color:#aaa">RESTAURANT ACTION</div><div class="jpt-order-detail-actions">'+actionHtml(row)+'</div></div>';
+ '<div class="jpt-order-detail-card"><div style="font-size:12px;color:#aaa">RESTAURANT ACTION</div><div class="jpt-order-detail-actions">'+detailActionHtml(row)+'</div></div>';
  body.querySelectorAll('[data-act]').forEach(b=>b.onclick=async()=>{await doAction(b);if(m.classList.contains('show')){const updated=rowsCache.find(x=>String(x.id)===String(id));if(updated&&updated.__status!=='new')m.classList.remove('show');}});
  body.querySelectorAll('[data-time]').forEach(b=>b.onclick=()=>{const input=b.parentElement.querySelector('.jpt-cob-minutes');if(!input)return;let v=Number(input.value)||30;v=Math.max(5,Math.min(120,v+(b.dataset.time==='plus'?5:-5)));input.value=String(v);});
  m.classList.add('show');
