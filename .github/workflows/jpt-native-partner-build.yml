@@ -34,3 +34,5 @@ jobs:
         with:
           name: jpt-partner-native-debug
           path: android-partner/app/build/outputs/apk/debug/app-debug.apk
+
+# Release gate trigger: build final Partner APK from jpt-partner-release-v1.
