@@ -85,7 +85,8 @@
       '<button type="button" class="btn" id="jptScratchReload">↻ Reload</button>';
     const form=document.getElementById('offerForm'),offers=document.getElementById('offers');
     if(form?.parentNode)form.parentNode.insertBefore(host,form);else if(offers)offers.appendChild(host);else return;
-    const legacy=document.getElementById('scratchSetup'); if(legacy){ legacy.textContent='✨ Scratch Cards'; legacy.onclick=function(){document.getElementById('jptScratchManager')?.scrollIntoView({behavior:'smooth',block:'start'});}; }\n    document.getElementById('jptScratchOutletSelect').onchange=function(){selectedOutlet=this.value;loadSelected();};
+    const legacy=document.getElementById('scratchSetup'); if(legacy){ legacy.textContent='✨ Scratch Cards'; legacy.onclick=function(){document.getElementById('jptScratchManager')?.scrollIntoView({behavior:'smooth',block:'start'});}; }
+    document.getElementById('jptScratchOutletSelect').onchange=function(){selectedOutlet=this.value;loadSelected();};
     document.getElementById('jptScratchSave').onclick=save;
     document.getElementById('jptScratchReload').onclick=()=>loadData().catch(e=>msg('Reload failed: '+(e.message||e)));
     loadData().catch(e=>msg('Load failed: '+(e.message||e)));
