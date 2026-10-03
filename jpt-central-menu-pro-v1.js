@@ -109,16 +109,35 @@ async function mount(){
  panel.appendChild(root);
 
  const select=document.getElementById('outletSelect'), cmOutlet=root.querySelector('#cmOutlet');
+ const syncOutletPicker=()=>{
+   if(!select)return;
+   const current=cmOutlet.value||select.value||window.activeOutlet||localStorage.getItem('jpt_admin_outlet')||'';
+   const opts=[...select.options];
+   cmOutlet.replaceChildren();
+   opts.forEach(o=>{const n=document.createElement('option');n.value=o.value;n.textContent=o.textContent;cmOutlet.appendChild(n)});
+   if(current && [...cmOutlet.options].some(o=>o.value===current)) cmOutlet.value=current;
+   else if(select.value && [...cmOutlet.options].some(o=>o.value===select.value)) cmOutlet.value=select.value;
+   else if(cmOutlet.options.length) cmOutlet.value=cmOutlet.options[0].value;
+ };
  if(select){
-   [...select.options].forEach(o=>{const n=document.createElement('option');n.value=o.value;n.textContent=o.textContent;cmOutlet.appendChild(n)});
-   cmOutlet.value=select.value||outlet();
-   cmOutlet.onchange=()=>{select.value=cmOutlet.value;select.dispatchEvent(new Event('change',{bubbles:true}));render()};
+   syncOutletPicker();
+   select.addEventListener('change',()=>{syncOutletPicker();render()});
+   const mo=new MutationObserver(()=>{syncOutletPicker(); if(cmOutlet.value) render()});
+   mo.observe(select,{childList:true});
+   cmOutlet.onchange=()=>{select.value=cmOutlet.value;select.dispatchEvent(new Event('change',{bubbles:true}))};
  }else cmOutlet.value=outlet();
 
  let rows=[],filter='all',cat='';
 
  async function render(){
    try{
+    const outletId=outlet();
+    if(!outletId){
+      root.querySelector('#cmCount').textContent='Waiting for outlet access…';
+      root.querySelector('#cmList').innerHTML='<div class="notice">Loading authorized outlet…</div>';
+      setTimeout(()=>render(),800);
+      return;
+    }
     rows=await load();
     const cats=[...new Set(rows.map(x=>String(x.category||'Uncategorised').trim()||'Uncategorised'))];
     const q=(root.querySelector('#cmSearch').value||'').trim().toLowerCase();
