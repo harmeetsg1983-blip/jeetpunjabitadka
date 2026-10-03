@@ -1,7 +1,7 @@
 name: JPT Native Partner Build
 on:
   push:
-    branches: ["jpt-native-partner-v1"]
+    branches: ["jpt-partner-release-v1"]
   workflow_dispatch:
 jobs:
   build:
