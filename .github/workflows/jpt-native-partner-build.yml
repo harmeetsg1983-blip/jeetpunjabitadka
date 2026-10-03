@@ -12,6 +12,8 @@ jobs:
         with: { distribution: temurin, java-version: "17" }
       - uses: gradle/actions/setup-gradle@v4
         with: { gradle-version: "8.9" }
+      - name: Install image renderer
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
       - name: Render Partner launcher logo
         run: |
           mkdir -p android-partner/app/src/main/res/drawable
