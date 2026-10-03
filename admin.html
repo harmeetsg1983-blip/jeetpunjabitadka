@@ -611,7 +611,7 @@ function stopOrderAlarm(){
 async function enableOrderAlarm(){
   try{primeNewOrderAudio();}catch(e){}
   try{if('Notification' in window && Notification.permission==='default') await Notification.requestPermission();}catch(e){}
-  localStorage.setItem('jpt_v107_alarm_enabled','1');toast('Exact NEW ORDER ringtone enabled');
+  localStorage.setItem('jpt_v107_alarm_enabled','1');toast('Order alert is enabled; use the saved notification ringtone in Sound Settings');
 }
 $('enableAlarm').onclick=enableOrderAlarm;$('stopAlarm').onclick=stopOrderAlarm;
 const jptOrderActionBusy=new Set();
