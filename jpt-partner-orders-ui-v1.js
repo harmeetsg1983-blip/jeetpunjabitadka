@@ -130,9 +130,15 @@ function render(){
 }
 async function directAction(row,next,extra={}){
  const patch={status:next,updated_at:new Date().toISOString(),...extra};
- const q=await window.sb.from('orders').update(patch).eq('id',row.id).eq('outlet_id',row.outlet_id);
+ const q=await window.sb.from('orders').update(patch).eq('id',row.id).eq('outlet_id',row.outlet_id)
+   .select('id,status,target_minutes,accepted_at,deadline_at,updated_at').maybeSingle();
  if(q.error)throw q.error;
- return true;
+ if(!q.data)throw new Error('Order status was not saved. Please refresh and try again.');
+ Object.assign(row,q.data);
+ if(String(next)!=='new'){
+   try{window.JPTPartnerOrderAlertV4?.stop?.();window.stopOrderAlarm?.();}catch(e){}
+ }
+ return q.data;
 }
 
 async function doAction(btn){
@@ -153,6 +159,10 @@ async function doAction(btn){
    selected='preparing';
   }else{
    await directAction(row,act);
+   if(act==='preparing')selected='preparing';
+   else if(act==='ready')selected='ready';
+   else if(act==='out_for_delivery')selected='out_for_delivery';
+   else if(act==='completed')selected='history';
    if(act==='ready'){
     try{
      const rr=await window.sb.rpc('delivery_offer_next',{p_order_id:Number(row.id)});
@@ -162,6 +172,7 @@ async function doAction(btn){
    }
   }
   if(typeof window.toast==='function')window.toast(act==='accept'?'Order accepted • timer started':act==='reject'?'Order rejected':act==='preparing'?'Order is PREPARING':act==='ready'?'Order marked READY':act==='out_for_delivery'?'Order moved to OUT FOR DELIVERY':'Order marked DELIVERED');
+  render();
   await load();
  }catch(e){if(typeof window.toast==='function')window.toast('Order update failed: '+(e?.message||e));}
  finally{btn.disabled=false}
