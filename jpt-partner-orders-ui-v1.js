@@ -17,7 +17,7 @@ const CENTRAL_RPC='partner_access_is_central_owner';
 const OWNER_OUTLET_CODES=new Set(['JPT-001','SOP-002','NME-004','PFA-003','TOP-005']);
 const STATUS_VIEWS=[['preparing','PREPARING'],['ready','READY'],['out_for_delivery','OUT FOR DELIVERY'],['history','COMPLETED']];
 const statusView=s=>{s=status(s);if(s==='accepted'||s==='preparing')return 'preparing';if(s==='completed')return 'delivered';return s};
-let timer=null,channel=null,rowsCache=[],outlets={},selected='preparing',central=false,lastNewest='';
+let timer=null,channel=null,rowsCache=[],outlets={},selected='preparing',central=false,lastNewest='',loadSeq=0;
 const prepDrafts=new Map();
 let pendingNew=new Map();
 
@@ -237,11 +237,16 @@ async function doAction(btn){
 }
 
 async function load(){
+ const seq=++loadSeq;
  try{
   if(!window.sb)return;
   central=await isCentral();
   await loadOutlets();
-  await loadRows();
+  const freshRows=await loadRows();
+  /* Ignore an older in-flight refresh. A READY/ACCEPT action can otherwise
+     be overwritten visually by a slower request that started before the action. */
+  if(seq!==loadSeq)return;
+  rowsCache=freshRows;
   const newest=rowsCache[0];
   rowsCache.filter(x=>x.__status==='new'&&OWNER_OUTLET_CODES.has(String(x.outlet_id||''))).forEach(x=>pendingNew.set(String(x.id||x.order_no),x));
   syncCentralBell();
