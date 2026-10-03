@@ -6,7 +6,7 @@
 const GOLD='#d8ae42';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
-let menuSearch='',menuCategory='ALL';
+let menuSearch='',menuCategory='ALL',menuRows=[],menuLoadBusy=false;
 
 function css(){
  if(document.getElementById('jptWorkspaceCSS'))return;
@@ -96,7 +96,7 @@ function decorateMenu(){
 }
 
 function renderMenuView(){
- const items=Array.isArray(window.menuItems)?window.menuItems:[];
+ const items=menuRows;
  const chips=document.getElementById('jptMenuChips'),stats=document.getElementById('jptMenuStats'),list=document.getElementById('menuList');
  if(!chips||!stats||!list)return;
  const cats=['ALL',...Array.from(new Set(items.map(x=>String(x.category||'Uncategorised').trim()||'Uncategorised')))];
@@ -119,11 +119,29 @@ function renderMenuView(){
  list.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=()=>window.toggleItem?.(b.dataset.toggle));
 }
 
+async function loadWorkspaceMenu(){
+ if(menuLoadBusy)return;
+ const sb=window.sb, outlet=document.getElementById('outletSelect')?.value||'';
+ if(!sb||!outlet)return;
+ menuLoadBusy=true;
+ try{
+   const r=await sb.from('menu_items').select('*').eq('outlet_id',outlet).order('sort_order').order('name');
+   if(r.error)throw r.error;
+   menuRows=(r.data||[]).filter(x=>x.is_deleted!==true);
+   const ir=await sb.from('menu_item_images').select('menu_item_id,item_name,image_url').eq('outlet_id',outlet);
+   const map={};if(!ir.error)(ir.data||[]).forEach(v=>map[v.menu_item_id||v.item_name]=v.image_url);
+   menuRows.forEach(x=>x.image_url=map[x.id]||x.image_url||'');
+   renderMenuView();
+ }catch(e){
+   const list=document.getElementById('menuList');
+   if(list)list.innerHTML='<div class="jpt-menu-empty">'+esc(e?.message||'Menu could not be loaded')+'</div>';
+ }finally{menuLoadBusy=false}
+}
 function patchLoadMenu(){
  if(window.__jptWorkspaceLoadMenuPatched||typeof window.loadMenu!=='function')return;
  window.__jptWorkspaceLoadMenuPatched=true;
  const original=window.loadMenu;
- window.loadMenu=async function(){const r=await original.apply(this,arguments);renderMenuView();return r};
+ window.loadMenu=async function(){const r=await original.apply(this,arguments);await loadWorkspaceMenu();return r};
 }
 
 function patchShowPanel(){
@@ -134,7 +152,7 @@ function patchShowPanel(){
 }
 
 function boot(){
- css();makeSwitch();makeBottom();patchShowPanel();patchLoadMenu();decorateMenu();
+ css();makeSwitch();makeBottom();patchShowPanel();patchLoadMenu();decorateMenu();loadWorkspaceMenu();
  try{window.addEventListener('jpt:menu-refreshed',renderMenuView)}catch(e){}
 }
 let tries=0;const t=setInterval(()=>{tries++;if(document.getElementById('menu')&&document.getElementById('orders')){boot();clearInterval(t)}if(tries>80)clearInterval(t)},250);
