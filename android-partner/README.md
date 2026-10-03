@@ -16,3 +16,6 @@ Important production gate:
 
 
 Build note: CI signs the debug APK for direct Android installation.
+
+
+CI note: APK is explicitly zipaligned and apksigner-verified before artifact upload.
