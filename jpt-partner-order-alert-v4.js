@@ -151,6 +151,15 @@
     return false;
   }
 
+  async function verifyActiveOrder(){
+    try{
+      if(activeId===null || !window.sb)return;
+      const r=await window.sb.from('orders').select('id,status').eq('id',activeId).maybeSingle();
+      if(r.error)return;
+      if(!r.data || String(r.data.status||'').toLowerCase()!=='new') hardStop(true);
+    }catch(e){}
+  }
+
   async function ring(o){
     if(!o || String(o.status||'').toLowerCase()!=='new')return;
     const prefs=await getPrefs(); if(prefs.orderNotifications===false)return;
@@ -207,6 +216,7 @@
   window.addEventListener('jpt:notification-settings',()=>{if(activeId!==null)arm()});
 
   let n=0, restored=false;
+  setInterval(()=>{if(activeId!==null)verifyActiveOrder()},2000);
   const timer=setInterval(()=>{
     wrap();bind();
     if(!restored){restored=true;restore();}
