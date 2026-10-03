@@ -1,4 +1,4 @@
-package com.jeetpunjabitaka.partner
+package com.jeetpunjabitadka.partner.nativev1
 
 import android.Manifest
 import android.content.Intent
@@ -74,9 +74,7 @@ class MainActivity : AppCompatActivity() {
                         };
                     }
                 })()""", null)
-                if (!isFinishing && !isDestroyed) {
-                    web.postDelayed(this, 1000)
-                }
+                if (!isFinishing && !isDestroyed) web.postDelayed(this, 1000)
             }
         }
         bridgeRunnable = runnable
