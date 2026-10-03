@@ -13,3 +13,6 @@ Current scope:
 Important production gate:
 - Background/locked delivery still requires a verified event source (FCM or a proven native realtime/polling service) and real-device testing.
 - Do not mark production GREEN from source inspection alone.
+
+
+Build note: CI signs the debug APK for direct Android installation.
