@@ -94,7 +94,7 @@ async function render(){
  document.getElementById('jptTestRingtone').onclick=preview;
  const perm=document.getElementById('jptAllowNotifications'), state=document.getElementById('jptNotificationState');
  async function refreshPermission(){if(!('Notification' in window)){state.textContent='Notifications are not supported by this browser.';return} state.textContent='Permission: '+Notification.permission; perm.disabled=Notification.permission==='granted';}
- perm.onclick=async()=>{try{const p=await Notification.requestPermission();state.textContent='Permission: '+p;if(p==='granted')await savePrefs(Object.assign({},p,{orderNotifications:true}))}catch(e){state.textContent='Permission request failed.'}};
+ perm.onclick=async()=>{try{const permission=await Notification.requestPermission();state.textContent='Permission: '+permission;if(permission==='granted'){const current=await prefs();await savePrefs(Object.assign({},current,{orderNotifications:true}));}}catch(e){state.textContent='Permission request failed.'}};
  refreshPermission();
  document.getElementById('jptAddRingtone').onclick=()=>document.getElementById('jptRingtoneFile').click();
  document.getElementById('jptRingtoneFile').onchange=async e=>{
