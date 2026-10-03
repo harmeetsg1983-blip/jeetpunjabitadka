@@ -100,6 +100,7 @@ main{padding-bottom:12px}.item{display:flex;gap:14px;padding:15px 14px;border:1p
 <script>
 let jptCheckoutBusy=false;
 const sb=window.supabase.createClient(window.JPT_SUPABASE_URL,window.JPT_SUPABASE_PUBLISHABLE_KEY);
+const JPT_WHATSAPP_NUMBER='9148161094';
 window.sb=sb;
 const OUTLETS={
  "JPT-001":{name:"Jeet Punjabi Tadka",accent:"#d8ae42"},
@@ -358,17 +359,31 @@ $('payment').addEventListener('change',e=>{const box=$('upiBox');if(box)box.styl
 async function placeOrder(){
  if(jptCheckoutBusy)return;
  jptCheckoutBusy=true;
+ let waWindow=null;
  try{
- let rows=cartRows();if(!rows.length)return toast('Cart is empty');
- let phone=$('phone').value.trim();if(!/^\d{10}$/.test(phone))return toast('Enter 10 digit phone number');
- let c=calc(),payment=$('payment').value;
- let gps=window.JPTDeliveryLocationSnapshot||null;
- let ord={order_no:'JPT-'+Date.now().toString().slice(-7),customer_name:$('custName').value.trim()||'Customer',customer_phone:phone,customer_address:$('address').value.trim(),items:rows.map(r=>({id:r.x.id,name:r.x.name,qty:r.q,price:Number(r.x.price)})),subtotal:c.subtotal,discount:c.discount,delivery_charge:c.delivery,total:c.total,status:'new',eta_minutes:45,notes:'',outlet_id:outletId,payment,order_type:'delivery',delivery_lat:gps?Number(gps.lat):null,delivery_lng:gps?Number(gps.lng):null,delivery_location_confirmed_at:gps?(gps.at||new Date().toISOString()):null};
- let result=await sb.from('orders').insert(ord);if(result.error){jptCheckoutBusy=false;return toast('Order save failed: '+result.error.message);}
- window.JPT_LAST_PLACED_ORDER={order_no:ord.order_no,phone:phone,created_at:new Date().toISOString(),outlet_id:outletId};
- if(payment==='UPI')setTimeout(()=>openUpiPayment(ord.order_no,c.total,OUTLETS[outletId].name),250);
- cartState={};selectedPromo=null;updateCart();closeCart();
- toast(payment==='UPI'?'Order placed. Complete payment in your UPI app.':'Order placed successfully');
+  let rows=cartRows();if(!rows.length)return toast('Cart is empty');
+  let phone=$('phone').value.trim();if(!/^\d{10}$/.test(phone))return toast('Enter 10 digit phone number');
+  let c=calc(),payment=$('payment').value;
+  let gps=window.JPTDeliveryLocationSnapshot||null;
+  let ord={order_no:'JPT-'+Date.now().toString().slice(-7),customer_name:$('custName').value.trim()||'Customer',customer_phone:phone,customer_address:$('address').value.trim(),items:rows.map(r=>({id:r.x.id,name:r.x.name,qty:r.q,price:Number(r.x.price)})),subtotal:c.subtotal,discount:c.discount,delivery_charge:c.delivery,total:c.total,status:'new',eta_minutes:45,notes:'',outlet_id:outletId,payment,order_type:'delivery',delivery_lat:gps?Number(gps.lat):null,delivery_lng:gps?Number(gps.lng):null,delivery_location_confirmed_at:gps?(gps.at||new Date().toISOString()):null};
+  let msg=`NEW ORDER ${ord.order_no}%0A${encodeURIComponent(rows.map(r=>r.x.name+' x '+r.q).join('\\n'))}%0ASubtotal: ${encodeURIComponent(money(c.subtotal))}%0ADiscount: ${encodeURIComponent(money(c.discount))}%0ADelivery: ${encodeURIComponent(c.delivery?money(c.delivery):'FREE')}%0ATotal: ${encodeURIComponent(money(c.total))}%0AOutlet: ${encodeURIComponent(OUTLETS[outletId].name)}%0AOutlet ID: ${encodeURIComponent(outletId)}%0APayment: ${encodeURIComponent(payment)}%0ACustomer: ${encodeURIComponent(ord.customer_name)}%0APhone: ${phone}%0AAddress: ${encodeURIComponent(ord.customer_address)}`;
+  try{waWindow=window.open('about:blank','_blank');}catch(e){waWindow=null}
+  let result=await sb.from('orders').insert(ord);
+  if(result.error){
+    try{waWindow?.close()}catch(e){}
+    jptCheckoutBusy=false;return toast('Order save failed: '+result.error.message);
+  }
+  let placed={order_no:ord.order_no,phone:phone,created_at:new Date().toISOString(),outlet_id:outletId,status:'new',target_minutes:null,deadline_at:null};
+  window.JPT_LAST_PLACED_ORDER=placed;
+  try{localStorage.setItem('jpt_v106_last_order',JSON.stringify(placed))}catch(e){}
+  try{window.dispatchEvent(new CustomEvent('jpt:order-placed',{detail:placed}))}catch(e){}
+  if(waWindow){
+    try{waWindow.location.href='https://wa.me/91'+JPT_WHATSAPP_NUMBER+'?text='+msg}catch(e){}
+  }else{
+    try{window.open('https://wa.me/91'+JPT_WHATSAPP_NUMBER+'?text='+msg,'_blank')}catch(e){}
+  }
+  cartState={};selectedPromo=null;updateCart();closeCart();
+  toast('Order placed successfully');
  }catch(e){console.error(e);toast('Order could not be completed. Please try again.')} finally {jptCheckoutBusy=false}
 }
 window.addEventListener('popstate',async e=>{if($('modal').classList.contains('show')){closeCart(true);return;}if(e.state&&e.state.outlet){const id=e.state.outlet;if(OUTLETS[id]&&id!==outletId){outletId=id;cartState={};selectedPromo=null;items=[];offers=[];campaigns=[];imageMap={};setTheme();renderOutlets();await loadManagedMenu();}}else if(outletId!=='JPT-001'){outletId='JPT-001';cartState={};selectedPromo=null;items=[];offers=[];campaigns=[];imageMap={};setTheme();renderOutlets();await loadManagedMenu();}});
