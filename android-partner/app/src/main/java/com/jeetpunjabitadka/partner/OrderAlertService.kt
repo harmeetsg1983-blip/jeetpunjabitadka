@@ -6,6 +6,7 @@ import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 
 class OrderAlertService : Service() {
@@ -13,6 +14,7 @@ class OrderAlertService : Service() {
         private const val AUDIO_URL = "https://raw.githubusercontent.com/harmeetsg1983-blip/jeetpunjabitadka/main/1000449570.mp4"
     }
     private var player: MediaPlayer? = null
+    private var wakeLock: PowerManager.WakeLock? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -46,6 +48,7 @@ class OrderAlertService : Service() {
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .build()
         startForeground(NOTIF, notification)
+        acquireWakeLock()
         if (player?.isPlaying == true) return
         try {
             player?.release()
@@ -60,12 +63,27 @@ class OrderAlertService : Service() {
         } catch (_: Throwable) { stopAlert() }
     }
 
+    private fun acquireWakeLock() {
+        if (wakeLock?.isHeld == true) return
+        val pm = getSystemService(PowerManager::class.java)
+        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "JPTPartner:NewOrderAlert").apply {
+            setReferenceCounted(false)
+            acquire(10 * 60 * 1000L)
+        }
+    }
+
+    private fun releaseWakeLock() {
+        wakeLock?.let { if (it.isHeld) it.release() }
+        wakeLock = null
+    }
+
     private fun stopAlert() {
         player?.stop(); player?.release(); player = null
+        releaseWakeLock()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
-    override fun onDestroy() { player?.release(); player = null; super.onDestroy() }
+    override fun onDestroy() { player?.release(); player = null; releaseWakeLock(); super.onDestroy() }
     override fun onBind(intent: Intent?): IBinder? = null
 }
