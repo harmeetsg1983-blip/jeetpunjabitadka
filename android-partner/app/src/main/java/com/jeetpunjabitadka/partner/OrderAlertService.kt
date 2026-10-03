@@ -7,7 +7,6 @@ import android.media.MediaPlayer
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import java.io.File
 
 class OrderAlertService : Service() {
     companion object { const val START = "JPT_START_ORDER_ALERT"; const val STOP = "JPT_STOP_ORDER_ALERT"; private const val CHANNEL = "jpt_new_order"; private const val NOTIF = 7001
@@ -34,7 +33,7 @@ class OrderAlertService : Service() {
             STOP -> stopAlert()
             START -> startAlert(intent.getStringExtra("order_no") ?: "New order")
         }
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     private fun startAlert(orderNo: String) {
@@ -52,12 +51,13 @@ class OrderAlertService : Service() {
             player?.release()
             player = MediaPlayer().apply {
                 setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
+                setOnErrorListener { _, _, _ -> stopAlert(); true }
                 setDataSource(AUDIO_URL)
                 isLooping = true
                 setOnPreparedListener { it.start() }
                 prepareAsync()
             }
-        } catch (_: Throwable) {}
+        } catch (_: Throwable) { stopAlert() }
     }
 
     private fun stopAlert() {
