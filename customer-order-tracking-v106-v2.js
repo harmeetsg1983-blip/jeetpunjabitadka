@@ -1,7 +1,7 @@
 /* JPT V106 — CUSTOMER ORDER TRACKING BRIDGE V4
    Additive ETA/countdown layer.
    Uses existing secure get_customer_order RPC.
-   Customer ETA = restaurant preparation target + 20-minute delivery buffer.
+   Customer ETA = restaurant preparation target + 10-minute delivery buffer.
    The 20-minute buffer is a maximum planning buffer, not a live traffic prediction.
 */
 (function(){
@@ -19,6 +19,7 @@
   var noticeUnread=0;
   var JPT_CUSTOMER_ACCEPTED_AUDIO='./ringtones/1000449572.mp4';
   var readySinceKey='jpt_v106_ready_since';
+  var timingRpc='get_customer_order_timing';
   function playCustomerAcceptedTone(){
     try{
       var a=new Audio(JPT_CUSTOMER_ACCEPTED_AUDIO);
@@ -204,13 +205,13 @@
       return {leftMs:(prep+DELIVERY_BUFFER)*60000,label:'Estimated arrival up to '+(prep+DELIVERY_BUFFER)+' minutes',note:prep+' min preparation + up to '+DELIVERY_BUFFER+' min delivery buffer'};
     }
     if(status==='ready'){
-      var rs=getReadySince(o);
-      var left=Math.max(0,rs+DELIVERY_BUFFER*60000-Date.now());
+      var readyAt=o.ready_at?new Date(o.ready_at).getTime():getReadySince(o);
+      var left=Math.max(0,readyAt+DELIVERY_BUFFER*60000-Date.now());
       return {leftMs:left,label:'Estimated arrival up to '+DELIVERY_BUFFER+' minutes',note:'Order ready + up to '+DELIVERY_BUFFER+' min delivery buffer'};
     }
     if(status==='out_for_delivery'){
-      var rs2=getReadySince(o);
-      var left2=Math.max(0,rs2+DELIVERY_BUFFER*60000-Date.now());
+      var readyAt2=o.ready_at?new Date(o.ready_at).getTime():getReadySince(o);
+      var left2=Math.max(0,readyAt2+DELIVERY_BUFFER*60000-Date.now());
       return {leftMs:left2,label:'Delivery countdown',note:'Up to '+DELIVERY_BUFFER+' min delivery buffer after READY'};
     }
     if(status==='new'){
@@ -332,7 +333,7 @@
     var o=load();if(!o||!o.order_no||!o.phone)return;
     try{
       var sb=getSb();if(!sb)return;
-      var r=await sb.rpc('get_customer_order',{p_order_no:o.order_no,p_phone:o.phone});
+      var r=await sb.rpc(timingRpc,{p_order_no:o.order_no,p_phone:o.phone});
       if(r.error)return;
       var row=Array.isArray(r.data)?r.data[0]:r.data;
       if(row){
@@ -385,7 +386,7 @@
         var sb=getSb(),found=null;
         if(sb&&phone){
           try{
-            var r=await sb.rpc('get_customer_order',{p_order_no:expected,p_phone:phone});
+            var r=await sb.rpc(timingRpc,{p_order_no:expected,p_phone:phone});
             if(!r.error)found=Array.isArray(r.data)?r.data[0]:r.data;
           }catch(e){}
         }
