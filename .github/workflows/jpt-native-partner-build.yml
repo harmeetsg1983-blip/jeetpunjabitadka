@@ -18,6 +18,9 @@ jobs:
         run: |
           mkdir -p android-partner/app/src/main/res/drawable
           convert -background none android-partner/branding/jpt_partner_logo.svg -resize 512x512 android-partner/app/src/main/res/drawable/jpt_partner_logo.png
+      - name: Generate CI signing key
+        run: |
+          keytool -genkeypair -v -keystore android-partner/ci-debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
       - run: gradle -p android-partner :app:assembleDebug
       - uses: actions/upload-artifact@v4
         with:
