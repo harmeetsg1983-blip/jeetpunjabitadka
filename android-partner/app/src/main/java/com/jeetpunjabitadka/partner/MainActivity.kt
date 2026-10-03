@@ -99,14 +99,25 @@ class MainActivity : AppCompatActivity() {
                     if (isFinishing || isDestroyed) return@runOnUiThread
                     val title = if (minimum > BuildConfig.VERSION_CODE) "Update required" else "New JPT Partner update"
                     val message = buildString {
-                        append("Installed: ")
-                    val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+                        append("Installed: " + BuildConfig.VERSION_NAME)
+                        append("\nAvailable: " + policy.optString("current_version_name", "New version"))
+                        if (releaseNotes.isNotBlank()) {
+                            append("\n\n")
+                            append(releaseNotes)
+                        }
+                    }
+                    val dialog = androidx.appcompat.app.AlertDialog.Builder(this@MainActivity)
                         .setTitle(title)
                         .setMessage(message)
                         .setPositiveButton("UPDATE") { _, _ ->
-                            try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(updateUrl))) } catch (_: Throwable) { }
+                            try {
+                                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(updateUrl)))
+                            } catch (_: Throwable) {
+                            }
                         }
-                    if (minimum <= BuildConfig.VERSION_CODE && !mandatory) dialog.setNegativeButton("LATER", null)
+                    if (minimum <= BuildConfig.VERSION_CODE && !mandatory) {
+                        dialog.setNegativeButton("LATER", null)
+                    }
                     dialog.setCancelable(minimum <= BuildConfig.VERSION_CODE && !mandatory)
                     dialog.show()
                 }
@@ -115,7 +126,6 @@ class MainActivity : AppCompatActivity() {
             }
         }.start()
     }
-
     private fun installNativeAlertBridge() {
         bridgeRunnable?.let { web.removeCallbacks(it) }
         val runnable = object : Runnable {
