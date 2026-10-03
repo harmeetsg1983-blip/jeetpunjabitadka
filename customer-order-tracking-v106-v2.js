@@ -258,7 +258,7 @@
     var eta=etaFor(o,info);
     if(eta){
       var left=Math.max(0,eta.leftMs);
-      html+='<div style="color:#159866;font-size:13px;font-weight:1000;margin-bottom:5px">'+(left>0?'✓ ON TIME':'')+'</div>';
+      html+='<div style="color:#159866;font-size:13px;font-weight:1000;margin-bottom:5px">'+(String(o&&o.status||'').toLowerCase()==='new'?'✓ ORDER PLACED':(left>0?'✓ ON TIME':''))+'</div>';
     }
     html+='<div style="font-size:25px;font-weight:1000;letter-spacing:-.6px">'+esc(info.title)+'</div><div class="jpt-track-sub">'+esc(info.sub)+'</div></div>';
 
