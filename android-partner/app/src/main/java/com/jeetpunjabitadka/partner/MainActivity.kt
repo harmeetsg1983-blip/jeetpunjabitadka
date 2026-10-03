@@ -99,7 +99,7 @@ class MainActivity : AppCompatActivity() {
                     if (isFinishing || isDestroyed) return@runOnUiThread
                     val title = if (minimum > BuildConfig.VERSION_CODE) "Update required" else "New JPT Partner update"
                     val message = buildString {
-                        append("Installed: ")\n                        append(BuildConfig.VERSION_NAME)\n                        append("\\nAvailable: ")\n                        append(policy.optString("current_version_name", "new version"))\n                        if (releaseNotes.isNotBlank()) {\n                            append("\\n\\n")\n                            append(releaseNotes)\n                        }\n                    }
+                        append("Installed: ")
                     val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
                         .setTitle(title)
                         .setMessage(message)
