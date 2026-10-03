@@ -20,6 +20,7 @@ const statusView=s=>{s=status(s);if(s==='accepted'||s==='preparing')return 'prep
 let timer=null,channel=null,rowsCache=[],outlets={},selected='preparing',central=false,lastNewest='',loadSeq=0;
 const prepDrafts=new Map();
 let pendingNew=new Map();
+const statusLocks=new Map();
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
@@ -192,6 +193,7 @@ async function directAction(row,next,extra={}){
  if(q.error)throw q.error;
  if(!q.data)throw new Error('Order status was not saved. Please refresh and try again.');
  Object.assign(row,q.data);
+ statusLocks.set(String(row.id),{status:String(q.data.status||next).toLowerCase(),updatedAt:q.data.updated_at||new Date().toISOString(),updatedMs:Date.parse(q.data.updated_at||'')||Date.now(),at:Date.now()});
  if(String(next)!=='new'){
    try{window.JPTPartnerOrderAlertV4?.stop?.();window.stopOrderAlarm?.();}catch(e){}
  }
@@ -246,6 +248,15 @@ async function load(){
   /* Ignore an older in-flight refresh. A READY/ACCEPT action can otherwise
      be overwritten visually by a slower request that started before the action. */
   if(seq!==loadSeq)return;
+  const nowMs=Date.now();
+  freshRows.forEach(r=>{
+    const lock=statusLocks.get(String(r.id));
+    if(!lock)return;
+    if(nowMs-lock.at>15000){statusLocks.delete(String(r.id));return;}
+    const serverMs=Date.parse(r.updated_at||r.created_at||0)||0;
+    if(serverMs < lock.updatedMs){r.status=lock.status;r.__status=lock.status;r.updated_at=lock.updatedAt;}
+    else statusLocks.delete(String(r.id));
+  });
   rowsCache=freshRows;
   const newest=rowsCache[0];
   rowsCache.filter(x=>x.__status==='new'&&OWNER_OUTLET_CODES.has(String(x.outlet_id||''))).forEach(x=>pendingNew.set(String(x.id||x.order_no),x));
