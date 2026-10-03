@@ -227,15 +227,45 @@
     var outletCode=String(o&&o.outlet_id||'').trim();
     var mapHost=el.querySelector('#jptTrackMap');
     var clat=Number(o&&o.delivery_lat),clng=Number(o&&o.delivery_lng);
+    if(Number.isFinite(clat)&&Number.isFinite(clng)&&Math.abs(clat)<=90&&Math.abs(clng)<=180){
+      var mapUrl='https://www.openstreetmap.org/export/embed.html?bbox='+(clng-0.01)+'%2C'+(clat-0.01)+'%2C'+(clng+0.01)+'%2C'+(clat+0.01)+'&layer=mapnik&marker='+clat+'%2C'+clng;
+      if(mapHost)mapHost.innerHTML='<iframe title="Delivery map" loading="eager" src="'+mapUrl+'"></iframe>';
+    }else if(mapHost)mapHost.innerHTML='<div style="height:100%;display:grid;place-items:center;color:#777;font-weight:800">Delivery location will appear here</div>';
+
+    var html='<div class="jpt-track-status-head"><div class="jpt-track-status-copy">';
+    var eta=etaFor(o,info);
+    if(eta){
+      var left=Math.max(0,eta.leftMs);
+      html+='<div style="color:#159866;font-size:13px;font-weight:1000;margin-bottom:5px">'+(left>0?'✓ ON TIME':'')+'</div>';
+    }
+    html+='<div style="font-size:25px;font-weight:1000;letter-spacing:-.6px">'+esc(info.title)+'</div><div class="jpt-track-sub">'+esc(info.sub)+'</div></div>';
+
+    if(!info.cancelled && eta){
+      html+='<div class="jpt-track-eta"><div class="jpt-track-eta-title">'+esc(eta.label)+'</div><div id="jptEtaCountdown" class="jpt-track-eta-time">'+countdownText(eta.leftMs)+'</div><div class="jpt-track-eta-note">mins</div></div>';
+    }
+    html+='</div>';
+
+    if(!info.cancelled){
+      if(!eta && info.step<1)html+='<div class="jpt-track-sub jpt-track-wait" style="margin-top:10px">Waiting for restaurant acceptance…</div>';
+      html+='<div style="margin-top:14px">'+steps.map(function(x,i){return '<div class="jpt-track-line"><span class="jpt-track-dot '+(i<=info.step?'on':'')+'"></span><span style="font-weight:'+(i<=info.step?'900':'600')+'">'+esc(x)+'</span></div>'}).join('')+'</div>';
+    }
+
+    var rlat=Number(o&&o.rider_lat),rlng=Number(o&&o.rider_lng);
+    if(Number.isFinite(rlat)&&Number.isFinite(rlng)&&Math.abs(rlat)<=90&&Math.abs(rlng)<=180){
+      var riderMapUrl='https://www.openstreetmap.org/?mlat='+rlat+'&mlon='+rlng+'#map=16/'+rlat+'/'+rlng;
+      html+='<div class="jpt-track-sub" style="margin-top:10px">🚴 Rider live location available • <a target="_blank" rel="noopener" href="'+riderMapUrl+'">Open</a></div>';
+    }else if(o&&o.assignment_status){
+      html+='<div class="jpt-track-sub" style="margin-top:10px">🚴 Rider live location will appear after GPS sharing.</div>';
+    }
+
     if(info.ready)html+='<button id="jptConfirmDelivery" class="jpt-track-btn" type="button">I RECEIVED MY ORDER</button>';
-    if(info.done)html+='<div class="jpt-track-done" style="margin-top:8px">✅ Delivery confirmed</div>';
-    if(info.cancelled)html+='<div style="margin-top:8px;color:#ff9b8f;font-size:12px">This order is no longer active.</div>';
+    if(info.done)html+='<div class="jpt-track-done" style="margin-top:10px">✅ Delivery confirmed</div>';
+    if(info.cancelled)html+='<div style="margin-top:10px;color:#b64d43;font-size:12px">This order is no longer active.</div>';
 
     el.querySelector('#jptTrackCode').textContent=o&&o.order_no?o.order_no:'';
     el.querySelector('#jptTrackStatus').innerHTML=html;
     el.classList.add('show');
     loadOutletMedia(outletCode).then(paintOutletMedia);
-
 
     var b=document.getElementById('jptConfirmDelivery');
     if(b)b.onclick=async function(){
