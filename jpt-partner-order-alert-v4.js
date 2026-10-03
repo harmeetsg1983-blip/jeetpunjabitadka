@@ -39,10 +39,18 @@
         const q=indexedDB.open(DB,1);
         q.onsuccess=()=>resolve(q.result); q.onerror=()=>reject(q.error);
       });
-      return await new Promise((resolve,reject)=>{
+      const saved=await new Promise((resolve,reject)=>{
         const q=db.transaction(STORE,'readonly').objectStore(STORE).get('ringtone');
         q.onsuccess=()=>resolve(q.result||null); q.onerror=()=>reject(q.error);
       });
+      if(saved)return saved;
+    }catch(e){}
+    // Production fallback: use the locked JPT NEW ORDER sound directly from the app.
+    // Banner/image assets are not part of this alert path.
+    try{
+      const r=await fetch('./ringtones/1000449570.mp4',{cache:'no-store'});
+      if(!r.ok)return null;
+      return await r.blob();
     }catch(e){return null}
   }
 
