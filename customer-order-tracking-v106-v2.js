@@ -45,7 +45,7 @@
     if(document.getElementById('jptTrackStyleV4'))return;
     var s=document.createElement('style');s.id='jptTrackStyleV4';
     s.textContent=
-      '.jpt-customer-bell{position:fixed;right:14px;top:14px;z-index:320;background:#111;border:1px solid #d8ae42;color:#f4d77a;border-radius:14px;padding:9px 12px;font-weight:1000;box-shadow:0 8px 24px #0009}.jpt-customer-bell .badge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:5px;border-radius:99px;background:#d8ae42;color:#111;font-size:10px}.jpt-customer-notices{position:fixed;right:14px;top:60px;z-index:319;width:min(330px,calc(100% - 28px));background:#111;border:1px solid #5b471c;border-radius:14px;box-shadow:0 10px 30px #000b;padding:10px;display:none}.jpt-customer-notices.show{display:block}.jpt-customer-notice{padding:9px;border-bottom:1px solid #292929}.jpt-customer-notice b{font-size:12px}.jpt-customer-notice span{display:block;color:#aaa;font-size:10px;margin-top:3px}' + '.jpt-track{position:fixed;left:50%;bottom:76px;transform:translateX(-50%);width:min(492px,calc(100% - 28px));z-index:180;background:#111;border:1px solid #d8ae42;border-radius:16px;box-shadow:0 10px 35px #000b;color:#fff;padding:14px;display:none}.jpt-track.show{display:block}.jpt-track-top{display:flex;justify-content:space-between;gap:10px;align-items:center}.jpt-track-title{font-weight:1000;color:#f4d77a;font-size:16px}.jpt-track-code{font-weight:950;color:#fff;font-size:12px}.jpt-track-close{background:#211b0d;border:1px solid #5b471c;color:#f4d77a;border-radius:8px;padding:6px 9px}.jpt-track-status{margin-top:10px;padding:10px;border-radius:10px;background:#171717;border:1px solid #332b1b}.jpt-track-line{display:flex;align-items:center;gap:8px;margin:8px 0}.jpt-track-dot{width:10px;height:10px;border-radius:50%;background:#555;flex:none}.jpt-track-dot.on{background:#d8ae42;box-shadow:0 0 9px #d8ae42}.jpt-track-sub{font-size:11px;color:#aaa;line-height:1.4}.jpt-track-eta{margin-top:10px;padding:11px;border-radius:11px;background:#211706;border:1px solid #d8ae42;text-align:center}.jpt-track-eta-title{font-size:11px;color:#aaa}.jpt-track-eta-time{font-size:24px;font-weight:1000;color:#f4d77a;margin-top:2px}.jpt-track-eta-note{font-size:10px;color:#bbb;margin-top:3px}.jpt-track-btn{width:100%;margin-top:10px;padding:11px;border:0;border-radius:10px;background:#f4d77a;color:#111;font-weight:1000}.jpt-track-wait{color:#f4d77a;font-weight:900}.jpt-track-done{color:#7be19a;font-weight:900}';
+      '.jpt-customer-bell{position:fixed;right:14px;top:14px;z-index:320;background:#111;border:1px solid #d8ae42;color:#f4d77a;border-radius:14px;padding:9px 12px;font-weight:1000;box-shadow:0 8px 24px #0009}.jpt-customer-bell .badge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:5px;border-radius:99px;background:#d8ae42;color:#111;font-size:10px}.jpt-customer-notices{position:fixed;right:14px;top:60px;z-index:319;width:min(330px,calc(100% - 28px));background:#111;border:1px solid #5b471c;border-radius:14px;box-shadow:0 10px 30px #000b;padding:10px;display:none}.jpt-customer-notices.show{display:block}.jpt-customer-notice{padding:9px;border-bottom:1px solid #292929}.jpt-customer-notice b{font-size:12px}.jpt-customer-notice span{display:block;color:#aaa;font-size:10px;margin-top:3px}' + '.jpt-track{position:fixed;inset:0;z-index:1000;width:100%;height:100dvh;overflow:auto;background:#f5f6f8;color:#15171b;padding:0;display:none;border:0;border-radius:0;box-shadow:none;transform:none}.jpt-track.show{display:block}.jpt-track-top{height:66px;display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 16px;background:#fff;border-bottom:1px solid #e7e7e7}.jpt-track-brand{min-width:0}.jpt-track-title{font-weight:1000;color:#17191d;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.jpt-track-code{font-weight:800;color:#777;font-size:11px;margin-top:2px}.jpt-track-close{background:#fff;border:1px solid #ddd;color:#222;border-radius:50%;width:40px;height:40px;font-size:18px}.jpt-track-ad{height:clamp(110px,18vh,190px);margin:0;background:#111;position:relative;overflow:hidden}.jpt-track-ad-media{width:100%;height:100%;display:block;object-fit:cover}.jpt-track-ad-label{position:absolute;left:12px;bottom:10px;background:#000b;color:#fff;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:900}.jpt-track-ad-empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#151515,#34270d);color:#f5d879;font-size:18px}.jpt-track-ad-empty span{font-size:10px;color:#ddd;margin-top:4px}.jpt-track-map{height:clamp(260px,42vh,480px);background:#e8ebef;position:relative;overflow:hidden}.jpt-track-map iframe{width:100%;height:100%;border:0;display:block}.jpt-track-status{position:relative;margin:-42px 16px 18px;padding:18px;border-radius:22px;background:#fff;box-shadow:0 8px 28px #0002;border:0;z-index:2}.jpt-track-status-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.jpt-track-status-copy{min-width:0}.jpt-track-line{display:flex;align-items:center;gap:8px;margin:8px 0}.jpt-track-dot{width:10px;height:10px;border-radius:50%;background:#d2d5da;flex:none}.jpt-track-dot.on{background:#18a66d;box-shadow:0 0 8px #18a66d66}.jpt-track-sub{font-size:13px;color:#8b8d92;line-height:1.4}.jpt-track-eta{margin:0;padding:0;width:76px;min-width:76px;height:76px;border-radius:18px;background:#18a66d;color:#fff;text-align:center;display:flex;flex-direction:column;justify-content:center;order:2}.jpt-track-eta-title{font-size:0}.jpt-track-eta-time{font-size:27px;font-weight:1000;line-height:1}.jpt-track-eta-note{font-size:11px;color:#fff;margin-top:4px}.jpt-track-btn{width:100%;margin-top:10px;padding:13px;border:0;border-radius:12px;background:#f4c84a;color:#111;font-weight:1000}.jpt-track-wait{color:#a97900;font-weight:900}.jpt-track-done{color:#18a66d;font-weight:900}.jpt-location{margin-top:10px}.jpt-location-map{display:none}.jpt-location-actions{display:none}.jpt-track-info{margin:0 16px 30px;padding:15px 4px;color:#45474c;font-weight:900;font-size:15px}.jpt-track-info::after{content:'›';float:right;color:#e87916;font-size:24px;line-height:14px}@media(max-width:380px){.jpt-track-top{padding:8px 12px}.jpt-track-status{margin-left:12px;margin-right:12px}.jpt-track-info{margin-left:12px;margin-right:12px}}';
     document.head.appendChild(s);
   }
 
@@ -99,7 +99,7 @@
     var el=document.getElementById('jptOrderTracker');
     if(el)return el;
     el=document.createElement('section');el.id='jptOrderTracker';el.className='jpt-track';
-    el.innerHTML='<div class="jpt-track-top"><div><div class="jpt-track-title">📦 Your Order</div><div id="jptTrackCode" class="jpt-track-code"></div></div><button id="jptTrackClose" class="jpt-track-close" type="button">✕</button></div><div id="jptTrackStatus" class="jpt-track-status"></div>';
+    el.innerHTML='<div class="jpt-track-top"><div class="jpt-track-brand"><div id="jptTrackRestaurantName" class="jpt-track-title">Restaurant Partner</div><div id="jptTrackCode" class="jpt-track-code"></div></div><button id="jptTrackClose" class="jpt-track-close" type="button" aria-label="Close">✕</button></div><div id="jptTrackOutletAd" class="jpt-track-ad"></div><div id="jptTrackMap" class="jpt-track-map"></div><div id="jptTrackStatus" class="jpt-track-status"></div><div class="jpt-track-info">Order info &amp; instructions</div>';
     document.body.appendChild(el);
     el.querySelector('#jptTrackClose').onclick=function(){el.classList.remove('show')};
     ensureCustomerBell();
@@ -120,6 +120,64 @@
   function getPrepMinutes(o){
     var n=Number(o&&o.target_minutes);
     return n>0?n:15;
+  }
+
+  var outletMediaCache={};
+  var outletMediaBusy={};
+  var OUTLET_FALLBACK_NAMES={
+    'JPT-001':'Jeet Punjabi Tadka',
+    'SOP-002':'Shan-e-Punjab',
+    'NME-004':'99 Meal Express',
+    'PFA-003':'Punjabi Food Adda',
+    'TOP-005':'Taste of Punjab'
+  };
+  async function loadOutletMedia(outletCode){
+    outletCode=String(outletCode||'').trim();
+    if(!outletCode)return null;
+    if(outletMediaCache[outletCode])return outletMediaCache[outletCode];
+    if(outletMediaBusy[outletCode])return outletMediaBusy[outletCode];
+    var sb=getSb(); if(!sb)return null;
+    outletMediaBusy[outletCode]=(async function(){
+      try{
+        var [ou,ca]=await Promise.all([
+          sb.from('outlets').select('code,name,banner_url').eq('code',outletCode).maybeSingle(),
+          sb.from('campaigns').select('id,outlet_id,title,active,banner_url,video_url,start_at,end_at,priority,schedule_json,created_at').eq('outlet_id',outletCode).eq('active',true).order('priority',{ascending:false}).order('created_at',{ascending:false}).limit(20)
+        ]);
+        var outlet=ou.error?null:ou.data;
+        var now=Date.now();
+        var campaigns=(ca.error?[]:(ca.data||[])).filter(function(row){
+          var s=row.start_at?Date.parse(row.start_at):-Infinity,e=row.end_at?Date.parse(row.end_at):Infinity;
+          if(!(s<=now&&now<=e))return false;
+          var j=row.schedule_json||{};
+          return j.surface==='customer_outlet_showcase' && (j.placement==='FIRST'||j.placement==null);
+        });
+        var row=campaigns[0]||null;
+        var media=row?.video_url||row?.banner_url||outlet?.banner_url||'';
+        var data={code:outletCode,name:outlet?.name||OUTLET_FALLBACK_NAMES[outletCode]||'Restaurant Partner',url:media,isVideo:!!row?.video_url,title:row?.title||outlet?.name||OUTLET_FALLBACK_NAMES[outletCode]||'Restaurant Partner'};
+        outletMediaCache[outletCode]=data;
+        return data;
+      }catch(e){
+        var fallback={code:outletCode,name:OUTLET_FALLBACK_NAMES[outletCode]||'Restaurant Partner',url:'',isVideo:false,title:OUTLET_FALLBACK_NAMES[outletCode]||'Restaurant Partner'};
+        outletMediaCache[outletCode]=fallback; return fallback;
+      }finally{delete outletMediaBusy[outletCode]}
+    })();
+    return outletMediaBusy[outletCode];
+  }
+  function paintOutletMedia(data){
+    var host=document.getElementById('jptTrackOutletAd');
+    var name=document.getElementById('jptTrackRestaurantName');
+    if(!host)return;
+    data=data||{};
+    if(name)name.textContent=data.name||'Restaurant Partner';
+    if(!data.url){
+      host.innerHTML='<div class="jpt-track-ad-empty"><b>'+esc(data.name||'Restaurant Partner')+'</b><span>Official restaurant promotion</span></div>';
+      return;
+    }
+    if(data.isVideo){
+      host.innerHTML='<video class="jpt-track-ad-media" autoplay muted loop playsinline preload="metadata" src="'+esc(data.url)+'"></video><div class="jpt-track-ad-label">'+esc(data.name||'Restaurant Partner')+'</div>';
+    }else{
+      host.innerHTML='<img class="jpt-track-ad-media" src="'+esc(data.url)+'" alt="'+esc(data.title||data.name||'Restaurant advertisement')+'" loading="eager"><div class="jpt-track-ad-label">'+esc(data.name||'Restaurant Partner')+'</div>';
+    }
   }
 
   function getReadySince(o){
@@ -166,25 +224,9 @@
 
   function render(o){
     var el=ensureUI(),info=statusInfo(o||{}),steps=['Received','Confirmed','Preparing','Ready','Out for delivery','Delivered'];
-    var html='<div style="font-weight:950">'+esc(info.title)+'</div><div class="jpt-track-sub">'+esc(info.sub)+'</div>';
-
-    if(!info.cancelled){
-      var eta=etaFor(o,info);
-      if(eta){
-        html+='<div class="jpt-track-eta"><div class="jpt-track-eta-title">'+esc(eta.label)+'</div><div id="jptEtaCountdown" class="jpt-track-eta-time">'+countdownText(eta.leftMs)+'</div><div class="jpt-track-eta-note">'+esc(eta.note)+'</div></div>';
-      }else if(info.step<1){
-        html+='<div class="jpt-track-sub jpt-track-wait" style="margin-top:7px">Waiting for restaurant acceptance…</div>';
-      }
-      html+='<div style="margin-top:10px">'+steps.map(function(x,i){return '<div class="jpt-track-line"><span class="jpt-track-dot '+(i<=info.step?'on':'')+'"></span><span>'+esc(x)+'</span></div>'}).join('')+'</div>';
-    }
-    var clat=Number(o&&o.delivery_lat),clng=Number(o&&o.delivery_lng),rlat=Number(o&&o.rider_lat),rlng=Number(o&&o.rider_lng);
-    if(Number.isFinite(clat)&&Number.isFinite(clng)&&Math.abs(clat)<=90&&Math.abs(clng)<=180){
-      var mapUrl='https://www.openstreetmap.org/export/embed.html?bbox='+(clng-0.01)+'%2C'+(clat-0.01)+'%2C'+(clng+0.01)+'%2C'+(clat+0.01)+'&layer=mapnik&marker='+clat+'%2C'+clng;
-      html+='<div class="jpt-location"><div class="jpt-location-title">📍 Delivery location</div><div class="jpt-track-sub">Customer delivery location confirmed.</div><iframe class="jpt-location-map" title="Customer delivery location" loading="lazy" src="'+mapUrl+'"></iframe><div class="jpt-location-actions"><a target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat='+clat+'&mlon='+clng+'#map=16/'+clat+'/'+clng+'">Open customer map</a>';
-      if(Number.isFinite(rlat)&&Number.isFinite(rlng)&&Math.abs(rlat)<=90&&Math.abs(rlng)<=180){html+='<a target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat='+rlat+'&mlon='+rlng+'#map=16/'+rlat+'/'+rlng+'">🚴 Rider live location</a>';}
-      else if(o&&o.assignment_status)html+='<span class="jpt-track-sub" style="padding:8px 0">🚴 Rider live location will appear after GPS sharing.</span>';
-      html+='</div></div>';
-    }
+    var outletCode=String(o&&o.outlet_id||'').trim();
+    var mapHost=el.querySelector('#jptTrackMap');
+    var clat=Number(o&&o.delivery_lat),clng=Number(o&&o.delivery_lng);
     if(info.ready)html+='<button id="jptConfirmDelivery" class="jpt-track-btn" type="button">I RECEIVED MY ORDER</button>';
     if(info.done)html+='<div class="jpt-track-done" style="margin-top:8px">✅ Delivery confirmed</div>';
     if(info.cancelled)html+='<div style="margin-top:8px;color:#ff9b8f;font-size:12px">This order is no longer active.</div>';
@@ -192,6 +234,8 @@
     el.querySelector('#jptTrackCode').textContent=o&&o.order_no?o.order_no:'';
     el.querySelector('#jptTrackStatus').innerHTML=html;
     el.classList.add('show');
+    loadOutletMedia(outletCode).then(paintOutletMedia);
+
 
     var b=document.getElementById('jptConfirmDelivery');
     if(b)b.onclick=async function(){
