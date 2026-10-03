@@ -12,7 +12,7 @@
   var KEY='jpt_v106_last_order';
   var POLL_MS=4000;
   var DELIVERY_BUFFER=20;
-  var timer=null, active=false, sbClient=null;
+  var timer=null, active=false, sbClient=null, trackingHistoryPushed=false;
   var lastStatus='';
   var lastAssignmentStatus='';
   var noticeItems=[];
@@ -101,7 +101,7 @@
     el=document.createElement('section');el.id='jptOrderTracker';el.className='jpt-track';
     el.innerHTML='<div class="jpt-track-top"><div class="jpt-track-brand"><div id="jptTrackRestaurantName" class="jpt-track-title">Restaurant Partner</div><div id="jptTrackCode" class="jpt-track-code"></div></div><button id="jptTrackClose" class="jpt-track-close" type="button" aria-label="Close">✕</button></div><div id="jptTrackOutletAd" class="jpt-track-ad"></div><div id="jptTrackMap" class="jpt-track-map"></div><div id="jptTrackStatus" class="jpt-track-status"></div><div id="jptTrackRider" class="jpt-track-rider" style="display:none"></div><div class="jpt-track-info">Order info &amp; instructions</div>';
     document.body.appendChild(el);
-    el.querySelector('#jptTrackClose').onclick=function(){el.classList.remove('show')};
+    el.querySelector('#jptTrackClose').onclick=function(){closeTracking(true)};
     ensureCustomerBell();
     return el;
   }
@@ -244,6 +244,30 @@
     host.innerHTML='<div class="jpt-rider-head"><div class="jpt-rider-avatar">'+esc(initials)+'</div><div style="min-width:0;flex:1"><div class="jpt-rider-status">DELIVERY PARTNER ASSIGNED</div><div class="jpt-rider-name">'+esc(name)+'</div><div class="jpt-rider-meta">Your delivery partner for this order</div><div class="jpt-rider-rating">'+esc(rating)+'</div></div></div><div class="jpt-rider-live">'+esc(locationText)+(o.rider_location_at?' · Updated '+new Date(o.rider_location_at).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'')+'</div><div class="jpt-rider-actions">'+(phone?'<a class="jpt-rider-action jpt-rider-call" href="tel:'+esc(phone)+'">📞 Call rider</a>':'<span class="jpt-rider-action" style="background:#f0f0f0;color:#777">Contact unavailable</span>')+(valid?'<a class="jpt-rider-action jpt-rider-map" target="_blank" rel="noopener" href="'+esc(mapUrl)+'">📍 View live location</a>':'<span class="jpt-rider-action" style="background:#f0f0f0;color:#777">📍 Location updating…</span>')+'</div>';
   }
 
+  function closeTracking(useHistory){
+    var el=document.getElementById('jptOrderTracker');
+    if(!el)return;
+    if(useHistory && trackingHistoryPushed && location.hash==='#tracking'){
+      history.back();
+      return;
+    }
+    el.classList.remove('show');
+    trackingHistoryPushed=false;
+    active=false;
+    if(timer){clearInterval(timer);timer=null}
+    if(location.hash==='#tracking')history.replaceState(null,'',location.href.split('#')[0]);
+  }
+
+  window.addEventListener('popstate',function(){
+    var el=document.getElementById('jptOrderTracker');
+    if(el&&el.classList.contains('show')){
+      el.classList.remove('show');
+      trackingHistoryPushed=false;
+      active=false;
+      if(timer){clearInterval(timer);timer=null}
+    }
+  });
+
   function render(o){
     var el=ensureUI(),info=statusInfo(o||{}),steps=['Received','Confirmed','Preparing','Ready','Out for delivery','Delivered'];
     var outletCode=String(o&&o.outlet_id||'').trim();
@@ -335,7 +359,15 @@
   window.JPTOpenTracking=function(order){
     try{
       if(!order||!order.order_no||!order.phone)return false;
-      save(order); ensureUI(); render(order); start(); return true;
+      save(order); ensureUI();
+      var el=document.getElementById('jptOrderTracker');
+      var wasShown=!!(el&&el.classList.contains('show'));
+      render(order); start();
+      if(!wasShown && location.hash!=='#tracking'){
+        history.pushState({jptTracking:true},'',location.href.split('#')[0]+'#tracking');
+        trackingHistoryPushed=true;
+      }
+      return true;
     }catch(e){return false}
   };
   window.addEventListener('jpt:order-placed',function(ev){try{window.JPTOpenTracking(ev.detail||null)}catch(e){}});
@@ -369,7 +401,8 @@
     try{if('serviceWorker' in navigator)navigator.serviceWorker.register('./customer-app-sw.js?v=5',{scope:'./',updateViaCache:'none'}).catch(function(){})}catch(e){}
     var tries=0;
     var t=setInterval(function(){tries++;if(hook()||tries>120)clearInterval(t)},250);
-    var old=load();if(old&&old.order_no&&old.phone){render(old);start()}
+    /* Do not auto-open the last order after a normal page refresh.
+       Tracking opens only from the current order-placement flow or an explicit app action. */
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
