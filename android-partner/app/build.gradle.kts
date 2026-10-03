@@ -3,10 +3,10 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 android {
-    namespace = "com.jeetpunjabitaka.partner.nativev1"
+    namespace = "com.jeetpunjabitadka.partner.nativev1"
     compileSdk = 35
     defaultConfig {
-        applicationId = "com.jeetpunjabitaka.partner.nativev1"
+        applicationId = "com.jeetpunjabitadka.partner.nativev1"
         minSdk = 26
         targetSdk = 35
         versionCode = 2
