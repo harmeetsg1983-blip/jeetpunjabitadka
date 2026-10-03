@@ -13,11 +13,19 @@
     try{clearInterval(fallbackTimer)}catch(e){} fallbackTimer=null;
     try{if(fallbackCtx)fallbackCtx.close()}catch(e){} fallbackCtx=null;
   }
-  function startFallbackAlarm(){
-    stopFallbackAlarm();
+  function primeFallbackAudio(){
     try{
       const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return false;
-      fallbackCtx=new Ctx();
+      if(!fallbackCtx)fallbackCtx=new Ctx();
+      if(fallbackCtx.state==='suspended')fallbackCtx.resume().catch(()=>{});
+      return true;
+    }catch(e){return false}
+  }
+  function startFallbackAlarm(){
+    try{
+      const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return false;
+      if(!fallbackCtx)fallbackCtx=new Ctx();
+      if(fallbackCtx.state==='suspended')fallbackCtx.resume().catch(()=>{});
       const beep=()=>{
         if(!fallbackCtx)return;
         const o=fallbackCtx.createOscillator(),g=fallbackCtx.createGain();
@@ -116,6 +124,7 @@
     b.classList.toggle('alarmPulse',!!pulse);
   }
   function resumeAudioFromGesture(){
+    try{primeFallbackAudio()}catch(e){}
     try{if(fallbackCtx?.state==='suspended')fallbackCtx.resume()}catch(e){}
     try{arm()}catch(e){}
   }
