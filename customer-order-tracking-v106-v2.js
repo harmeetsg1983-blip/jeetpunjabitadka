@@ -177,9 +177,13 @@
       }
       html+='<div style="margin-top:10px">'+steps.map(function(x,i){return '<div class="jpt-track-line"><span class="jpt-track-dot '+(i<=info.step?'on':'')+'"></span><span>'+esc(x)+'</span></div>'}).join('')+'</div>';
     }
-    if(o&&o.assignment_status&&['accepted','picked_up','out_for_delivery'].indexOf(o.assignment_status)>=0){
-      html+='<div class="jpt-rider"><b>🚴 Delivery partner assigned</b><div style="margin-top:4px">'+esc(o.rider_name||'Delivery partner')+'</div>';
-      html+='<div class="jpt-rider-map">'+(o.rider_lat!=null&&o.rider_lng!=null?'📍 Live location available • '+esc(new Date(o.rider_location_at||Date.now()).toLocaleTimeString('en-IN')):'📍 Waiting for live location')+'</div></div>';
+    var clat=Number(o&&o.delivery_lat),clng=Number(o&&o.delivery_lng),rlat=Number(o&&o.rider_lat),rlng=Number(o&&o.rider_lng);
+    if(Number.isFinite(clat)&&Number.isFinite(clng)&&Math.abs(clat)<=90&&Math.abs(clng)<=180){
+      var mapUrl='https://www.openstreetmap.org/export/embed.html?bbox='+(clng-0.01)+'%2C'+(clat-0.01)+'%2C'+(clng+0.01)+'%2C'+(clat+0.01)+'&layer=mapnik&marker='+clat+'%2C'+clng;
+      html+='<div class="jpt-location"><div class="jpt-location-title">📍 Delivery location</div><div class="jpt-track-sub">Customer delivery location confirmed.</div><iframe class="jpt-location-map" title="Customer delivery location" loading="lazy" src="'+mapUrl+'"></iframe><div class="jpt-location-actions"><a target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat='+clat+'&mlon='+clng+'#map=16/'+clat+'/'+clng+'">Open customer map</a>';
+      if(Number.isFinite(rlat)&&Number.isFinite(rlng)&&Math.abs(rlat)<=90&&Math.abs(rlng)<=180){html+='<a target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat='+rlat+'&mlon='+rlng+'#map=16/'+rlat+'/'+rlng+'">🚴 Rider live location</a>';}
+      else if(o&&o.assignment_status)html+='<span class="jpt-track-sub" style="padding:8px 0">🚴 Rider live location will appear after GPS sharing.</span>';
+      html+='</div></div>';
     }
     if(info.ready)html+='<button id="jptConfirmDelivery" class="jpt-track-btn" type="button">I RECEIVED MY ORDER</button>';
     if(info.done)html+='<div class="jpt-track-done" style="margin-top:8px">✅ Delivery confirmed</div>';
