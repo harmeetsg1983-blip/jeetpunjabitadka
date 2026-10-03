@@ -141,7 +141,7 @@
       if(!('Notification' in window) || Notification.permission!=='granted') return false;
       const title='JPT — NEW ORDER';
       const body='New order '+(o?.order_no||'')+' received. Open Orders → ACCEPT / REJECT.';
-      const options={body,tag:'jpt-new-order-'+String(o?.id||o?.order_no||''),renotify:true,requireInteraction:true,vibrate:[450,150,450,150,700],data:{order_no:o?.order_no||'',outlet_id:o?.outlet_id||''}};
+      const options={body,tag:'jpt-new-order-'+String(o?.id||o?.order_no||''),renotify:true,requireInteraction:true,vibrate:[450,150,450,150,700],data:{order_no:o?.order_no||'',outlet_id:o?.outlet_id||'',order_id:o?.id||'',url:'./partner-v107.html?push=order&order_id='+encodeURIComponent(o?.id||'')+'&outlet_id='+encodeURIComponent(o?.outlet_id||'')+'&order_no='+encodeURIComponent(o?.order_no||'')}};
       if(navigator.serviceWorker?.getRegistration){
         const reg=await navigator.serviceWorker.getRegistration();
         if(reg?.active){await reg.showNotification(title,options);return true;}
