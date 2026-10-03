@@ -11,7 +11,7 @@
 
   var KEY='jpt_v106_last_order';
   var POLL_MS=4000;
-  var DELIVERY_BUFFER=20;
+  var DELIVERY_BUFFER=10;
   var timer=null, active=false, sbClient=null, trackingHistoryPushed=false;
   var lastStatus='';
   var lastAssignmentStatus='';
