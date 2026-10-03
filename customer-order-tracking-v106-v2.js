@@ -332,6 +332,13 @@
   }
 
   function start(){if(active)return;active=true;poll();timer=setInterval(poll,POLL_MS)}
+  window.JPTOpenTracking=function(order){
+    try{
+      if(!order||!order.order_no||!order.phone)return false;
+      save(order); ensureUI(); render(order); start(); return true;
+    }catch(e){return false}
+  };
+  window.addEventListener('jpt:order-placed',function(ev){try{window.JPTOpenTracking(ev.detail||null)}catch(e){}});
 
   function hook(){
     if(typeof window.placeOrder!=='function')return false;
