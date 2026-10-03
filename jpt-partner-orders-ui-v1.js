@@ -18,6 +18,7 @@ const OWNER_OUTLET_CODES=new Set(['JPT-001','SOP-002','NME-004','PFA-003','TOP-0
 const STATUS_VIEWS=[['new','NEW'],['preparing','PREPARING'],['ready','READY'],['out_for_delivery','OUT FOR DELIVERY'],['delivered','DELIVERED'],['history','HISTORY']];
 const statusView=s=>{s=status(s);if(s==='accepted'||s==='preparing')return 'preparing';if(s==='completed')return 'delivered';return s};
 let timer=null,channel=null,rowsCache=[],outlets={},selected='new',central=false,lastNewest='';
+const prepDrafts=new Map();
 let pendingNew=new Map();
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -140,7 +141,7 @@ function ensureRoot(){
 
 function actionHtml(x){
  const id=esc(x.id||''),st=x.__status;
- if(st==='new')return `<div class="jpt-cob-timepick" aria-label="Preparation time"><button type="button" data-time="minus" data-id="${id}" aria-label="Decrease preparation time">−</button><input class="jpt-cob-minutes" data-id="${id}" type="number" min="5" max="120" step="5" value="${Number(x.target_minutes)||30}"><button type="button" data-time="plus" data-id="${id}" aria-label="Increase preparation time">+</button><span class="jpt-cob-muted">min</span></div><div class="jpt-cob-decision"><button class="primary" data-act="accept" data-id="${id}">ACCEPT</button><button data-act="reject" data-id="${id}">REJECT</button></div>`;
+ if(st==='new')return `<div class="jpt-cob-timepick" aria-label="Preparation time"><button type="button" data-time="minus" data-id="${id}" aria-label="Decrease preparation time">−</button><input class="jpt-cob-minutes" data-id="${id}" type="number" min="5" max="120" step="5" value="${Number(prepDrafts.get(String(x.id))??x.target_minutes??30)}"><button type="button" data-time="plus" data-id="${id}" aria-label="Increase preparation time">+</button><span class="jpt-cob-muted">min</span></div><div class="jpt-cob-decision"><button class="primary" data-act="accept" data-id="${id}">ACCEPT</button><button data-act="reject" data-id="${id}">REJECT</button></div>`;
  if(st==='accepted'||st==='preparing')return `<button class="primary" data-act="ready" data-id="${id}">READY</button>`;
  if(st==='ready')return `<button class="primary" data-act="out_for_delivery" data-id="${id}">OUT FOR DELIVERY</button>`;
  if(st==='out_for_delivery')return `<button class="primary" data-act="completed" data-id="${id}">DELIVERED</button>`;
@@ -161,9 +162,10 @@ function render(){
  }).join(''):'<div class="jpt-cob-empty">No '+esc(selected.replaceAll('_',' '))+' orders right now.</div>'}</div>`;
  root.querySelectorAll('[data-act]').forEach(b=>b.onclick=(ev)=>{ev.stopPropagation();return doAction(b)});
  root.querySelectorAll('[data-open-order-btn]').forEach(b=>b.onclick=()=>openOrderDetail(b.dataset.openOrderBtn));
- root.querySelectorAll('[data-time]').forEach(b=>b.onclick=()=>{
+ root.querySelectorAll('.jpt-cob-minutes').forEach(input=>input.oninput=()=>{prepDrafts.set(String(input.dataset.id),Math.max(5,Math.min(120,Number(input.value)||30)));});
+ root.querySelectorAll('[data-time]').forEach(b=>{
    const input=b.parentElement.querySelector('.jpt-cob-minutes'); if(!input)return;
-   let v=Number(input.value)||30; v=Math.max(5,Math.min(120,v+(b.dataset.time==='plus'?5:-5))); input.value=String(v);
+   let v=Number(input.value)||30; v=Math.max(5,Math.min(120,v+(b.dataset.time==='plus'?5:-5))); input.value=String(v); prepDrafts.set(String(b.dataset.id),v);
  });
  if(window.__jptCountdownTimer)clearInterval(window.__jptCountdownTimer);
  const tickCountdowns=()=>{
@@ -197,13 +199,14 @@ async function doAction(btn){
    if(!confirm('Reject this customer order?'))return;
    await directAction(row,'cancelled',{rejection_reason:'Rejected by restaurant'});
   }else if(act==='accept'){
-   const m=Math.max(5,Math.min(120,Number(btn.closest('.jpt-cob-actions')?.querySelector('.jpt-cob-minutes')?.value||30)));
+   const m=Math.max(5,Math.min(120,Number(prepDrafts.get(String(row.id))??btn.closest('.jpt-cob-actions')?.querySelector('.jpt-cob-minutes')?.value??row.target_minutes??30)));
    const now=new Date(),deadline=new Date(now.getTime()+m*60000);
    await directAction(row,'accepted',{target_minutes:m,accepted_at:now.toISOString(),deadline_at:deadline.toISOString(),eta_minutes:m+20});
    const verify=await window.sb.from('orders').select('status,target_minutes,accepted_at,deadline_at').eq('id',row.id).eq('outlet_id',row.outlet_id).maybeSingle();
    if(verify.error)throw verify.error;
    if(!verify.data || String(verify.data.status).toLowerCase()!=='accepted' || !verify.data.deadline_at)throw new Error('Server did not confirm order acceptance/timer');
    Object.assign(row,verify.data);
+   prepDrafts.delete(String(row.id));
    selected='preparing';
   }else{
    await directAction(row,act);
