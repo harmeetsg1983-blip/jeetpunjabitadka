@@ -7,7 +7,27 @@
   if(window.JPTPartnerOrderAlertV4)return;
 
   const DB='jptPartnerAlertDB', STORE='settings', KEY='jpt_v4_active_order', PREFS_KEY='notificationPrefs', RING_MS=9000;
-  let audio=null, objectUrl=null, ringTimer=null, activeId=null, generation=0, armed=false;
+  let audio=null, objectUrl=null, ringTimer=null, activeId=null, generation=0, armed=false, fallbackCtx=null, fallbackTimer=null;
+
+  function stopFallbackAlarm(){
+    try{clearInterval(fallbackTimer)}catch(e){} fallbackTimer=null;
+    try{if(fallbackCtx)fallbackCtx.close()}catch(e){} fallbackCtx=null;
+  }
+  function startFallbackAlarm(){
+    stopFallbackAlarm();
+    try{
+      const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return false;
+      fallbackCtx=new Ctx();
+      const beep=()=>{
+        if(!fallbackCtx)return;
+        const o=fallbackCtx.createOscillator(),g=fallbackCtx.createGain();
+        o.type='sine';o.frequency.value=880;g.gain.value=0.0001;
+        o.connect(g);g.connect(fallbackCtx.destination);
+        const t=fallbackCtx.currentTime;g.gain.exponentialRampToValueAtTime(0.22,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+0.32);o.start(t);o.stop(t+0.34);
+      };
+      beep();fallbackTimer=setInterval(beep,900);return true;
+    }catch(e){stopFallbackAlarm();return false}
+  }
 
   function stopAudio(){
     const a=audio; audio=null;
@@ -18,7 +38,7 @@
   function hardStop(clearOrder=true){
     generation++;
     clearTimeout(ringTimer); ringTimer=null; activeId=null; armed=false;
-    stopAudio();
+    stopAudio();stopFallbackAlarm();
     try{navigator.vibrate?.(0)}catch(e){}
     const alarm=document.getElementById('orderAlarm');
     if(alarm){alarm.style.display='none';alarm.classList.remove('alarmPulse');}
@@ -109,7 +129,8 @@
     attention(o);
     if(isNewActive) await notifyNewOrder(o);
     const g=generation;
-    await play();
+    const played=await play();
+    if(!played) startFallbackAlarm();
     if(g!==generation || activeId!==id)return;
     try{navigator.vibrate?.([450,150,450,150,700])}catch(e){}
     clearTimeout(ringTimer);
@@ -145,7 +166,7 @@
     }catch(e){}
   }
 
-  window.JPTPartnerOrderAlertV4={version:'4-single-owner',arm,ring,stop:hardStop,active:()=>activeId,getPrefs};
+  window.JPTPartnerOrderAlertV4={version:'4.1-fallback-alarm',arm,ring,stop:hardStop,active:()=>activeId,getPrefs};
   window.addEventListener('jpt:notification-settings',()=>{if(activeId!==null)arm()});
 
   let n=0, restored=false;
