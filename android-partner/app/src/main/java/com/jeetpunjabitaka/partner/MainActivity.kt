@@ -14,6 +14,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var web: WebView
     private val partnerUrl = "https://harmeetsg1983-blip.github.io/jeetpunjabitadka/admin.html"
     private var bridgeRunnable: Runnable? = null
+    private var sessionRunnable: Runnable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,36 +29,74 @@ class MainActivity : AppCompatActivity() {
                 override fun onPageFinished(view: WebView, url: String) {
                     super.onPageFinished(view, url)
                     installNativeAlertBridge()
+                    syncNativeSession()
                 }
             }
             addJavascriptInterface(NativeAlertBridge(), "JPTNativeAlert")
+            addJavascriptInterface(NativeSessionBridge(), "JPTNativeSession")
             loadUrl(partnerUrl)
         }
         setContentView(web)
+        startSessionSyncLoop()
     }
 
     inner class NativeAlertBridge {
         @JavascriptInterface fun start(orderNo: String) {
-            val intent = Intent(this@MainActivity, OrderAlertService::class.java)
-                .setAction(OrderAlertService.START)
-                .putExtra("order_no", orderNo)
-            if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent) else startService(intent)
-        }
-
-        @JavascriptInterface fun syncSession(accessToken: String, refreshToken: String) {
-            if (accessToken.isBlank()) return
-            val intent = Intent(this@MainActivity, OrderAlertService::class.java)
-                .setAction(OrderAlertService.SYNC_SESSION)
-                .putExtra("access_token", accessToken)
-                .putExtra("refresh_token", refreshToken)
-            if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent) else startService(intent)
+            startForegroundServiceCompat(
+                Intent(this@MainActivity, OrderAlertService::class.java)
+                    .setAction(OrderAlertService.START)
+                    .putExtra("order_no", orderNo)
+            )
         }
 
         @JavascriptInterface fun stop() {
-            val intent = Intent(this@MainActivity, OrderAlertService::class.java)
-                .setAction(OrderAlertService.STOP)
-            if (Build.VERSION.SDK_INT >= 26) startService(intent) else startService(intent)
+            startService(
+                Intent(this@MainActivity, OrderAlertService::class.java)
+                    .setAction(OrderAlertService.STOP)
+            )
         }
+    }
+
+    inner class NativeSessionBridge {
+        @JavascriptInterface fun sync(payload: String) {
+            val i = Intent(this@MainActivity, OrderAlertService::class.java)
+                .setAction(OrderAlertService.SYNC_SESSION)
+                .putExtra("session_json", payload)
+            startForegroundServiceCompat(i)
+        }
+    }
+
+    private fun startForegroundServiceCompat(intent: Intent) {
+        if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent) else startService(intent)
+    }
+
+    private fun syncNativeSession() {
+        if (isFinishing || isDestroyed) return
+        web.evaluateJavascript("""(async function(){
+            try{
+                const c=window.sb;
+                const s=c?.auth ? (await c.auth.getSession())?.data?.session : null;
+                const p={
+                    url:String(window.JPT_SUPABASE_URL||""),
+                    key:String(window.JPT_SUPABASE_PUBLISHABLE_KEY||""),
+                    access:String(s?.access_token||""),
+                    refresh:String(s?.refresh_token||"")
+                };
+                if(p.url && p.key && p.access) window.JPTNativeSession.sync(JSON.stringify(p));
+            }catch(e){}
+        })()""", null)
+    }
+
+    private fun startSessionSyncLoop() {
+        sessionRunnable?.let { web.removeCallbacks(it) }
+        val runnable = object : Runnable {
+            override fun run() {
+                syncNativeSession()
+                if (!isFinishing && !isDestroyed) web.postDelayed(this, 30_000)
+            }
+        }
+        sessionRunnable = runnable
+        web.postDelayed(runnable, 5_000)
     }
 
     private fun installNativeAlertBridge() {
@@ -66,19 +105,6 @@ class MainActivity : AppCompatActivity() {
             override fun run() {
                 if (isFinishing || isDestroyed) return
                 web.evaluateJavascript("""(function(){
-                    if(!window.JPTNativeAlert)return;
-                    if(!window.__JPT_NATIVE_SESSION_SYNC){
-                        window.__JPT_NATIVE_SESSION_SYNC=true;
-                        const sync=async()=>{try{
-                            if(window.sb?.auth?.getSession){
-                                const r=await window.sb.auth.getSession();
-                                const s=r?.data?.session;
-                                if(s?.access_token) window.JPTNativeAlert.syncSession(String(s.access_token),String(s.refresh_token||""));
-                            }
-                        }catch(e){}};
-                        sync();
-                        setInterval(sync,30000);
-                    }
                     if(window.__JPT_NATIVE_BRIDGE_INSTALLED)return;
                     if(typeof window.showOrderAlarm!=="function")return;
                     window.__JPT_NATIVE_BRIDGE_INSTALLED=true;
@@ -98,9 +124,7 @@ class MainActivity : AppCompatActivity() {
                         };
                     }
                 })()""", null)
-                if (!isFinishing && !isDestroyed) {
-                    web.postDelayed(this, 1000)
-                }
+                if (!isFinishing && !isDestroyed) web.postDelayed(this, 1000)
             }
         }
         bridgeRunnable = runnable
@@ -109,7 +133,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         bridgeRunnable?.let { web.removeCallbacks(it) }
+        sessionRunnable?.let { web.removeCallbacks(it) }
         bridgeRunnable = null
+        sessionRunnable = null
         web.destroy()
         super.onDestroy()
     }
