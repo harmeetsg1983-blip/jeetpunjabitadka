@@ -371,6 +371,15 @@
     }catch(e){return false}
   };
   window.addEventListener('jpt:order-placed',function(ev){try{window.JPTOpenTracking(ev.detail||null)}catch(e){}});
+  window.addEventListener('jpt:live-event',function(ev){
+    try{
+      var e=ev?.detail||{};
+      if(e.event_type==='delivery.location.updated' || e.event_type==='delivery.assignment.updated' || e.event_type==='delivery.status.updated'){
+        var o=load(),p=e.payload||{};
+        if(o && o.order_no && (!p.order_id || String(p.order_id)===String(o.id) || String(p.order_no)===String(o.order_no))) poll();
+      }
+    }catch(err){}
+  });
 
   function hook(){
     if(typeof window.placeOrder!=='function')return false;
