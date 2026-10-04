@@ -130,7 +130,7 @@ function openOrderDetail(id){
  '<div class="jpt-order-detail-card"><div style="font-size:12px;color:#aaa">ORDER ITEMS</div><div class="jpt-order-detail-items">'+parseItems(row).map(i=>{const q=Number(i.qty??i.quantity??1),p=Number(i.price??i.unit_price??0);return '<div class="jpt-order-detail-item"><div><b>'+esc(i.name||i.item_name||'Item')+'</b><div style="color:#aaa;margin-top:3px">Qty × '+q+'</div></div><strong>'+money(p*q)+'</strong></div>'}).join('')+'</div><div style="margin-top:12px;color:#bbb">Item subtotal <span style="float:right">'+money(sub)+'</span></div>'+(del?'<div style="margin-top:6px;color:#bbb">Delivery <span style="float:right">'+money(del)+'</span></div>':'')+(disc?'<div style="margin-top:6px;color:#7bd99a">Discount <span style="float:right">−'+money(disc)+'</span></div>':'')+'<div class="jpt-order-detail-total"><span>Total</span><span>'+money(total)+'</span></div><div style="margin-top:8px;color:#aaa;font-size:11px">Payment • '+esc(payment)+'</div></div>'+
  '<div class="jpt-order-detail-card"><div style="font-size:12px;color:#aaa">RESTAURANT ACTION</div><div class="jpt-order-detail-actions">'+detailActionHtml(row)+'</div></div>';
  body.querySelectorAll('[data-act]').forEach(b=>b.onclick=async()=>{await doAction(b);if(m.classList.contains('show')){const updated=rowsCache.find(x=>String(x.id)===String(id));if(updated&&updated.__status!=='new')m.classList.remove('show');}});
- body.querySelectorAll('[data-time]').forEach(b=>b.onclick=()=>{const input=b.parentElement.querySelector('.jpt-cob-minutes');if(!input)return;let v=Number(input.value)||30;v=Math.max(5,Math.min(120,v+(b.dataset.time==='plus'?5:-5)));input.value=String(v);});
+ body.querySelectorAll('[data-time]').forEach(b=>b.onclick=()=>{const input=b.parentElement.querySelector('.jpt-cob-minutes');if(!input)return;let v=Number(input.value)||30;v=Math.max(15,Math.min(60,v+(b.dataset.time==='plus'?5:-5)));input.value=String(v);});
  m.classList.add('show');
 }
 
@@ -151,7 +151,7 @@ function ensureRoot(){
 
 function actionHtml(x){
  const id=esc(x.id||''),st=x.__status;
- if(st==='new')return `<div class="jpt-cob-timepick" aria-label="Preparation time"><button type="button" data-time="minus" data-id="${id}" aria-label="Decrease preparation time">−</button><input class="jpt-cob-minutes" data-id="${id}" type="number" min="5" max="120" step="5" value="${Number(prepDrafts.get(String(x.id))??x.target_minutes??30)}"><button type="button" data-time="plus" data-id="${id}" aria-label="Increase preparation time">+</button><span class="jpt-cob-muted">min</span></div><div class="jpt-cob-decision"><button class="primary" data-act="accept" data-id="${id}">ACCEPT</button><button data-act="reject" data-id="${id}">REJECT</button></div>`;
+ if(st==='new')return `<div class="jpt-cob-timepick" aria-label="Preparation time"><button type="button" data-time="minus" data-id="${id}" aria-label="Decrease preparation time">−</button><input class="jpt-cob-minutes" data-id="${id}" type="number" min="15" max="60" step="5" value="${Number(prepDrafts.get(String(x.id))??x.target_minutes??30)}"><button type="button" data-time="plus" data-id="${id}" aria-label="Increase preparation time">+</button><span class="jpt-cob-muted">min</span></div><div class="jpt-cob-decision"><button class="primary" data-act="accept" data-id="${id}">ACCEPT</button><button data-act="reject" data-id="${id}">REJECT</button></div>`;
  if(st==='accepted'||st==='preparing'||st==='ready'||st==='out_for_delivery')return '<span class="jpt-cob-history">STATUS UPDATES ARE HANDLED BY THE DELIVERY FLOW</span>';
  return '';
 }
@@ -170,10 +170,10 @@ function render(){
  }).join(''):'<div class="jpt-cob-empty">No '+esc(selected.replaceAll('_',' '))+' orders right now.</div>'}</div>`;
  root.querySelectorAll('[data-act]').forEach(b=>b.onclick=(ev)=>{ev.stopPropagation();return doAction(b)});
  root.querySelectorAll('[data-open-order-btn]').forEach(b=>b.onclick=()=>openOrderDetail(b.dataset.openOrderBtn));
- root.querySelectorAll('.jpt-cob-minutes').forEach(input=>input.oninput=()=>{prepDrafts.set(String(input.dataset.id),Math.max(5,Math.min(120,Number(input.value)||30)));});
+ root.querySelectorAll('.jpt-cob-minutes').forEach(input=>input.oninput=()=>{prepDrafts.set(String(input.dataset.id),Math.max(15,Math.min(60,Number(input.value)||30)));});
  root.querySelectorAll('[data-time]').forEach(b=>{
    const input=b.parentElement.querySelector('.jpt-cob-minutes'); if(!input)return;
-   let v=Number(input.value)||30; v=Math.max(5,Math.min(120,v+(b.dataset.time==='plus'?5:-5))); input.value=String(v); prepDrafts.set(String(b.dataset.id),v);
+   let v=Number(input.value)||30; v=Math.max(15,Math.min(60,v+(b.dataset.time==='plus'?5:-5))); input.value=String(v); prepDrafts.set(String(b.dataset.id),v);
  });
  if(window.__jptCountdownTimer)clearInterval(window.__jptCountdownTimer);
  const tickCountdowns=()=>{
@@ -208,7 +208,7 @@ async function doAction(btn){
    if(!confirm('Reject this customer order?'))return;
    await directAction(row,'cancelled',{rejection_reason:'Rejected by restaurant'});
   }else if(act==='accept'){
-   const m=Math.max(5,Math.min(120,Number(prepDrafts.get(String(row.id))??btn.closest('.jpt-cob-actions')?.querySelector('.jpt-cob-minutes')?.value??row.target_minutes??30)));
+   const m=Math.max(15,Math.min(60,Number(prepDrafts.get(String(row.id))??btn.closest('.jpt-cob-actions')?.querySelector('.jpt-cob-minutes')?.value??row.target_minutes??30)));
    const now=new Date(),deadline=new Date(now.getTime()+m*60000);
    await directAction(row,'accepted',{target_minutes:m,accepted_at:now.toISOString(),deadline_at:deadline.toISOString(),eta_minutes:m+20});
    const verify=await window.sb.from('orders').select('status,target_minutes,accepted_at,deadline_at').eq('id',row.id).eq('outlet_id',row.outlet_id).maybeSingle();
