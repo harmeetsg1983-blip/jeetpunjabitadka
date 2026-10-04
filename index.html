@@ -365,6 +365,12 @@ async function placeOrder(){
   let c=calc(),payment=$('payment').value;
   let gps=window.JPTDeliveryLocationSnapshot||null;
   let ord={order_no:'JPT-'+Date.now().toString().slice(-7),customer_name:$('custName').value.trim()||'Customer',customer_phone:phone,customer_address:$('address').value.trim(),items:rows.map(r=>({id:r.x.id,name:r.x.name,qty:r.q,price:Number(r.x.price)})),subtotal:c.subtotal,discount:c.discount,delivery_charge:c.delivery,total:c.total,status:'new',eta_minutes:45,notes:'',outlet_id:outletId,payment,order_type:'delivery',delivery_lat:gps?Number(gps.lat):null,delivery_lng:gps?Number(gps.lng):null,delivery_location_confirmed_at:gps?(gps.at||new Date().toISOString()):null};
+  let result=await sb.from('orders').insert(ord);
+  if(result.error)return toast('Order save failed: '+result.error.message);
+  let placed={order_no:ord.order_no,phone:phone,created_at:new Date().toISOString(),outlet_id:outletId,status:'new',target_minutes:null,deadline_at:null};
+  window.JPT_LAST_PLACED_ORDER=placed;
+  try{localStorage.setItem('jpt_v106_last_order',JSON.stringify(placed))}catch(e){}
+  try{window.dispatchEvent(new CustomEvent('jpt:order-placed',{detail:placed}))}catch(e){}
   cartState={};selectedPromo=null;updateCart();closeCart();
   toast('Order placed successfully');
  }catch(e){console.error(e);toast('Order could not be completed. Please try again.')} finally {jptCheckoutBusy=false}
