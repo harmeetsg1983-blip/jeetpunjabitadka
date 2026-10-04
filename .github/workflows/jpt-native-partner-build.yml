@@ -1,7 +1,7 @@
 name: JPT Native Partner Build
 on:
   push:
-    branches: ["jpt-partner-release-v1"]
+    branches: ["jpt-partner-release-v1", "jpt-partner-background-monitor-clean-v1"]
   pull_request:
     branches: ["main"]
   workflow_dispatch:
