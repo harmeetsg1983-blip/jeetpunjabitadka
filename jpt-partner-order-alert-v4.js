@@ -7,7 +7,7 @@
   if(window.JPTPartnerOrderAlertV4)return;
 
   const DB='jptPartnerAlertDB', STORE='settings', KEY='jpt_v4_active_order', PREFS_KEY='notificationPrefs', RING_MS=9000, PROD_RINGTONES_URL='./ringtones/1000449570.mp4';
-  let audio=null, objectUrl=null, ringTimer=null, activeId=null, generation=0, armed=false;
+  let audio=null, objectUrl=null, ringTimer=null, activeId=null, generation=0, armed=false, ringInFlight=new Map();
 
   function stopAudio(){
     const a=audio; audio=null;
@@ -139,29 +139,38 @@
   async function ring(o){
     if(!o || String(o.status||'').toLowerCase()!=='new')return;
     const id=String(o.id||o.order_no||''); if(!id)return;
-    // Fresh server check prevents stale INSERT/refresh data from restarting
-    // an alert after the restaurant has already accepted/rejected the order.
-    try{
-      if(window.sb && o.id!=null){
-        const fresh=await window.sb.from('orders').select('id,status,order_no,outlet_id,created_at').eq('id',o.id).maybeSingle();
-        if(fresh.error || !fresh.data || String(fresh.data.status||'').toLowerCase()!=='new'){
-          if(activeId===id)hardStop(true);
-          return;
+
+    // Multiple realtime/refresh paths can report the same NEW order at once.
+    // Serialize them by order id so one order can never start two alert loops.
+    if(ringInFlight.has(id))return ringInFlight.get(id);
+    const task=(async()=>{
+      // Fresh server check prevents stale INSERT/refresh data from restarting
+      // an alert after the restaurant has already accepted/rejected the order.
+      try{
+        if(window.sb && o.id!=null){
+          const fresh=await window.sb.from('orders').select('id,status,order_no,outlet_id,created_at').eq('id',o.id).maybeSingle();
+          if(fresh.error || !fresh.data || String(fresh.data.status||'').toLowerCase()!=='new'){
+            if(activeId===id)hardStop(true);
+            return;
+          }
+          o=fresh.data;
         }
-        o=fresh.data;
-      }
-    }catch(e){ return; }
-    const prefs=await getPrefs(); if(prefs.orderNotifications===false)return;
-    const isNewActive=activeId!==id;
-    if(isNewActive){hardStop(false);activeId=id;persist(o);}
-    attention(o);
-    if(isNewActive) await notifyNewOrder(o);
-    const g=generation;
-    await play();
-    if(g!==generation || activeId!==id)return;
-    try{navigator.vibrate?.([450,150,450,150,700])}catch(e){}
-    clearTimeout(ringTimer);
-    ringTimer=setTimeout(()=>{if(activeId===id && g===generation)ring(o)},RING_MS);
+      }catch(e){ return; }
+
+      const prefs=await getPrefs(); if(prefs.orderNotifications===false)return;
+      const isNewActive=activeId!==id;
+      if(isNewActive){hardStop(false);activeId=id;persist(o);}
+      attention(o);
+      if(isNewActive) await notifyNewOrder(o);
+      const g=generation;
+      await play();
+      if(g!==generation || activeId!==id)return;
+      try{navigator.vibrate?.([450,150,450,150,700])}catch(e){}
+      clearTimeout(ringTimer);
+      ringTimer=setTimeout(()=>{if(activeId===id && g===generation)ring(o)},RING_MS);
+    })();
+    ringInFlight.set(id,task);
+    try{return await task}finally{ringInFlight.delete(id)}
   }
 
   function wrap(){
