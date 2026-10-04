@@ -138,8 +138,20 @@
 
   async function ring(o){
     if(!o || String(o.status||'').toLowerCase()!=='new')return;
-    const prefs=await getPrefs(); if(prefs.orderNotifications===false)return;
     const id=String(o.id||o.order_no||''); if(!id)return;
+    // Fresh server check prevents stale INSERT/refresh data from restarting
+    // an alert after the restaurant has already accepted/rejected the order.
+    try{
+      if(window.sb && o.id!=null){
+        const fresh=await window.sb.from('orders').select('id,status,order_no,outlet_id,created_at').eq('id',o.id).maybeSingle();
+        if(fresh.error || !fresh.data || String(fresh.data.status||'').toLowerCase()!=='new'){
+          if(activeId===id)hardStop(true);
+          return;
+        }
+        o=fresh.data;
+      }
+    }catch(e){ return; }
+    const prefs=await getPrefs(); if(prefs.orderNotifications===false)return;
     const isNewActive=activeId!==id;
     if(isNewActive){hardStop(false);activeId=id;persist(o);}
     attention(o);
