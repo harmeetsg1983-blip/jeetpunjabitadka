@@ -266,12 +266,9 @@ class OrderAlertService : Service() {
     }
 
     private fun stopAlertAndMonitoring() {
+        // Accept/preparing/ready/out-for-delivery must stop only the ringtone.
+        // Background NEW ORDER monitoring must remain alive for the next order.
         stopAlertOnly()
-        pollRunnable?.let { pollHandler?.removeCallbacks(it) }
-        pollRunnable = null
-        pollHandler = null
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
     }
 
     override fun onDestroy() {
