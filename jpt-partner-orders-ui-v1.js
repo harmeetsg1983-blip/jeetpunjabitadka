@@ -193,7 +193,7 @@ async function directAction(row,next,extra={}){
  if(q.error)throw q.error;
  if(!q.data)throw new Error('Order status was not saved. Please refresh and try again.');
  Object.assign(row,q.data);
- statusLocks.set(String(row.id),{status:String(q.data.status||next).toLowerCase(),updatedAt:q.data.updated_at||new Date().toISOString(),updatedMs:Date.parse(q.data.updated_at||'')||Date.now(),at:Date.now()});
+ statusLocks.set(String(row.id),{status:String(q.data.status||next).toLowerCase(),target_minutes:q.data.target_minutes,accepted_at:q.data.accepted_at,deadline_at:q.data.deadline_at,updatedAt:q.data.updated_at||new Date().toISOString(),updatedMs:Date.parse(q.data.updated_at||'')||Date.now(),at:Date.now()});
  if(String(next)!=='new'){
    try{window.JPTPartnerOrderAlertV4?.stop?.();window.stopOrderAlarm?.();}catch(e){}
  }
@@ -254,7 +254,7 @@ async function load(){
     if(!lock)return;
     if(nowMs-lock.at>15000){statusLocks.delete(String(r.id));return;}
     const serverMs=Date.parse(r.updated_at||r.created_at||0)||0;
-    if(serverMs < lock.updatedMs){r.status=lock.status;r.__status=lock.status;r.updated_at=lock.updatedAt;}
+    if(serverMs < lock.updatedMs){r.status=lock.status;r.__status=lock.status;r.target_minutes=lock.target_minutes;r.accepted_at=lock.accepted_at;r.deadline_at=lock.deadline_at;r.updated_at=lock.updatedAt;}
     else statusLocks.delete(String(r.id));
   });
   rowsCache=freshRows;
