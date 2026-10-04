@@ -18,7 +18,7 @@
 </main><div class="nav"><button class="dark" onclick="show('home')">Home</button><button class="dark" onclick="show('profile')">Onboard</button><button class="dark" onclick="show('history')">Earnings</button><button class="dark" onclick="show('tools')">Tools</button></div>
 <script src="./jpt-live-platform-bridge-v1.js?v=1"></script>
 <script>
-const SUPABASE_URL='https://qrkbhrmxejtpvheplath.supabase.co',SUPABASE_KEY='sb_publishable_xySAr0cGnVCaC_sgtwk8Zw_IW_b5sgh';const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);window.sb=sb;let stream=null,selfieBlob=null,offer=null,audio=null,offerTimer=null,locationTimer=null,current=null,lastOrderStatus='';
+const SUPABASE_URL='https://qrkbhrmxejtpvheplath.supabase.co',SUPABASE_KEY='sb_publishable_xySAr0cGnVCaC_sgtwk8Zw_IW_b5sgh';const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);window.sb=sb;let stream=null,selfieBlob=null,offer=null,audio=null,offerTimer=null,locationTimer=null,current=null,lastOrderStatus='';let deliveryLiveChannel=null;
 const $=id=>document.getElementById(id);function show(id){['home','profile','history','tools'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}function phone(v){let d=(v||'').replace(/\D/g,'');return d.startsWith('91')&&d.length===12?d.slice(2):d}
 async function ensureSession(){let {data}=await sb.auth.getSession();return data.session||null}
 async function riderLoginSendOtp(){try{let p=phone($('loginPhone').value);if(p.length!==10)return alert('Enter valid 10-digit rider phone number');$('loginMsg').textContent='Sending OTP…';let r=await sb.auth.signInWithOtp({phone:'+91'+p});if(r.error)throw r.error;$('loginMsg').textContent='OTP sent. Enter the OTP below.';$('loginOtp').disabled=false;$('verifyOtpBtn').disabled=false;}catch(e){$('loginMsg').textContent='OTP failed: '+e.message;alert(e.message)}}
@@ -31,6 +31,30 @@ async function openCamera(){try{if(stream)stream.getTracks().forEach(t=>t.stop()
 function captureSelfie(){let v=$('video'),c=$('canvas');if(!stream)return;let w=v.videoWidth||720,h=v.videoHeight||720;c.width=w;c.height=h;c.getContext('2d').drawImage(v,0,0,w,h);c.toBlob(b=>{selfieBlob=b;$('video').style.display='none';c.style.display='block';$('capture').disabled=true;$('retake').classList.remove('hidden');$('selfieState').textContent='Live selfie: Captured';stream.getTracks().forEach(t=>t.stop());stream=null},'image/jpeg',.88)}function retakeSelfie(){selfieBlob=null;$('canvas').style.display='none';$('retake').classList.add('hidden');openCamera()}
 async function uploadPrivate(dpId,file,label){let path=dpId+'/'+label+'_'+Date.now()+'_'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');let r=await sb.storage.from('delivery-partner-kyc').upload(path,file,{upsert:false});if(r.error)throw r.error;return path}
 async function submitOnboarding(){try{let s=await ensureSession();if(!s)return showLogin();let name=$('name').value.trim(),p=phone($('phone').value),addr=$('address').value.trim(),file=$('aadhaar').files[0];if(!name)return alert('Enter full name');if(p.length!==10)return alert('Enter valid 10-digit contact number');if(!addr)return alert('Enter Aadhaar address');if(!file)return alert('Upload Aadhaar document');if(!selfieBlob)return alert('Capture live camera selfie');$('submitMsg').textContent='Preparing secure submission…';let prep=await sb.rpc('delivery_partner_prepare_profile',{p_full_name:name});if(prep.error)throw prep.error;let dpId=(typeof prep.data==='string'?prep.data:(prep.data?.id||prep.data?.delivery_partner_id));if(!dpId)throw new Error('Could not prepare delivery partner profile');let aad=await uploadPrivate(dpId,file,'aadhaar');let selfie=await uploadPrivate(dpId,new File([selfieBlob],'live-selfie.jpg',{type:'image/jpeg'}),'live_selfie');let r=await sb.rpc('delivery_partner_submit_onboarding',{p_full_name:name,p_phone:p,p_address:addr,p_aadhaar_document_url:aad,p_live_selfie_url:selfie,p_live_selfie_capture_method:'camera',p_live_selfie_captured_at:new Date().toISOString()});if(r.error)throw r.error;$('submitMsg').textContent='Submitted successfully. Status: Under Review. Wait for admin approval before going ONLINE.';await refresh()}catch(e){$('submitMsg').textContent='Submission failed: '+e.message;alert(e.message)}}
+async function startDeliveryLiveChannel(){
+  try{
+    if(deliveryLiveChannel) await sb.removeChannel(deliveryLiveChannel);
+    deliveryLiveChannel=sb.channel('jpt-delivery-live-'+Date.now())
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'delivery_assignments'},p=>{
+        if(window.JPTLiveBridge?.receive&&p?.new){
+          window.JPTLiveBridge.receive({event_id:'delivery.assignment.created:'+String(p.new.id),event_type:'delivery.assignment.created',entity_type:'delivery_assignment',entity_id:p.new.id,outlet_id:p.new.outlet_id||'',audience:'delivery',occurred_at:p.new.created_at,payload:p.new},'supabase-realtime');
+        }
+        loadOffer().catch(()=>{}); loadActive().catch(()=>{});
+      })
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'delivery_assignments'},p=>{
+        if(window.JPTLiveBridge?.receive&&p?.new){
+          window.JPTLiveBridge.receive({event_id:'delivery.assignment.updated:'+String(p.new.id)+':'+String(p.new.updated_at||Date.now()),event_type:'delivery.assignment.updated',entity_type:'delivery_assignment',entity_id:p.new.id,outlet_id:p.new.outlet_id||'',audience:'delivery',occurred_at:p.new.updated_at||new Date().toISOString(),payload:p.new},'supabase-realtime');
+        }
+        loadOffer().catch(()=>{}); loadActive().catch(()=>{});
+      })
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'delivery_location_updates'},p=>{
+        if(window.JPTLiveBridge?.receive&&p?.new){
+          window.JPTLiveBridge.receive({event_id:'delivery.location.updated:'+String(p.new.id),event_type:'delivery.location.updated',entity_type:'delivery_location',entity_id:p.new.id,outlet_id:'',audience:'customer,partner,delivery',occurred_at:p.new.recorded_at,payload:p.new},'supabase-realtime');
+        }
+      })
+      .subscribe();
+  }catch(e){console.warn('Delivery live channel unavailable',e)}
+}
 async function startOfferPolling(){stopOfferPolling();offerTimer=setInterval(async()=>{await loadOffer();await loadActive()},5000);await loadOffer();await loadActive()}function stopOfferPolling(){if(offerTimer){clearInterval(offerTimer);offerTimer=null}}async function loadOffer(){try{let {data,error}=await sb.rpc('delivery_partner_offer_snapshot');if(error)throw error;if(data&&((Array.isArray(data)&&data.length)||data.id)){let x=Array.isArray(data)?data[0]:data;if(!offer||offer.id!==x.id){offer=x;showOffer(x);startTone()}}else{if(!$('offer').classList.contains('hidden')&&!current)$('offer').classList.add('hidden')}}catch(e){console.warn(e)}}function showOffer(x){$('offer').classList.remove('hidden');$('offerText').textContent='Order #'+(x.order_id||'—');$('offerDetails').textContent=(x.outlet_id||'')+' • '+(x.status||'offered')+' • '+(x.customer_address||'Delivery details after acceptance')}
 async function respondOffer(accept){if(!offer)return;stopTone();try{let r=await sb.rpc('delivery_assignment_respond',{p_assignment_id:offer.id,p_accept:accept,p_reason:accept?null:'rider_rejected'});if(r.error)throw r.error;$('offer').classList.add('hidden');offer=null;if(accept)playDeliveryAcceptedTone();await loadActive()}catch(e){alert(e.message)}}
 async function loadActive(){let {data,error}=await sb.rpc('delivery_partner_assignment_snapshot');if(error)return;let x=Array.isArray(data)?data.find(a=>['accepted','picked_up','out_for_delivery'].includes(a.status)):data;if(!x)return;current=x;$('current').classList.remove('hidden');$('currentOrder').textContent='Order #'+x.order_id;$('currentStatus').textContent=(x.status||'accepted').replace(/_/g,' ').toUpperCase();updateNextButton(x.status);await checkRestaurantReady(x.order_id);startLocation()}
@@ -58,7 +82,7 @@ function playDeliveryAcceptedTone(){
   }catch(e){}
 }
 function testTone(){startTone();setTimeout(stopTone,5000)}
-window.addEventListener('load',async()=>{let s=await ensureSession();if(!s){showLogin();return}await refresh();await loadActive();});
+window.addEventListener('load',async()=>{let s=await ensureSession();if(!s){showLogin();return}await refresh();await startDeliveryLiveChannel();await loadActive();});
 </script><script>
 let jptInstallPrompt=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();jptInstallPrompt=e;const b=document.getElementById('installApp');if(b)b.style.display='block';});
