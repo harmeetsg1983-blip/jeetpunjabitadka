@@ -46,3 +46,36 @@ jobs:
         with:
           name: jpt-partner-native-release
           path: android-partner/app/build/outputs/apk/release/app-release.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jpt-partner-native-release
+          path: android-partner/app/build/outputs/apk/release/app-release.apk
+
+      - name: Publish APK to Supabase release storage
+        env:
+          SUPABASE_URL: "https://qrkbhrmxejtpvheplath.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+          FILE_NAME="jpt_partner_native_v1-release.apk"
+          curl --fail-with-body -X POST "$SUPABASE_URL/storage/v1/object/native-app-releases/$FILE_NAME" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Content-Type: application/vnd.android.package-archive" \
+            --data-binary "@android-partner/app/build/outputs/apk/release/app-release.apk"
+          echo "RELEASE_URL=$SUPABASE_URL/storage/v1/object/public/native-app-releases/$FILE_NAME" >> "$GITHUB_ENV"
+
+      - name: Publish release policy URL
+        env:
+          SUPABASE_URL: "https://qrkbhrmxejtpvheplath.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RELEASE_URL: ${{ env.RELEASE_URL }}
+        run: |
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+          test -n "$RELEASE_URL"
+          curl --fail-with-body -X PATCH "$SUPABASE_URL/rest/v1/app_release_policies?app_id=eq.jpt_partner_native_v1&platform=eq.android" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            --data "{\"update_url\":\"$RELEASE_URL\"}"
