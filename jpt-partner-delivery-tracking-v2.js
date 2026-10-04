@@ -164,6 +164,18 @@
         .subscribe();
     }catch(e){}
     try{
+      channel=window.sb.channel('jpt-partner-delivery-live-'+Date.now())
+        .on('postgres_changes',{event:'INSERT',schema:'public',table:'delivery_location_updates'},p=>{
+          if(window.JPTLiveBridge?.receive&&p?.new) window.JPTLiveBridge.receive({event_id:'delivery.location.updated:'+String(p.new.id),event_type:'delivery.location.updated',entity_type:'delivery_location',entity_id:p.new.id,outlet_id:outletId(),audience:'partner',occurred_at:p.new.recorded_at,payload:p.new},'supabase-realtime');
+          load();
+        })
+        .on('postgres_changes',{event:'UPDATE',schema:'public',table:'delivery_assignments'},p=>{
+          if(window.JPTLiveBridge?.receive&&p?.new) window.JPTLiveBridge.receive({event_id:'delivery.assignment.updated:'+String(p.new.id)+':'+String(p.new.updated_at||Date.now()),event_type:'delivery.assignment.updated',entity_type:'delivery_assignment',entity_id:p.new.id,outlet_id:p.new.outlet_id||outletId(),audience:'partner',occurred_at:p.new.updated_at||new Date().toISOString(),payload:p.new},'supabase-realtime');
+          load();
+        })
+        .subscribe();
+    }catch(e){}
+    try{
       if(window.JPTLiveBridge?.on){
         window.JPTDeliveryTrackingBridgeOff=window.JPTLiveBridge.on(function(ev){
           if(ev?.event_type==='delivery.location.updated' || ev?.event_type==='delivery.assignment.updated' || ev?.event_type==='delivery.status.updated') load();
