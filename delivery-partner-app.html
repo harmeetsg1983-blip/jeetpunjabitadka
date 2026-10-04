@@ -18,13 +18,13 @@
 </main><div class="nav"><button class="dark" onclick="show('home')">Home</button><button class="dark" onclick="show('profile')">Onboard</button><button class="dark" onclick="show('history')">Earnings</button><button class="dark" onclick="show('tools')">Tools</button></div>
 <script src="./jpt-live-platform-bridge-v1.js?v=1"></script>
 <script>
-const SUPABASE_URL='https://qrkbhrmxejtpvheplath.supabase.co',SUPABASE_KEY='sb_publishable_xySAr0cGnVCaC_sgtwk8Zw_IW_b5sgh';const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);window.sb=sb;let stream=null,selfieBlob=null,offer=null,audio=null,offerTimer=null,locationTimer=null,current=null,lastOrderStatus='';let deliveryLiveChannel=null;
+const SUPABASE_URL='https://qrkbhrmxejtpvheplath.supabase.co',SUPABASE_KEY='sb_publishable_xySAr0cGnVCaC_sgtwk8Zw_IW_b5sgh';const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);window.sb=sb;let stream=null,selfieBlob=null,offer=null,audio=null,offerTimer=null,locationTimer=null,current=null,lastOrderStatus='';let deliveryLiveChannel=null,deliveryPrivateChannel=null;
 const $=id=>document.getElementById(id);function show(id){['home','profile','history','tools'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}function phone(v){let d=(v||'').replace(/\D/g,'');return d.startsWith('91')&&d.length===12?d.slice(2):d}
 async function ensureSession(){let {data}=await sb.auth.getSession();return data.session||null}
 async function riderLoginSendOtp(){try{let p=phone($('loginPhone').value);if(p.length!==10)return alert('Enter valid 10-digit rider phone number');$('loginMsg').textContent='Sending OTP…';let r=await sb.auth.signInWithOtp({phone:'+91'+p});if(r.error)throw r.error;$('loginMsg').textContent='OTP sent. Enter the OTP below.';$('loginOtp').disabled=false;$('verifyOtpBtn').disabled=false;}catch(e){$('loginMsg').textContent='OTP failed: '+e.message;alert(e.message)}}
 async function riderLoginVerifyOtp(){try{let p=phone($('loginPhone').value),otp=$('loginOtp').value.trim();if(p.length!==10||!/^\\d{6}$/.test(otp))return alert('Enter the 6-digit OTP');$('loginMsg').textContent='Verifying…';let r=await sb.auth.verifyOtp({phone:'+91'+p,token:otp,type:'sms'});if(r.error)throw r.error;$('loginBox').classList.add('hidden');$('loginMsg').textContent='Signed in.';await refresh();}catch(e){$('loginMsg').textContent='OTP verification failed: '+e.message;alert(e.message)}}
 function showLogin(){if(!$('loginBox'))return;$('loginBox').classList.remove('hidden');$('loginOtp').disabled=true;$('verifyOtpBtn').disabled=true;}
-async function refresh(){try{let s=await ensureSession();if(!s){showLogin();$('submitMsg').textContent='Sign in with the verified rider phone number to continue.';return}window.JPTDeliveryDevice?.boot();window.JPTDeliveryPushSubscription?.boot();let {data}=await sb.from('delivery_partners').select('id,status,is_active,onboarding_completed,verification_status').eq('user_id',s.user.id).maybeSingle();if(data){$('onboardState').textContent='Onboarding: '+(data.onboarding_completed?'Submitted':'Not submitted');$('verifyState').textContent='Admin: '+(data.verification_status||'pending');renderStatus(data.status==='online');}await loadEarnings()}catch(e){$('submitMsg').textContent='Session setup: '+e.message}}
+async function refresh(){try{let s=await ensureSession();if(!s){showLogin();$('submitMsg').textContent='Sign in with the verified rider phone number to continue.';return}window.JPTDeliveryDevice?.boot();window.JPTDeliveryPushSubscription?.boot();let {data}=await sb.from('delivery_partners').select('id,status,is_active,onboarding_completed,verification_status').eq('user_id',s.user.id).maybeSingle();if(data){window.JPT_DELIVERY_PARTNER_ID=String(data.id||'');$('onboardState').textContent='Onboarding: '+(data.onboarding_completed?'Submitted':'Not submitted');$('verifyState').textContent='Admin: '+(data.verification_status||'pending');renderStatus(data.status==='online');}await loadEarnings()}catch(e){$('submitMsg').textContent='Session setup: '+e.message}}
 function renderStatus(v){$('statusPill').textContent=v?'ONLINE':'OFFLINE';$('statusPill').className='pill '+(v?'online':'')}
 async function setOnline(){try{let s=await ensureSession();if(!s)return showLogin();let {data,error}=await sb.rpc('delivery_partner_set_status',{p_status:'online'});if(error)throw error;renderStatus(true);startOfferPolling()}catch(e){alert(e.message||'Online status is not available until admin approval is complete.')}}async function setOffline(){try{let s=await ensureSession();if(!s)return showLogin();let {error}=await sb.rpc('delivery_partner_set_status',{p_status:'offline'});if(error)throw error;renderStatus(false);stopOfferPolling()}catch(e){alert(e.message)}}
 async function openCamera(){try{if(stream)stream.getTracks().forEach(t=>t.stop());stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'user'},width:{ideal:1280},height:{ideal:1280}},audio:false});$('video').srcObject=stream;$('video').style.display='block';$('canvas').style.display='none';$('capture').disabled=false;$('selfieState').textContent='Camera ready — capture live selfie';}catch(e){alert('Camera error: '+e.name+' — '+e.message)}}
@@ -55,6 +55,20 @@ async function startDeliveryLiveChannel(){
       .subscribe();
   }catch(e){console.warn('Delivery live channel unavailable',e)}
 }
+async function startDeliveryPrivateBroadcast(){
+  try{
+    var id=String(window.JPT_DELIVERY_PARTNER_ID||'').trim();
+    if(!id)return;
+    if(deliveryPrivateChannel)try{await sb.removeChannel(deliveryPrivateChannel)}catch(e){}
+    deliveryPrivateChannel=sb.channel('jpt:delivery:rider:'+id,{config:{private:true}})
+      .on('broadcast',{event:'delivery_assignment_insert'},function(){loadOffer().catch(function(){});loadActive().catch(function(){});})
+      .on('broadcast',{event:'delivery_assignment_update'},function(){loadOffer().catch(function(){});loadActive().catch(function(){});})
+      .on('broadcast',{event:'delivery_location_updated'},function(p){
+        if(window.JPTLiveBridge&&window.JPTLiveBridge.receive&&p&&p.payload)window.JPTLiveBridge.receive(p.payload,'supabase-private-broadcast');
+      })
+      .subscribe();
+  }catch(e){console.warn('Delivery private live unavailable',e)}
+}
 async function startOfferPolling(){stopOfferPolling();offerTimer=setInterval(async()=>{await loadOffer();await loadActive()},5000);await loadOffer();await loadActive()}function stopOfferPolling(){if(offerTimer){clearInterval(offerTimer);offerTimer=null}}async function loadOffer(){try{let {data,error}=await sb.rpc('delivery_partner_offer_snapshot');if(error)throw error;if(data&&((Array.isArray(data)&&data.length)||data.id)){let x=Array.isArray(data)?data[0]:data;if(!offer||offer.id!==x.id){offer=x;showOffer(x);startTone()}}else{if(!$('offer').classList.contains('hidden')&&!current)$('offer').classList.add('hidden')}}catch(e){console.warn(e)}}function showOffer(x){$('offer').classList.remove('hidden');$('offerText').textContent='Order #'+(x.order_id||'—');$('offerDetails').textContent=(x.outlet_id||'')+' • '+(x.status||'offered')+' • '+(x.customer_address||'Delivery details after acceptance')}
 async function respondOffer(accept){if(!offer)return;stopTone();try{let r=await sb.rpc('delivery_assignment_respond',{p_assignment_id:offer.id,p_accept:accept,p_reason:accept?null:'rider_rejected'});if(r.error)throw r.error;$('offer').classList.add('hidden');offer=null;if(accept)playDeliveryAcceptedTone();await loadActive()}catch(e){alert(e.message)}}
 async function loadActive(){let {data,error}=await sb.rpc('delivery_partner_assignment_snapshot');if(error)return;let x=Array.isArray(data)?data.find(a=>['accepted','picked_up','out_for_delivery'].includes(a.status)):data;if(!x)return;current=x;$('current').classList.remove('hidden');$('currentOrder').textContent='Order #'+x.order_id;$('currentStatus').textContent=(x.status||'accepted').replace(/_/g,' ').toUpperCase();updateNextButton(x.status);await checkRestaurantReady(x.order_id);startLocation()}
@@ -82,7 +96,7 @@ function playDeliveryAcceptedTone(){
   }catch(e){}
 }
 function testTone(){startTone();setTimeout(stopTone,5000)}
-window.addEventListener('load',async()=>{let s=await ensureSession();if(!s){showLogin();return}await refresh();await startDeliveryLiveChannel();await loadActive();});
+window.addEventListener('load',async()=>{let s=await ensureSession();if(!s){showLogin();return}await refresh();await startDeliveryLiveChannel();await startDeliveryPrivateBroadcast();await loadActive();});
 </script><script>
 let jptInstallPrompt=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();jptInstallPrompt=e;const b=document.getElementById('installApp');if(b)b.style.display='block';});
