@@ -13,8 +13,9 @@ const k=getKey();if(!k)return false;const h=await hashKey(k);
 const r=await sb.rpc('delivery_partner_register_device',{p_device_key_hash:h,p_platform:'web',p_app_version:'V11',p_notification_permission:permission()});
 if(r.error){console.warn('JPT device registration:',r.error.message);return false}
 registered=true;return true}
-async function heartbeat(){if(!registered)return;const sb=window.sb;if(!sb)return;const r=await sb.rpc('delivery_partner_heartbeat',{p_notification_permission:permission(),p_sound_enabled:true,p_vibration_enabled:true});if(r.error)console.warn('JPT device heartbeat:',r.error.message)}
-async function boot(){try{await register();if(timer)clearInterval(timer);timer=setInterval(heartbeat,INTERVAL)}catch(e){console.warn('JPT device boot:',e.message)}}
+async function heartbeat(){if(!registered)return false;const sb=window.sb;if(!sb)return false;const r=await sb.rpc('delivery_partner_heartbeat',{p_notification_permission:permission(),p_sound_enabled:true,p_vibration_enabled:true});if(r.error){registered=false;console.warn('JPT device heartbeat:',r.error.message);return false}return true}
+async function tick(){try{if(!registered){await register();return}await heartbeat()}catch(e){registered=false;console.warn('JPT device tick:',e.message)}}
+async function boot(){try{await tick();if(timer)clearInterval(timer);timer=setInterval(tick,INTERVAL)}catch(e){registered=false;console.warn('JPT device boot:',e.message)}}
 window.JPTDeliveryDevice={boot,register,heartbeat};
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')boot()});
 })();
