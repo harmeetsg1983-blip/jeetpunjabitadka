@@ -38,14 +38,25 @@ class MainActivity : AppCompatActivity() {
 
     inner class NativeAlertBridge {
         @JavascriptInterface fun start(orderNo: String) {
-            startService(Intent(this@MainActivity, OrderAlertService::class.java)
+            val intent = Intent(this@MainActivity, OrderAlertService::class.java)
                 .setAction(OrderAlertService.START)
-                .putExtra("order_no", orderNo))
+                .putExtra("order_no", orderNo)
+            if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent) else startService(intent)
+        }
+
+        @JavascriptInterface fun syncSession(accessToken: String, refreshToken: String) {
+            if (accessToken.isBlank()) return
+            val intent = Intent(this@MainActivity, OrderAlertService::class.java)
+                .setAction(OrderAlertService.SYNC_SESSION)
+                .putExtra("access_token", accessToken)
+                .putExtra("refresh_token", refreshToken)
+            if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent) else startService(intent)
         }
 
         @JavascriptInterface fun stop() {
-            startService(Intent(this@MainActivity, OrderAlertService::class.java)
-                .setAction(OrderAlertService.STOP))
+            val intent = Intent(this@MainActivity, OrderAlertService::class.java)
+                .setAction(OrderAlertService.STOP)
+            if (Build.VERSION.SDK_INT >= 26) startService(intent) else startService(intent)
         }
     }
 
@@ -55,6 +66,19 @@ class MainActivity : AppCompatActivity() {
             override fun run() {
                 if (isFinishing || isDestroyed) return
                 web.evaluateJavascript("""(function(){
+                    if(!window.JPTNativeAlert)return;
+                    if(!window.__JPT_NATIVE_SESSION_SYNC){
+                        window.__JPT_NATIVE_SESSION_SYNC=true;
+                        const sync=async()=>{try{
+                            if(window.sb?.auth?.getSession){
+                                const r=await window.sb.auth.getSession();
+                                const s=r?.data?.session;
+                                if(s?.access_token) window.JPTNativeAlert.syncSession(String(s.access_token),String(s.refresh_token||""));
+                            }
+                        }catch(e){}};
+                        sync();
+                        setInterval(sync,30000);
+                    }
                     if(window.__JPT_NATIVE_BRIDGE_INSTALLED)return;
                     if(typeof window.showOrderAlarm!=="function")return;
                     window.__JPT_NATIVE_BRIDGE_INSTALLED=true;
@@ -74,7 +98,9 @@ class MainActivity : AppCompatActivity() {
                         };
                     }
                 })()""", null)
-                if (!isFinishing && !isDestroyed) web.postDelayed(this, 1000)
+                if (!isFinishing && !isDestroyed) {
+                    web.postDelayed(this, 1000)
+                }
             }
         }
         bridgeRunnable = runnable
