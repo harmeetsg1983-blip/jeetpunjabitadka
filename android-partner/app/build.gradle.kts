@@ -30,9 +30,32 @@ android {
             keyPassword = "android"
         }
     }
+    val releaseKeystorePath = System.getenv("JPT_RELEASE_KEYSTORE_PATH")
+    val releaseKeystorePassword = System.getenv("JPT_RELEASE_KEYSTORE_PASSWORD")
+    val releaseKeyAlias = System.getenv("JPT_RELEASE_KEY_ALIAS")
+    val releaseKeyPassword = System.getenv("JPT_RELEASE_KEY_PASSWORD")
+    val hasReleaseSigning = listOf(
+        releaseKeystorePath, releaseKeystorePassword, releaseKeyAlias, releaseKeyPassword
+    ).all { !it.isNullOrBlank() }
+
+    if (hasReleaseSigning) {
+        signingConfigs.create("productionRelease") {
+            storeFile = file(releaseKeystorePath!!)
+            storePassword = releaseKeystorePassword
+            keyAlias = releaseKeyAlias
+            keyPassword = releaseKeyPassword
+        }
+    }
+
     buildTypes {
         getByName("debug") {
             signingConfig = signingConfigs.getByName("ciDebug")
+        }
+        getByName("release") {
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("productionRelease")
+            }
+            isMinifyEnabled = false
         }
     }
 }
