@@ -163,6 +163,13 @@
         .on('postgres_changes',{event:'*',schema:'public',table:'delivery_assignments'},()=>load())
         .subscribe();
     }catch(e){}
+    try{
+      if(window.JPTLiveBridge?.on){
+        window.JPTDeliveryTrackingBridgeOff=window.JPTLiveBridge.on(function(ev){
+          if(ev?.event_type==='delivery.location.updated' || ev?.event_type==='delivery.assignment.updated' || ev?.event_type==='delivery.status.updated') load();
+        });
+      }
+    }catch(e){}
   }
 
   window.JPTDeliveryTracking={version:VERSION,reload:load};
