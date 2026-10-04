@@ -46,10 +46,6 @@ jobs:
         with:
           name: jpt-partner-native-release
           path: android-partner/app/build/outputs/apk/release/app-release.apk
-      - uses: actions/upload-artifact@v4
-        with:
-          name: jpt-partner-native-release
-          path: android-partner/app/build/outputs/apk/release/app-release.apk
 
       - name: Publish APK to Supabase release storage
         env:
@@ -57,11 +53,12 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           test -n "$SUPABASE_SERVICE_ROLE_KEY"
-          FILE_NAME="jpt_partner_native_v1-release.apk"
+          FILE_NAME="jpt_partner_native_v1-v3.apk"
           curl --fail-with-body -X POST "$SUPABASE_URL/storage/v1/object/native-app-releases/$FILE_NAME" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Content-Type: application/vnd.android.package-archive" \
+            -H "x-upsert: true" \
             --data-binary "@android-partner/app/build/outputs/apk/release/app-release.apk"
           echo "RELEASE_URL=$SUPABASE_URL/storage/v1/object/public/native-app-releases/$FILE_NAME" >> "$GITHUB_ENV"
 
