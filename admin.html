@@ -627,8 +627,10 @@ async function orderAction(id,status,extra={}){
   jptOrderActionBusy.add(key);
   try{
     const patch={status,updated_at:new Date().toISOString(),...extra};
-    const r=await sb.from('orders').update(patch).eq('id',id).eq('outlet_id',activeOutlet);
+    const r=await sb.from('orders').update(patch).eq('id',id).eq('outlet_id',activeOutlet)
+      .select('id,status,target_minutes,accepted_at,deadline_at,updated_at').maybeSingle();
     if(r.error){toast('Order update failed: '+r.error.message);return false}
+    if(!r.data){toast('Order update was not confirmed by the server. Please retry.');return false}
     if(String(status).toLowerCase()!=='new'){
       stopOrderAlarm(id);
       try{window.JPTPartnerOrderAlertV4?.stop?.(true)}catch(e){}
