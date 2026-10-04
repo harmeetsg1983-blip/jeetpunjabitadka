@@ -1,4 +1,4 @@
-const CACHE='jpt-delivery-v5';
+const CACHE='jpt-delivery-v6';
 const SHELL=[
   './delivery-partner-app.html',
   './delivery-partner-manifest.webmanifest',
