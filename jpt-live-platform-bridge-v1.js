@@ -63,6 +63,21 @@
   }
 
   /*
+   * Location event contract.
+   * GPS coordinates are event payload data, not secrets. Consumers must still
+   * enforce role/outlet/order authorization server-side. Location sharing is
+   * delivery-scoped: start after assignment acceptance/pickup, stop on delivered
+   * or cancelled. The bridge transports location events; it does not invent GPS.
+   *
+   * Canonical event types:
+   *   delivery.assignment.accepted
+   *   delivery.location.updated
+   *   delivery.status.updated
+   *   delivery.location.stopped
+   *
+   * A location update should contain:
+   *   {lat,lng,accuracy_m,heading,speed_mps,recorded_at,assignment_id,order_id}
+   *
    * Provider adapter hook.
    * A deployed Firebase bridge can call JPTLiveBridge.receive(snapshot.val(),'firebase-rtdb').
    * No Firebase credentials or privileged send keys belong in client source.
@@ -93,6 +108,10 @@
       images:true,
       videos:true,
       tracking:true,
+      location:true,
+      rider_location:true,
+      restaurant_location:true,
+      customer_location:true,
       outlets:true
     }
   };
