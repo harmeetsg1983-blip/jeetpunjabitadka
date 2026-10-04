@@ -47,6 +47,10 @@
       .jpt-dt-row-v2{padding:9px 0;border-bottom:1px solid #252525}
       .jpt-dt-row-v2:last-child{border-bottom:0}
       .jpt-dt-partner-v2{display:block;color:#aaa;font-size:10px;margin-top:3px}
+      .jpt-dt-location-v2{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:6px;font-size:10px;color:#aaa}
+      .jpt-dt-location-v2.live{color:#79e39b}
+      .jpt-dt-location-v2.wait{color:#d8ae42}
+      .jpt-dt-map-v2{display:inline-block;padding:4px 8px;border-radius:8px;border:1px solid #3c3018;color:#d8ae42;text-decoration:none;background:#151515;font-weight:850}
     `;
     document.head.appendChild(s);
   }
@@ -74,6 +78,17 @@
     return box;
   }
 
+  function locationMarkup(x){
+    const lat=Number(x.rider_lat),lng=Number(x.rider_lng);
+    const valid=Number.isFinite(lat)&&Number.isFinite(lng)&&Math.abs(lat)<=90&&Math.abs(lng)<=180;
+    if(!valid)return '<div class="jpt-dt-location-v2 wait">📍 Rider GPS: waiting for next update</div>';
+    const at=x.rider_location_at?new Date(x.rider_location_at):null;
+    const age=at&&!Number.isNaN(at.getTime())?Math.max(0,Date.now()-at.getTime()):Infinity;
+    const live=age<=60000;
+    const map='https://www.openstreetmap.org/?mlat='+encodeURIComponent(lat)+'&mlon='+encodeURIComponent(lng)+'#map=16/'+encodeURIComponent(lat)+'/'+encodeURIComponent(lng);
+    const stamp=at&&!Number.isNaN(at.getTime())?'Updated '+at.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'Location timestamp unavailable';
+    return '<div class="jpt-dt-location-v2 '+(live?'live':'wait')+'">📍 '+(live?'LIVE RIDER LOCATION':'Rider location is stale')+' • '+esc(stamp)+' <a class="jpt-dt-map-v2" target="_blank" rel="noopener" href="'+esc(map)+'">VIEW MAP</a></div>';
+  }
   function render(rows){
     const list=$('jptDeliveryTrackingListV2');
     if(!list)return;
@@ -87,7 +102,7 @@
         <div><b>${esc(x.order_no||x.order_id)}</b>
           <span class="jpt-dt-chip-v2 ${st.cls}">🚴 ${esc(st.label)}</span>
         </div>
-        ${x.partner_name?`<span class="jpt-dt-partner-v2">Partner: ${esc(x.partner_name)}</span>`:''}
+        ${x.partner_name?`<span class="jpt-dt-partner-v2">Partner: ${esc(x.partner_name)}</span>`:''}${locationMarkup(x)}
       </div>`;
     }).join('');
   }
@@ -104,7 +119,7 @@
       if(!st)return;
       const wrap=document.createElement('div');
       wrap.className='jpt-dt-card-status-v2';
-      wrap.innerHTML=`<span class="jpt-dt-chip-v2 ${st.cls}">🚴 ${esc(st.label)}</span>${a.partner_name?`<span class="jpt-dt-partner-v2">Partner: ${esc(a.partner_name)}</span>`:''}`;
+      wrap.innerHTML=`<span class="jpt-dt-chip-v2 ${st.cls}">🚴 ${esc(st.label)}</span>${a.partner_name?`<span class="jpt-dt-partner-v2">Partner: ${esc(a.partner_name)}</span>`:''}${locationMarkup(a)}`;
       const actions=card.querySelector('.jpt-ops-actions');
       if(actions) card.insertBefore(wrap,actions); else card.appendChild(wrap);
     });
@@ -147,6 +162,25 @@
       channel=window.sb.channel('jpt-delivery-tracking-v2-'+Date.now())
         .on('postgres_changes',{event:'*',schema:'public',table:'delivery_assignments'},()=>load())
         .subscribe();
+    }catch(e){}
+    try{
+      channel=window.sb.channel('jpt-partner-delivery-live-'+Date.now())
+        .on('postgres_changes',{event:'INSERT',schema:'public',table:'delivery_location_updates'},p=>{
+          if(window.JPTLiveBridge?.receive&&p?.new) window.JPTLiveBridge.receive({event_id:'delivery.location.updated:'+String(p.new.id),event_type:'delivery.location.updated',entity_type:'delivery_location',entity_id:p.new.id,outlet_id:outletId(),audience:'partner',occurred_at:p.new.recorded_at,payload:p.new},'supabase-realtime');
+          load();
+        })
+        .on('postgres_changes',{event:'UPDATE',schema:'public',table:'delivery_assignments'},p=>{
+          if(window.JPTLiveBridge?.receive&&p?.new) window.JPTLiveBridge.receive({event_id:'delivery.assignment.updated:'+String(p.new.id)+':'+String(p.new.updated_at||Date.now()),event_type:'delivery.assignment.updated',entity_type:'delivery_assignment',entity_id:p.new.id,outlet_id:p.new.outlet_id||outletId(),audience:'partner',occurred_at:p.new.updated_at||new Date().toISOString(),payload:p.new},'supabase-realtime');
+          load();
+        })
+        .subscribe();
+    }catch(e){}
+    try{
+      if(window.JPTLiveBridge?.on){
+        window.JPTDeliveryTrackingBridgeOff=window.JPTLiveBridge.on(function(ev){
+          if(ev?.event_type==='delivery.location.updated' || ev?.event_type==='delivery.assignment.updated' || ev?.event_type==='delivery.status.updated') load();
+        });
+      }
     }catch(e){}
   }
 

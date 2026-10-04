@@ -128,6 +128,7 @@ button,input,select,textarea{font:inherit}.app{min-height:100vh;background:#0707
 
 <script src="./supabase-config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./jpt-live-platform-bridge-v1.js?v=1"></script>
 <script>
 /* JPT Partner Dynamic Outlet Access Bridge V2 — RPC column compatible */
 (function(){
@@ -686,7 +687,7 @@ async function loadOrders(){
   }
 }
 async function bindOrderRealtime(){
-  try{if(orderChannel) await sb.removeChannel(orderChannel);orderChannel=sb.channel('jpt-v107-orders-'+activeOutlet+'-'+Date.now()).on('postgres_changes',{event:'INSERT',schema:'public',table:'orders',filter:'outlet_id=eq.'+activeOutlet},p=>{if(p?.new?.status==='new'){showOrderAlarm(p.new)}loadOrders().catch(()=>{})}).on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders',filter:'outlet_id=eq.'+activeOutlet},()=>loadOrders().catch(()=>{})).subscribe();}catch(e){console.warn('Order realtime unavailable',e)}
+  try{if(orderChannel) await sb.removeChannel(orderChannel);orderChannel=sb.channel('jpt-v107-orders-'+activeOutlet+'-'+Date.now()).on('postgres_changes',{event:'INSERT',schema:'public',table:'orders',filter:'outlet_id=eq.'+activeOutlet},p=>{if(window.JPTLiveBridge?.receive&&p?.new){window.JPTLiveBridge.receive({event_id:'order.created:'+String(p.new.id),event_type:'order.created',entity_type:'order',entity_id:p.new.id,outlet_id:p.new.outlet_id,audience:'partner',occurred_at:p.new.created_at,payload:p.new},'supabase-realtime')}if(p?.new?.status==='new'){showOrderAlarm(p.new)}loadOrders().catch(()=>{})}).on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders',filter:'outlet_id=eq.'+activeOutlet},p=>{if(window.JPTLiveBridge?.receive&&p?.new){window.JPTLiveBridge.receive({event_id:'order.updated:'+String(p.new.id)+':'+String(p.new.updated_at||Date.now()),event_type:'order.updated',entity_type:'order',entity_id:p.new.id,outlet_id:p.new.outlet_id,audience:'partner',occurred_at:p.new.updated_at,payload:p.new},'supabase-realtime')}loadOrders().catch(()=>{})}).subscribe();}catch(e){console.warn('Order realtime unavailable',e)}
 }
 $('ordersRefresh').onclick=loadOrders;
 document.querySelectorAll('.orderQueueBtn').forEach(b=>b.classList.toggle('gold',b.dataset.queue==='all'));
