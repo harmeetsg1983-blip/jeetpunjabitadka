@@ -625,22 +625,15 @@ async function enableOrderAlarm(){
 $('enableAlarm').onclick=enableOrderAlarm;$('stopAlarm').onclick=stopOrderAlarm;
 const jptOrderActionBusy=new Set();
 async function orderAction(id,status,extra={}){
-  if(window.__JPTOrdersV3Active)return false;
-  const key=String(id||'')+'|'+String(status||'');
-  if(jptOrderActionBusy.has(key))return false;
-  jptOrderActionBusy.add(key);
-  try{
-    const patch={status,updated_at:new Date().toISOString(),...extra};
-    const r=await sb.from('orders').update(patch).eq('id',id).eq('outlet_id',activeOutlet)
-      .select('id,status,target_minutes,accepted_at,deadline_at,updated_at').maybeSingle();
-    if(r.error){toast('Order update failed: '+r.error.message);return false}
-    if(!r.data){toast('Order update was not confirmed by the server. Please retry.');return false}
-    if(String(status).toLowerCase()!=='new'){
-      stopOrderAlarm(id);
-      try{window.JPTPartnerOrderAlertV4?.stop?.(true)}catch(e){}
-    }
-    await loadOrders();return true;
-  }finally{jptOrderActionBusy.delete(key)}
+  if(window.JPTOrderControlBridge?.transition){
+    try{
+      const row=await window.JPTOrderControlBridge.transition(id,activeOutlet,status,extra);
+      if(String(status).toLowerCase()!=='new')window.JPTOrderControlBridge.stopAlerts(id);
+      await loadOrders(); return !!row;
+    }catch(e){toast('Order update failed: '+(e.message||e));return false}
+  }
+  const key=String(id||'')+'|'+String(status||''); if(jptOrderActionBusy.has(key))return false; jptOrderActionBusy.add(key);
+  try{const patch={status,updated_at:new Date().toISOString(),...extra};const r=await sb.from('orders').update(patch).eq('id',id).eq('outlet_id',activeOutlet).select('id,status,target_minutes,accepted_at,deadline_at,updated_at').maybeSingle();if(r.error){toast('Order update failed: '+r.error.message);return false}if(!r.data){toast('Order update was not confirmed by the server. Please retry.');return false}if(String(status).toLowerCase()!=='new'){stopOrderAlarm(id);try{window.JPTPartnerOrderAlertV4?.stop?.(true)}catch(e){}}await loadOrders();return true}finally{jptOrderActionBusy.delete(key)}
 }
 async function acceptOrder(id,minutes){
   const n=Number(minutes);
