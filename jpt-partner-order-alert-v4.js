@@ -7,7 +7,42 @@
   if(window.JPTPartnerOrderAlertV4)return;
 
   const DB='jptPartnerAlertDB', STORE='settings', KEY='jpt_v4_active_order', PREFS_KEY='notificationPrefs', RING_MS=9000, PROD_RINGTONES_URL='./ringtones/1000449570.mp4';
-  let audio=null, objectUrl=null, ringTimer=null, activeId=null, generation=0, armed=false, ringInFlight=new Map();
+  let audio=null, objectUrl=null, ringTimer=null, activeId=null, generation=0, armed=false, ringInFlight=new Map(), audioCtx=null, toneTimer=null;
+
+  function stopTone(){
+    clearInterval(toneTimer); toneTimer=null;
+  }
+
+  function ensureToneContext(){
+    try{
+      const C=window.AudioContext||window.webkitAudioContext;
+      if(!C)return null;
+      if(!audioCtx)audioCtx=new C();
+      if(audioCtx.state==='suspended'||audioCtx.state==='interrupted')audioCtx.resume().catch(()=>{});
+      return audioCtx;
+    }catch(e){return null}
+  }
+
+  function toneOnce(freq,duration=0.22){
+    const ctx=ensureToneContext(); if(!ctx||ctx.state==='closed')return false;
+    try{
+      const osc=ctx.createOscillator(),gain=ctx.createGain();
+      osc.type='sine'; osc.frequency.value=freq;
+      gain.gain.setValueAtTime(0.0001,ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.16,ctx.currentTime+0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+duration);
+      osc.connect(gain);gain.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+duration+0.03);
+      return true;
+    }catch(e){return false}
+  }
+
+  function playFallbackTone(){
+    const ctx=ensureToneContext();
+    if(!ctx)return false;
+    stopTone();
+    const tick=()=>{toneOnce(880,0.22);setTimeout(()=>toneOnce(660,0.22),260)};
+    tick();toneTimer=setInterval(tick,900);return true;
+  }
 
   function stopAudio(){
     const a=audio; audio=null;
@@ -18,6 +53,7 @@
   function hardStop(clearOrder=true){
     generation++;
     clearTimeout(ringTimer); ringTimer=null; activeId=null; armed=false;
+    stopTone();
     stopAudio();
     try{navigator.vibrate?.(0)}catch(e){}
     const alarm=document.getElementById('orderAlarm');
@@ -75,16 +111,18 @@
     audio.muted=false;
     try{
       await audio.play();
+      stopTone();
       armed=true;
       return true;
     }catch(e){
-      armed=false;
-      return false;
+      armed=playFallbackTone();
+      return armed;
     }
   }
 
   function primeAudioFromGesture(){
     try{
+      ensureToneContext();
       const prefsVolume=1;
       if(audio && armed)return true;
       stopAudio();
@@ -123,7 +161,7 @@
     b.classList.toggle('alarmPulse',!!pulse);
   }
   function resumeAudioFromGesture(){
-    try{primeAudioFromGesture()}catch(e){}
+    try{ensureToneContext();primeAudioFromGesture()}catch(e){}
   }
   function attention(o){
     setBell(1,true);
