@@ -18,7 +18,7 @@ const CENTRAL_RPC='partner_access_is_central_owner';
 const OWNER_OUTLET_CODES=new Set(['JPT-001','SOP-002','NME-004','PFA-003','TOP-005']);
 const STATUS_VIEWS=[['new','NEW'],['preparing','PREPARING'],['ready','READY'],['out_for_delivery','OUT FOR DELIVERY'],['history','COMPLETED']];
 const statusView=s=>{s=status(s);if(s==='accepted'||s==='preparing')return 'preparing';if(s==='completed')return 'delivered';return s};
-let timer=null,channel=null,rowsCache=[],outlets={},selected='preparing',central=false,lastNewest='',loadSeq=0;
+let timer=null,channel=null,rowsCache=[],outlets={},selected='preparing',central=false,lastNewest='',loadSeq=0,alertBaselineReady=false,alertedNewIds=new Set();
 const prepDrafts=new Map();
 let pendingNew=new Map();
 const statusLocks=new Map();
@@ -263,22 +263,26 @@ async function load(){
   const hasNew=rowsCache.some(x=>x.__status==='new'&&OWNER_OUTLET_CODES.has(String(x.outlet_id||'')));
   if(hasNew) selected='new';
   else if(selected==='new') selected='preparing';
-  const newestNew=rowsCache.find(x=>x.__status==='new'&&OWNER_OUTLET_CODES.has(String(x.outlet_id||'')));
-  rowsCache.filter(x=>x.__status==='new'&&OWNER_OUTLET_CODES.has(String(x.outlet_id||''))).forEach(x=>pendingNew.set(String(x.id||x.order_no),x));
+  const currentNew=rowsCache.filter(x=>x.__status==='new'&&OWNER_OUTLET_CODES.has(String(x.outlet_id||'')));
+  currentNew.forEach(x=>pendingNew.set(String(x.id||x.order_no),x));
   syncCentralBell();
   syncOrderBellBar();
-  if(newestNew){
-   const stamp=String(newestNew.created_at||'')+'|'+String(newestNew.id||'')+'|'+String(newestNew.outlet_id||'');
-   /* Alert on both realtime arrival and the first polling load after a missed
-      realtime event. This keeps NEW orders audible/visible without touching
-      the orders table or Supabase schema. */
-   if(lastNewest!==stamp){
+  /* On the first load after app start/reopen, baseline existing NEW orders
+     silently. They must remain visible, but must not be treated as freshly
+     created just because the page was refreshed. */
+  if(!alertBaselineReady){
+   currentNew.forEach(x=>alertedNewIds.add(String(x.id||x.order_no)));
+   alertBaselineReady=true;
+  }else{
+   const freshNew=currentNew.find(x=>!alertedNewIds.has(String(x.id||x.order_no)));
+   if(freshNew){
+    alertedNewIds.add(String(freshNew.id||freshNew.order_no));
     selected='new';
     try{window.showPanel?.('orders')}catch(e){}
-    if(typeof window.showOrderAlarm==='function')window.showOrderAlarm(newestNew);
+    if(typeof window.showOrderAlarm==='function')window.showOrderAlarm(freshNew);
    }
-   lastNewest=stamp;
   }
+  alertedNewIds.forEach(id=>{if(!currentNew.some(x=>String(x.id||x.order_no)===id))alertedNewIds.delete(id)});
   const notice=document.getElementById('ordersNotice');
   if(notice)notice.textContent=(central?'Central':'Selected outlet')+' board • '+rowsCache.length+' latest orders';
   const count=document.getElementById('ordersCount');if(count)count.textContent=String(rowsCache.filter(x=>x.__status===selected).length);
