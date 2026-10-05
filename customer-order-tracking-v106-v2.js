@@ -46,7 +46,7 @@
     var s=document.createElement('style');s.id='jptTrackStyleV4';
     s.textContent=
       '.jpt-customer-bell{position:fixed;right:14px;top:14px;z-index:320;background:#111;border:1px solid #d8ae42;color:#f4d77a;border-radius:14px;padding:9px 12px;font-weight:1000;box-shadow:0 8px 24px #0009}.jpt-customer-bell .badge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:5px;border-radius:99px;background:#d8ae42;color:#111;font-size:10px}.jpt-customer-notices{position:fixed;right:14px;top:60px;z-index:319;width:min(330px,calc(100% - 28px));background:#111;border:1px solid #5b471c;border-radius:14px;box-shadow:0 10px 30px #000b;padding:10px;display:none}.jpt-customer-notices.show{display:block}.jpt-customer-notice{padding:9px;border-bottom:1px solid #292929}.jpt-customer-notice b{font-size:12px}.jpt-customer-notice span{display:block;color:#aaa;font-size:10px;margin-top:3px}' + '.jpt-track{position:fixed;inset:0;z-index:1000;width:100%;height:100dvh;overflow:auto;background:#f5f6f8;color:#15171b;padding:0;display:none;border:0;border-radius:0;box-shadow:none;transform:none}.jpt-track.show{display:block}.jpt-track-top{height:66px;display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 16px;background:#fff;border-bottom:1px solid #e7e7e7}.jpt-track-brand{min-width:0}.jpt-track-title{font-weight:1000;color:#17191d;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.jpt-track-code{font-weight:800;color:#777;font-size:11px;margin-top:2px}.jpt-track-close{background:#fff;border:1px solid #ddd;color:#222;border-radius:50%;width:40px;height:40px;font-size:18px}.jpt-track-ad{height:clamp(110px,18vh,190px);margin:0;background:#111;position:relative;overflow:hidden}.jpt-track-ad-media{width:100%;height:100%;display:block;object-fit:cover}.jpt-track-ad-label{position:absolute;left:12px;bottom:10px;background:#000b;color:#fff;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:900}.jpt-track-ad-empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#151515,#34270d);color:#f5d879;font-size:18px}.jpt-track-ad-empty span{font-size:10px;color:#ddd;margin-top:4px}.jpt-track-map{height:clamp(260px,42vh,480px);background:#e8ebef;position:relative;overflow:hidden}.jpt-track-map iframe{width:100%;height:100%;border:0;display:block}.jpt-track-status{position:relative;margin:-42px 16px 18px;padding:18px;border-radius:22px;background:#fff;box-shadow:0 8px 28px #0002;border:0;z-index:2}.jpt-track-status-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.jpt-track-status-copy{min-width:0}.jpt-track-line{display:flex;align-items:center;gap:8px;margin:8px 0}.jpt-track-dot{width:10px;height:10px;border-radius:50%;background:#d2d5da;flex:none}.jpt-track-dot.on{background:#18a66d;box-shadow:0 0 8px #18a66d66}.jpt-track-sub{font-size:13px;color:#8b8d92;line-height:1.4}.jpt-track-eta{margin:0;padding:0;width:76px;min-width:76px;height:76px;border-radius:18px;background:#18a66d;color:#fff;text-align:center;display:flex;flex-direction:column;justify-content:center;order:2}.jpt-track-eta-title{font-size:0}.jpt-track-eta-time{font-size:27px;font-weight:1000;line-height:1}.jpt-track-eta-note{font-size:11px;color:#fff;margin-top:4px}.jpt-track-btn{width:100%;margin-top:10px;padding:13px;border:0;border-radius:12px;background:#f4c84a;color:#111;font-weight:1000}.jpt-track-wait{color:#a97900;font-weight:900}.jpt-track-done{color:#18a66d;font-weight:900}.jpt-location{margin-top:10px}.jpt-location-map{display:none}.jpt-location-actions{display:none}.jpt-track-info{margin:0 16px 30px;padding:15px 4px;color:#45474c;font-weight:900;font-size:15px}.jpt-track-info::after{content:"›";float:right;color:#e87916;font-size:24px;line-height:14px}@media(max-width:380px){.jpt-track-top{padding:8px 12px}.jpt-track-status{margin-left:12px;margin-right:12px}.jpt-track-info{margin-left:12px;margin-right:12px}}';
-    s.textContent += '.jpt-track-rider{margin:0 16px 16px;padding:16px;border-radius:20px;background:#fff;border:1px solid #ececec;box-shadow:0 8px 24px #00000010}.jpt-rider-head{display:flex;align-items:center;gap:12px}.jpt-rider-avatar{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,#111,#3b321e);color:#f6d76b;display:grid;place-items:center;font-size:18px;font-weight:1000;flex:none;border:1px solid #d8ae42}.jpt-rider-name{font-size:17px;font-weight:1000;color:#15171b}.jpt-rider-meta{font-size:11px;color:#777;margin-top:3px}.jpt-rider-actions{display:flex;gap:8px;margin-top:12px}.jpt-rider-action{flex:1;text-align:center;text-decoration:none;padding:11px 8px;border-radius:12px;font-weight:1000;font-size:12px}.jpt-rider-call{background:#18a66d;color:#fff}.jpt-rider-map{background:#f4c84a;color:#111}.jpt-rider-rating{display:inline-flex;align-items:center;gap:4px;margin-top:7px;padding:5px 8px;border-radius:999px;background:#fff8dc;color:#8b6800;font-size:11px;font-weight:1000}.jpt-rider-live{margin-top:11px;padding:10px 12px;border-radius:12px;background:#f6f7f9;color:#4c4f55;font-size:12px;font-weight:800}.jpt-rider-status{font-size:10px;color:#159866;font-weight:1000;text-transform:uppercase;letter-spacing:.4px}';document.head.appendChild(s);
+    s.textContent += '.jpt-track-rider{margin:0 16px 16px;padding:16px;border-radius:20px;background:#fff;border:1px solid #ececec;box-shadow:0 8px 24px #00000010}.jpt-rider-head{display:flex;align-items:center;gap:12px}.jpt-rider-avatar{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,#111,#3b321e);color:#f6d76b;display:grid;place-items:center;font-size:18px;font-weight:1000;flex:none;border:1px solid #d8ae42}.jpt-rider-name{font-size:17px;font-weight:1000;color:#15171b}.jpt-rider-meta{font-size:11px;color:#777;margin-top:3px}.jpt-rider-actions{display:flex;gap:8px;margin-top:12px}.jpt-rider-action{flex:1;text-align:center;text-decoration:none;padding:11px 8px;border-radius:12px;font-weight:1000;font-size:12px}.jpt-rider-call{background:#18a66d;color:#fff}.jpt-rider-map{background:#f4c84a;color:#111}.jpt-rider-rating{display:inline-flex;align-items:center;gap:4px;margin-top:7px;padding:5px 8px;border-radius:999px;background:#fff8dc;color:#8b6800;font-size:11px;font-weight:1000}.jpt-rider-live{margin-top:11px;padding:10px 12px;border-radius:12px;background:#f6f7f9;color:#4c4f55;font-size:12px;font-weight:800}.jpt-rider-status{font-size:10px;color:#159866;font-weight:1000;text-transform:uppercase;letter-spacing:.4px}.jpt-track-actions{display:flex;gap:8px;margin-top:12px}.jpt-track-action{flex:1;padding:11px 9px;border:0;border-radius:12px;font-weight:1000;font-size:12px;text-align:center;text-decoration:none;cursor:pointer}.jpt-track-wa{background:#18a66d;color:#fff}.jpt-track-help{background:#f4c84a;color:#111}.jpt-track-summary{margin:0 16px 16px;padding:16px;border-radius:20px;background:#fff;border:1px solid #ececec;box-shadow:0 8px 24px #00000010}.jpt-track-summary-title{font-weight:1000;font-size:15px;margin-bottom:9px}.jpt-track-summary-row{display:flex;justify-content:space-between;gap:10px;margin:7px 0;font-size:12px;color:#555}.jpt-track-summary-total{font-weight:1000;color:#15171b;border-top:1px solid #eee;padding-top:9px}';document.head.appendChild(s);
   }
 
   function ensureCustomerBell(){
@@ -99,7 +99,7 @@
     var el=document.getElementById('jptOrderTracker');
     if(el)return el;
     el=document.createElement('section');el.id='jptOrderTracker';el.className='jpt-track';
-    el.innerHTML='<div class="jpt-track-top"><div class="jpt-track-brand"><div id="jptTrackRestaurantName" class="jpt-track-title">Restaurant Partner</div><div id="jptTrackCode" class="jpt-track-code"></div></div><button id="jptTrackClose" class="jpt-track-close" type="button" aria-label="Close">✕</button></div><div id="jptTrackOutletAd" class="jpt-track-ad"></div><div id="jptTrackMap" class="jpt-track-map"></div><div id="jptTrackStatus" class="jpt-track-status"></div><div id="jptTrackRider" class="jpt-track-rider" style="display:none"></div><div class="jpt-track-info">Order info &amp; instructions</div>';
+    el.innerHTML='<div class="jpt-track-top"><div class="jpt-track-brand"><div id="jptTrackRestaurantName" class="jpt-track-title">Restaurant Partner</div><div id="jptTrackCode" class="jpt-track-code"></div></div><button id="jptTrackClose" class="jpt-track-close" type="button" aria-label="Close">✕</button></div><div id="jptTrackOutletAd" class="jpt-track-ad"></div><div id="jptTrackMap" class="jpt-track-map"></div><div id="jptTrackStatus" class="jpt-track-status"></div><div id="jptTrackRider" class="jpt-track-rider" style="display:none"></div><div id="jptTrackOrderSummary" class="jpt-track-summary"></div><div class="jpt-track-info">Order info &amp; instructions</div>';
     document.body.appendChild(el);
     el.querySelector('#jptTrackClose').onclick=function(){closeTracking(true)};
     ensureCustomerBell();
@@ -108,7 +108,7 @@
 
   function statusInfo(o){
     var s=String(o&&o.status||'new').toLowerCase().trim().replace(/\s+/g,'_');
-    if(s==='delivered')return {title:'Delivered',sub:'Order received. Thank you!',step:5,done:true};
+    if(s==='delivered'||s==='completed')return {title:'Delivered',sub:'Order received. Thank you!',step:5,done:true};
     if(s==='out_for_delivery'||s==='out_for_delivery_'||s==='out-for-delivery')return {title:'Out for delivery',sub:'Your order is on the way.',step:4};
     if(s==='ready')return {title:'Ready for delivery',sub:'Your order is ready. Delivery partner is on the delivery stage.',step:3,ready:true};
     if(s==='preparing')return {title:'Preparing your order',sub:'The restaurant is preparing your food.',step:2};
@@ -224,6 +224,41 @@
     return String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');
   }
 
+  function renderOrderSummary(o){
+    var host=document.getElementById('jptTrackOrderSummary');
+    if(!host)return;
+    var rows=Array.isArray(o&&o.items)?o.items:[];
+    var total=Number(o&&o.total||0);
+    host.innerHTML='<div class="jpt-track-summary-title">Order summary</div>'+
+      (rows.length?rows.map(function(x){return '<div class="jpt-track-summary-row"><span>'+esc(x.name||'Item')+' × '+Number(x.qty||1)+'</span><b>₹'+Math.max(0,Math.round(Number(x.price||0)*Number(x.qty||1))).toLocaleString('en-IN')+'</b></div>'}).join(''):'<div class="jpt-track-summary-row"><span>Order details</span><b>'+esc(o&&o.order_no||'')+'</b></div>')+
+      '<div class="jpt-track-summary-row jpt-track-summary-total"><span>Total</span><b>₹'+Math.max(0,Math.round(total)).toLocaleString('en-IN')+'</b></div>';
+  }
+
+  function bindTrackingActions(o){
+    var host=document.getElementById('jptTrackStatus');
+    if(!host)return;
+    var actions=document.getElementById('jptTrackActions');
+    if(!actions){
+      actions=document.createElement('div');actions.id='jptTrackActions';actions.className='jpt-track-actions';
+      host.appendChild(actions);
+    }
+    var url='';
+    try{url=localStorage.getItem('jpt_last_order_whatsapp_url')||''}catch(e){}
+    actions.innerHTML='<button type="button" class="jpt-track-action jpt-track-wa" id="jptTrackWhatsApp">💬 WhatsApp</button><button type="button" class="jpt-track-action jpt-track-help" id="jptTrackHelp">Help / Support</button>';
+    var wa=document.getElementById('jptTrackWhatsApp');
+    if(wa)wa.onclick=function(){
+      var target=url;
+      if(!target){
+        var num='9148161094';
+        var msg='Order '+String(o&&o.order_no||'')+' • '+String(o&&o.outlet_id||'');
+        target='https://wa.me/91'+num+'?text='+encodeURIComponent(msg);
+      }
+      try{window.open(target,'_blank','noopener')}catch(e){location.href=target}
+    };
+    var help=document.getElementById('jptTrackHelp');
+    if(help)help.onclick=function(){if(typeof window.toast==='function')window.toast('Order support: please contact the restaurant using WhatsApp.');};
+  }
+
   function renderRiderProfile(o){
     var host=document.getElementById('jptTrackRider');
     if(!host)return;
@@ -311,6 +346,8 @@
     el.querySelector('#jptTrackCode').textContent=o&&o.order_no?o.order_no:'';
     el.querySelector('#jptTrackStatus').innerHTML=html;
     renderRiderProfile(o);
+    renderOrderSummary(o);
+    bindTrackingActions(o);
     el.classList.add('show');
     loadOutletMedia(outletCode).then(paintOutletMedia);
 
@@ -377,6 +414,9 @@
       var ch=sb.channel('jpt-customer-delivery-live-'+Date.now())
         .on('postgres_changes',{event:'INSERT',schema:'public',table:'delivery_location_updates'},function(p){
           if(window.JPTLiveBridge?.receive&&p?.new) window.JPTLiveBridge.receive({event_id:'delivery.location.updated:'+String(p.new.id),event_type:'delivery.location.updated',entity_type:'delivery_location',entity_id:p.new.id,outlet_id:'',audience:'customer',occurred_at:p.new.recorded_at,payload:p.new},'supabase-realtime');
+        })
+        .on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders'},function(p){
+          try{var cur=load();if(cur&&p&&p.new&&String(p.new.order_no||'')===String(cur.order_no||''))poll();}catch(e){}
         })
         .on('postgres_changes',{event:'UPDATE',schema:'public',table:'delivery_assignments'},function(p){
           if(window.JPTLiveBridge?.receive&&p?.new) window.JPTLiveBridge.receive({event_id:'delivery.assignment.updated:'+String(p.new.id)+':'+String(p.new.updated_at||Date.now()),event_type:'delivery.assignment.updated',entity_type:'delivery_assignment',entity_id:p.new.id,outlet_id:p.new.outlet_id||'',audience:'customer',occurred_at:p.new.updated_at||new Date().toISOString(),payload:p.new},'supabase-realtime');
