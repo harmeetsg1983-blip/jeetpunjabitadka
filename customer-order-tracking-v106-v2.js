@@ -17,16 +17,9 @@
   var lastAssignmentStatus='';
   var noticeItems=[];
   var noticeUnread=0;
-  var JPT_CUSTOMER_ACCEPTED_AUDIO='./ringtones/1000449571.mp4';
-  var CUSTOMER_ACCEPTED_TONE_KEY='jpt_v106_customer_accepted_tone:';
+  var JPT_CUSTOMER_ACCEPTED_AUDIO='./ringtones/1000449572.mp4';
   var readySinceKey='jpt_v106_ready_since';
-  function playCustomerAcceptedToneOnce(orderNo){
-    var key=CUSTOMER_ACCEPTED_TONE_KEY+String(orderNo||'');
-    if(!orderNo)return;
-    try{
-      if(localStorage.getItem(key)==='1')return;
-      localStorage.setItem(key,'1');
-    }catch(e){return}
+  function playCustomerAcceptedTone(){
     try{
       var a=new Audio(JPT_CUSTOMER_ACCEPTED_AUDIO);
       a.preload='auto';a.loop=false;
@@ -398,7 +391,7 @@
         var nextStatus=String(row.status||'').toLowerCase().trim().replace(/\s+/g,'_');
         if(!lastStatus){addCustomerNotice('Order placed','Your order is saved and waiting for restaurant acceptance.');notifyCustomer('JPT — Order placed','Your order is saved and waiting for restaurant acceptance.','jpt-order-placed-'+o.order_no);}
         else if(nextStatus!==lastStatus){var titles={accepted:'Order accepted',preparing:'Order is being prepared',ready:'Order is READY',out_for_delivery:'Order is out for delivery',delivered:'Order delivered',cancelled:'Order cancelled'};var nt=titles[nextStatus]||'Order status updated';addCustomerNotice(nt,statusInfo(row).sub);notifyCustomer('JPT — '+nt,statusInfo(row).sub,'jpt-order-status-'+o.order_no+'-'+nextStatus);}
-        if(lastStatus && lastStatus!=='accepted' && nextStatus==='accepted') playCustomerAcceptedToneOnce(o.order_no);
+        if(lastStatus && lastStatus!=='accepted' && nextStatus==='accepted') playCustomerAcceptedTone();
         lastStatus=nextStatus;
         var tr=await sb.rpc('get_customer_delivery_tracking',{p_order_no:o.order_no,p_phone:o.phone});
         var tracking=tr.error?{}:(Array.isArray(tr.data)?tr.data[0]:tr.data)||{};
