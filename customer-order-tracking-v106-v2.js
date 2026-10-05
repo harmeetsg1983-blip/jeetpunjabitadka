@@ -23,7 +23,23 @@
     try{
       var a=new Audio(JPT_CUSTOMER_ACCEPTED_AUDIO);
       a.preload='auto';a.loop=false;
-      a.play().catch(function(){});
+      var p=a.play();
+      if(p&&typeof p.catch==='function')p.catch(function(){notifyCustomerAcceptedFallback();});
+      return;
+    }catch(e){}
+    notifyCustomerAcceptedFallback();
+  }
+  function notifyCustomerAcceptedFallback(){
+    try{
+      if(!('Notification' in window)||Notification.permission!=='granted')return;
+      var body='Your order has been accepted by the restaurant.';
+      navigator.serviceWorker?.getRegistration?.().then(function(reg){
+        if(reg?.active)reg.showNotification('JPT — Order accepted',{
+          body:body,tag:'jpt-order-accepted-'+String(load()?.order_no||'accepted'),
+          renotify:false,requireInteraction:false,vibrate:[120,80,120],
+          data:{url:location.href}
+        });
+      });
     }catch(e){}
   }
 
