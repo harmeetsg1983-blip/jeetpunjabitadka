@@ -225,7 +225,10 @@
     try{
       const s=JSON.parse(localStorage.getItem(KEY)||'null'); if(!s?.id||!window.sb)return;
       const r=await window.sb.from('orders').select('id,order_no,outlet_id,status,created_at').eq('id',s.id).maybeSingle();
-      if(!r.error&&r.data&&String(r.data.status).toLowerCase()==='new')ring(r.data);else persist(null);
+      /* A persisted NEW order may be an old pending order from a prior
+         session. Do not ring it again on app reopen; live INSERT/poll detection
+         owns fresh alerts. Keep it only as a validated pending state. */
+      if(!r.error&&r.data&&String(r.data.status).toLowerCase()==='new')return;else persist(null);
     }catch(e){}
   }
 
