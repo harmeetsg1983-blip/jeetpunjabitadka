@@ -265,7 +265,7 @@ async function directAction(row,next,extra={}){
    if(r.error)throw r.error;
    return r.data||null;
  };
- const waitForServerState=async(attempts=5,delayMs=250)=>{
+ const waitForServerState=async(attempts=12,delayMs=500)=>{
    let latest=null;
    for(let i=0;i<attempts;i++){
      latest=await readCurrent();
