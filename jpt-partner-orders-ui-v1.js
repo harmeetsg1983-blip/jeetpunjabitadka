@@ -115,8 +115,11 @@ function ensureOrderDetailModal(){
 function detailActionHtml(x){
  const id=esc(x.id||''),st=x.__status;
  if(st==='new')return actionHtml(x);
- if(st==='accepted'||st==='preparing')return '<button class="primary" data-act="ready" data-id="'+id+'">READY</button>';
- return '<span class="jpt-cob-history">Delivery flow will handle the remaining status changes.</span>';
+ if(st==='accepted')return '<button class="primary" data-act="preparing" data-id="'+id+'">START PREPARING</button>';
+ if(st==='preparing')return '<button class="primary" data-act="ready" data-id="'+id+'">MARK READY</button>';
+ if(st==='ready')return '<span class="jpt-cob-history">READY • DELIVERY OFFER IS CHECKED AUTOMATICALLY</span>';
+ if(st==='out_for_delivery')return '<span class="jpt-cob-history">OUT FOR DELIVERY • DELIVERY FLOW ACTIVE</span>';
+ return '<span class="jpt-cob-history">Delivery flow active.</span>';
 }
 
 function openOrderDetail(id){
@@ -153,7 +156,10 @@ function ensureRoot(){
 function actionHtml(x){
  const id=esc(x.id||''),st=x.__status;
  if(st==='new')return `<div class="jpt-cob-timepick" aria-label="Preparation time"><button type="button" data-time="minus" data-id="${id}" aria-label="Decrease preparation time">−</button><input class="jpt-cob-minutes" data-id="${id}" type="number" min="5" max="120" step="5" value="${Number(prepDrafts.get(String(x.id))??x.target_minutes??30)}"><button type="button" data-time="plus" data-id="${id}" aria-label="Increase preparation time">+</button><span class="jpt-cob-muted">min</span></div><div class="jpt-cob-decision"><button class="primary" data-act="accept" data-id="${id}">ACCEPT</button><button data-act="reject" data-id="${id}">REJECT</button></div>`;
- if(st==='accepted'||st==='preparing'||st==='ready'||st==='out_for_delivery')return '<span class="jpt-cob-history">STATUS UPDATES ARE HANDLED BY THE DELIVERY FLOW</span>';
+ if(st==='accepted')return '<button class="primary" data-act="preparing" data-id="${id}">START PREPARING</button>';
+ if(st==='preparing')return '<button class="primary" data-act="ready" data-id="${id}">MARK READY</button>';
+ if(st==='ready')return '<span class="jpt-cob-history">READY • DELIVERY OFFER IS CHECKED AUTOMATICALLY</span>';
+ if(st==='out_for_delivery')return '<span class="jpt-cob-history">OUT FOR DELIVERY • DELIVERY FLOW ACTIVE</span>';
  return '';
 }
 
