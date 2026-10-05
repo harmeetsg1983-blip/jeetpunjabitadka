@@ -46,7 +46,15 @@
 
   async function preloadSavedRingtone(){
     try{
-      const blob=await getRingtone();
+      let blob=await getRingtone();
+      // If the owner has not saved a custom ringtone in this browser yet,
+      // preload the exact production Restaurant NEW ORDER asset instead.
+      if(!(blob instanceof Blob)||!blob.size){
+        if(!PROD_RINGTONES_URL)return false;
+        const r=await fetch(PROD_RINGTONES_URL,{cache:'force-cache'});
+        if(!r.ok)return false;
+        blob=await r.blob();
+      }
       if(!(blob instanceof Blob)||!blob.size)return false;
       if(cachedRingUrl){try{URL.revokeObjectURL(cachedRingUrl)}catch(e){}}
       cachedRingBlob=blob;
