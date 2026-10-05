@@ -361,7 +361,6 @@
         var tracking=tr.error?{}:(Array.isArray(tr.data)?tr.data[0]:tr.data)||{};
         var nextAssignment=String(tracking.assignment_status||'');
         if(nextAssignment && nextAssignment!==lastAssignmentStatus){var at='',ab='';if(nextAssignment==='accepted'){at='Delivery partner assigned';ab='A rider has been assigned to your order.';}else if(nextAssignment==='picked_up'){at='Order picked up';ab='Your delivery partner has picked up the order.';}else if(nextAssignment==='out_for_delivery'){at='Rider is on the way';ab='Your order is out for delivery.';}if(at){addCustomerNotice(at,ab);notifyCustomer('JPT — '+at,ab,'jpt-order-assignment-'+o.order_no+'-'+nextAssignment);}}
-        if(nextAssignment && nextAssignment!==lastAssignmentStatus && nextAssignment==='accepted') playCustomerAcceptedTone();
         lastAssignmentStatus=nextAssignment;
         o=Object.assign({},o,row,tracking);save(o);render(o);
         if(nextStatus==='delivered'){
