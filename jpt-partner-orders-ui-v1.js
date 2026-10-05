@@ -188,38 +188,81 @@ function render(){
  tickCountdowns();window.__jptCountdownTimer=setInterval(tickCountdowns,1000);
 }
 async function directAction(row,next,extra={}){
- const patch={status:next,updated_at:new Date().toISOString(),...extra};
- const expected=String(row.__status||row.status||'new').toLowerCase();
- /* Re-read the server state before a guarded transition. The card can be
-    stale when a realtime UPDATE/load races with a button tap. If the server
-    is already at the requested state, treat the action as idempotently done;
-    otherwise only allow the known restaurant transition READY from
-    ACCEPTED/PREPARING. All other transitions keep the strict expected-state
-    guard. */
- const current=await window.sb.from('orders').select('id,status,target_minutes,accepted_at,deadline_at,updated_at').eq('id',row.id).eq('outlet_id',row.outlet_id).maybeSingle();
+ const target=String(next||'').toLowerCase();
+ const patch={status:target,updated_at:new Date().toISOString(),...extra};
+ const rank={new:0,accepted:1,preparing:2,ready:3,out_for_delivery:4,delivered:5,completed:5,cancelled:99};
+ const transitionAllowed=(from,to)=>{
+   if(to==='accepted')return from==='new';
+   if(to==='preparing')return from==='accepted';
+   if(to==='ready')return from==='accepted'||from==='preparing';
+   if(to==='out_for_delivery')return from==='ready';
+   if(to==='delivered'||to==='completed')return from==='out_for_delivery';
+   if(to==='cancelled')return from==='new';
+   return false;
+ };
+ const applyServerRow=(data)=>{
+   Object.assign(row,data);
+   row.__status=status(data.status);
+   statusLocks.set(String(row.id),{
+     status:row.__status,
+     target_minutes:data.target_minutes,
+     accepted_at:data.accepted_at,
+     deadline_at:data.deadline_at,
+     updatedAt:data.updated_at||new Date().toISOString(),
+     updatedMs:Date.parse(data.updated_at||'')||Date.now(),
+     at:Date.now()
+   });
+   return data;
+ };
+ const current=await window.sb.from('orders')
+   .select('id,status,target_minutes,accepted_at,deadline_at,updated_at')
+   .eq('id',row.id).eq('outlet_id',row.outlet_id).maybeSingle();
  if(current.error)throw current.error;
  if(!current.data)throw new Error('Order was not found on the server. Please refresh and try again.');
- const serverStatus=status(current.data.status);
- if(serverStatus===String(next).toLowerCase()){
-   Object.assign(row,current.data);
-   row.__status=serverStatus;
-   statusLocks.set(String(row.id),{status:serverStatus,target_minutes:current.data.target_minutes,accepted_at:current.data.accepted_at,deadline_at:current.data.deadline_at,updatedAt:current.data.updated_at||new Date().toISOString(),updatedMs:Date.parse(current.data.updated_at||'')||Date.now(),at:Date.now()});
+ let serverStatus=status(current.data.status);
+
+ /* The UI row may be stale because realtime, polling and the action click can
+    arrive in a different order. The SERVER is the authority. If the requested
+    state is already present, or the server has already advanced beyond the
+    requested state, reconcile locally instead of showing a false failure. */
+ if(serverStatus===target || (rank[serverStatus]!==undefined && rank[target]!==undefined && rank[serverStatus]>rank[target] && serverStatus!=='cancelled')){
+   applyServerRow(current.data);
    return current.data;
  }
- const allowedReady=String(next).toLowerCase()==='ready' && (serverStatus==='accepted'||serverStatus==='preparing');
- if(serverStatus!==expected && !allowedReady){
-   load().catch(()=>{});
-   throw new Error('Order changed on the server to '+serverStatus.toUpperCase()+'. Refreshing the order board.');
+
+ /* Rebase the guarded write on the state we just read from the server.
+    This removes the old stale-card race where .eq(status, row.__status)
+    rejected an otherwise valid READY transition. */
+ if(!transitionAllowed(serverStatus,target)){
+   await load().catch(()=>{});
+   throw new Error('Order is currently '+serverStatus.toUpperCase()+'. Board refreshed; no invalid status change was made.');
  }
- const guardedExpected=allowedReady?serverStatus:expected;
- const q=await window.sb.from('orders').update(patch).eq('id',row.id).eq('outlet_id',row.outlet_id).eq('status',guardedExpected)
+
+ let q=await window.sb.from('orders').update(patch)
+   .eq('id',row.id).eq('outlet_id',row.outlet_id).eq('status',serverStatus)
    .select('id,status,target_minutes,accepted_at,deadline_at,updated_at').maybeSingle();
+
  if(q.error)throw q.error;
- if(!q.data)throw new Error('Order status was not saved. Please refresh and try again.');
- Object.assign(row,q.data);
- row.__status=status(q.data.status);
- statusLocks.set(String(row.id),{status:String(q.data.status||next).toLowerCase(),target_minutes:q.data.target_minutes,accepted_at:q.data.accepted_at,deadline_at:q.data.deadline_at,updatedAt:q.data.updated_at||new Date().toISOString(),updatedMs:Date.parse(q.data.updated_at||'')||Date.now(),at:Date.now()});
- if(String(next)!=='new'){
+
+ /* A second operator/device may win the tiny race after the read. Re-read
+    once before reporting an error; if it reached target or a later state,
+    treat the action as idempotently completed. */
+ if(!q.data){
+   const retry=await window.sb.from('orders')
+     .select('id,status,target_minutes,accepted_at,deadline_at,updated_at')
+     .eq('id',row.id).eq('outlet_id',row.outlet_id).maybeSingle();
+   if(retry.error)throw retry.error;
+   if(!retry.data)throw new Error('Order was not found on the server. Please refresh and try again.');
+   const retryStatus=status(retry.data.status);
+   if(retryStatus===target || (rank[retryStatus]!==undefined && rank[target]!==undefined && rank[retryStatus]>rank[target] && retryStatus!=='cancelled')){
+     applyServerRow(retry.data);
+     return retry.data;
+   }
+   throw new Error('Order status could not be confirmed by the server. Board refreshed; please retry.');
+ }
+
+ applyServerRow(q.data);
+ if(target!=='new'){
    try{window.JPTPartnerOrderAlertV4?.stop?.();window.stopOrderAlarm?.();}catch(e){}
  }
  return q.data;
