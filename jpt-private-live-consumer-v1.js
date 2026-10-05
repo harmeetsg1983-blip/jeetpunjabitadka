@@ -5,6 +5,18 @@
 (function(){
   'use strict';
   if(window.JPTPrivateLiveConsumer) return;
+  // The canonical restaurant live core owns Broadcast transport.
+  // This legacy consumer waits briefly for it and stays dormant when present.
+  if(window.JPTRestaurantLiveOrderCore){
+    window.JPTPrivateLiveConsumer={version:'1.1.0',subscribe:function(){return false},stop:function(){}};
+    return;
+  }
+  var coreWait=setInterval(function(){
+    if(!window.JPTRestaurantLiveOrderCore)return;
+    clearInterval(coreWait);
+    try{window.JPTPrivateLiveConsumer?.stop?.()}catch(e){}
+    window.JPTPrivateLiveConsumer={version:'1.1.0',subscribe:function(){return false},stop:function(){}};
+  },100);
   var channel=null, boundTopic='', timer=null;
 
   function sb(){ return window.sb || null; }
