@@ -17,7 +17,7 @@ const CONFIRM_ATTEMPTS=12;
 const CONFIRM_DELAY_MS=500;
 const rank={new:0,accepted:1,preparing:2,ready:3,out_for_delivery:4,delivered:5,completed:5,cancelled:99};
 
-let channel=null,topic='',pollTimer=null,reconnectTimer=null;
+let channel=null,channels=[],topic='',topics=[],pollTimer=null,reconnectTimer=null;
 let running=false,starting=false;
 let outletCode='';
 let rows=new Map();
@@ -36,6 +36,16 @@ function currentOutlet(){
     localStorage.getItem('jpt_admin_outlet') ||
     ''
   ).trim();
+}
+const OWNER_OUTLETS=['JPT-001','SOP-002','NME-004','PFA-003','TOP-005'];
+async function resolveOutlets(){
+  const client=sb();
+  const selected=currentOutlet();
+  try{
+    const r=await client.rpc('partner_access_is_central_owner');
+    if(!r?.error && r.data===true)return {central:true,codes:OWNER_OUTLETS.slice()};
+  }catch(e){}
+  return {central:false,codes:selected?[selected]:[]};
 }
 function emit(type,payload){
   const ev={type,payload,at:new Date().toISOString()};
@@ -106,8 +116,9 @@ async function waitFor(id,outlet,target){
 async function transition(id,target,extra={},expectedStatus){
   target=normStatus(target);
   const client=sb(); if(!client)throw new Error('Supabase client not ready');
-  const outlet=currentOutlet();
-  const current=rows.get(String(id))||await read(id,outlet);
+  const existing=rows.get(String(id));
+  const outlet=existing?.outlet_id||currentOutlet();
+  const current=existing||await read(id,outlet);
   if(!current)throw new Error('Order not found');
   const serverStatus=normStatus(current.status);
   const allowed={
@@ -181,27 +192,33 @@ function handleBroadcast(event,payload){
 }
 async function bind(){
   const client=sb(); if(!client)return false;
-  outletCode=currentOutlet();
-  if(!outletCode)return false;
+  const resolved=await resolveOutlets();
+  outletCode=resolved.central?'':(resolved.codes[0]||'');
+  if(!resolved.codes.length)return false;
   try{await client.realtime.setAuth()}catch(e){}
-  if(channel){try{await client.removeChannel(channel)}catch(e){};channel=null}
-  topic='jpt:partner:outlet:'+outletCode;
+  for(const ch of channels){try{await client.removeChannel(ch)}catch(e){}}
+  channels=[];channel=null;topics=resolved.codes.map(code=>'jpt:partner:outlet:'+code);topic=topics.join(',');
   const myGen=generation;
-  channel=client.channel(topic,{config:{private:true}})
-    .on('broadcast',{event:'order_insert'},p=>handleBroadcast('order_insert',p))
-    .on('broadcast',{event:'order_update'},p=>handleBroadcast('order_update',p))
-    .on('broadcast',{event:'INSERT'},p=>handleBroadcast('INSERT',p))
-    .on('broadcast',{event:'UPDATE'},p=>handleBroadcast('UPDATE',p))
-    .subscribe((status,err)=>{
-      emit('transport',{status,error:err||null,topic});
-      if(myGen!==generation)return;
-      if(status==='SUBSCRIBED'){
-        load(outletCode).catch(()=>{});
-      }else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){
-        clearTimeout(reconnectTimer);
-        reconnectTimer=setTimeout(()=>bind().catch(()=>{}),2000);
-      }
-    });
+  resolved.codes.forEach(code=>{
+    const t='jpt:partner:outlet:'+code;
+    const ch=client.channel(t,{config:{private:true}})
+      .on('broadcast',{event:'order_insert'},p=>handleBroadcast('order_insert',p))
+      .on('broadcast',{event:'order_update'},p=>handleBroadcast('order_update',p))
+      .on('broadcast',{event:'INSERT'},p=>handleBroadcast('INSERT',p))
+      .on('broadcast',{event:'UPDATE'},p=>handleBroadcast('UPDATE',p))
+      .subscribe((status,err)=>{
+        emit('transport',{status,error:err||null,topic:t,outlet_id:code});
+        if(myGen!==generation)return;
+        if(status==='SUBSCRIBED'){
+          load(resolved.central?'':code).catch(()=>{});
+        }else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){
+          clearTimeout(reconnectTimer);
+          reconnectTimer=setTimeout(()=>bind().catch(()=>{}),2000);
+        }
+      });
+    channels.push(ch);
+    if(!channel)channel=ch;
+  });
   return true;
 }
 function startPolling(){
@@ -209,7 +226,7 @@ function startPolling(){
   pollTimer=setInterval(()=>{
     if(!running)return;
     load(outletCode).catch(()=>{});
-    if(!channel)bind().catch(()=>{});
+    if(!channels.length)bind().catch(()=>{});
   },POLL_MS);
 }
 async function start(){
@@ -218,10 +235,11 @@ async function start(){
   try{
     const client=sb();
     if(!client)throw new Error('Supabase client not ready');
-    outletCode=currentOutlet();
-    if(!outletCode)return;
+    const resolved=await resolveOutlets();
+    outletCode=resolved.central?'':(resolved.codes[0]||'');
+    if(!resolved.codes.length)return;
     running=true;generation++;
-    await load(outletCode);
+    await load(resolved.central?'':resolved.codes[0]);
     await bind();
     startPolling();
     emit('started',{outlet_id:outletCode});
@@ -231,8 +249,8 @@ async function stop(){
   running=false;generation++;
   clearInterval(pollTimer);pollTimer=null;
   clearTimeout(reconnectTimer);reconnectTimer=null;
-  if(channel){try{await sb()?.removeChannel(channel)}catch(e){}}
-  channel=null;topic='';
+  for(const ch of channels){try{await sb()?.removeChannel(ch)}catch(e){}}
+  channels=[];channel=null;topic='';topics=[];
   emit('stopped',{});
 }
 function get(id){return rows.get(String(id))||null}
@@ -240,7 +258,7 @@ window.JPTRestaurantLiveOrderCore={
   version:'1.0.0',
   start,stop,bind,load,on,get,snapshot,
   transition,accept,startPreparing,markReady,reject,
-  getState:()=>({running,outlet_id:outletCode,topic,connected:!!channel,count:rows.size})
+  getState:()=>({running,outlet_id:outletCode,topic,topics,connected:channels.length>0,count:rows.size})
 };
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>start().catch(()=>{}),300),{once:true});
