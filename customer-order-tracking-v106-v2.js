@@ -196,7 +196,7 @@
     try{
       var saved=Number(localStorage.getItem(key)||0);
       if(saved>0)return saved;
-      var serverTs=Date.parse(String(o&&o.updated_at||o&&o.ready_at||''));
+      var serverTs=Date.parse(String(o&&o.ready_at||o&&o.out_for_delivery_at||o&&o.updated_at||''));
       if(Number.isFinite(serverTs)&&serverTs>0){
         localStorage.setItem(key,String(serverTs));
         return serverTs;
