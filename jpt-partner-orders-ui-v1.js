@@ -16,7 +16,7 @@ const ROOT_ID='jptOrdersCentralV2';
 const TABS_ID='jptOrdersCentralV2Tabs';
 const CENTRAL_RPC='partner_access_is_central_owner';
 const OWNER_OUTLET_CODES=new Set(['JPT-001','SOP-002','NME-004','PFA-003','TOP-005']);
-const STATUS_VIEWS=[['preparing','PREPARING'],['ready','READY'],['out_for_delivery','OUT FOR DELIVERY'],['history','COMPLETED']];
+const STATUS_VIEWS=[['new','NEW'],['preparing','PREPARING'],['ready','READY'],['out_for_delivery','OUT FOR DELIVERY'],['history','COMPLETED']];
 const statusView=s=>{s=status(s);if(s==='accepted'||s==='preparing')return 'preparing';if(s==='completed')return 'delivered';return s};
 let timer=null,channel=null,rowsCache=[],outlets={},selected='preparing',central=false,lastNewest='',loadSeq=0;
 const prepDrafts=new Map();
@@ -260,6 +260,9 @@ async function load(){
     else statusLocks.delete(String(r.id));
   });
   rowsCache=freshRows;
+  const hasNew=rowsCache.some(x=>x.__status==='new'&&OWNER_OUTLET_CODES.has(String(x.outlet_id||'')));
+  if(hasNew) selected='new';
+  else if(selected==='new') selected='preparing';
   const newest=rowsCache[0];
   rowsCache.filter(x=>x.__status==='new'&&OWNER_OUTLET_CODES.has(String(x.outlet_id||''))).forEach(x=>pendingNew.set(String(x.id||x.order_no),x));
   syncCentralBell();
@@ -289,7 +292,7 @@ async function bindRealtime(){
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'orders'},p=>{
       const o=p?.new||{};
       if(OWNER_OUTLET_CODES.has(String(o.outlet_id||'')) && String(o.status||'').toLowerCase()==='new'){
-        pendingNew.set(String(o.id||o.order_no),o);selected='preparing';try{window.showPanel?.('orders')}catch(e){};
+        pendingNew.set(String(o.id||o.order_no),o);selected='new';try{window.showPanel?.('orders')}catch(e){};
         if(typeof window.showOrderAlarm==='function')window.showOrderAlarm(o);
         setTimeout(()=>{try{openOrderDetail(o.id)}catch(e){}},180);
       }
