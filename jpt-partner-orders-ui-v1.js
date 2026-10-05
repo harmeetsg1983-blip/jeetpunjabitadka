@@ -270,7 +270,7 @@ async function load(){
   if(newest){
    const stamp=String(newest.created_at||'')+'|'+String(newest.id||'')+'|'+String(newest.outlet_id||'');
    if(lastNewest && stamp!==lastNewest && newest.__status==='new'){
-    selected='preparing';
+    selected='new';
     try{window.showPanel?.('orders')}catch(e){}
     if(typeof window.showOrderAlarm==='function')window.showOrderAlarm(newest);
    }
