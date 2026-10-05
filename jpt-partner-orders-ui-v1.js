@@ -8,6 +8,7 @@
 */
 (function(){
 'use strict';
+window.__JPTOrdersV3Active=true;
 if(window.JPTPartnerOrdersUI?.version==='v3') return;
 
 const STYLE_ID='jpt-orders-central-v3-style';
@@ -188,7 +189,8 @@ function render(){
 }
 async function directAction(row,next,extra={}){
  const patch={status:next,updated_at:new Date().toISOString(),...extra};
- const q=await window.sb.from('orders').update(patch).eq('id',row.id).eq('outlet_id',row.outlet_id)
+ const expected=String(row.__status||row.status||'new').toLowerCase();
+ const q=await window.sb.from('orders').update(patch).eq('id',row.id).eq('outlet_id',row.outlet_id).eq('status',expected)
    .select('id,status,target_minutes,accepted_at,deadline_at,updated_at').maybeSingle();
  if(q.error)throw q.error;
  if(!q.data)throw new Error('Order status was not saved. Please refresh and try again.');
@@ -302,6 +304,7 @@ async function bindRealtime(){
 }
 
 function start(){
+ try{window.__JPTDisableLegacyOrderRuntime?.()}catch(e){}
  ensureRoot();load();clearInterval(timer);timer=setInterval(load,15000);
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')load()});
  const sel=document.getElementById('outletSelect');if(sel)sel.addEventListener('change',()=>{lastNewest='';selected='new';load()});
