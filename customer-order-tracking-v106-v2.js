@@ -119,7 +119,16 @@
 
   function getPrepMinutes(o){
     var n=Number(o&&o.target_minutes);
-    return n>0?n:15;
+    if(n>0)return n;
+    var totalEta=Number(o&&o.eta_minutes);
+    if(totalEta>0)return Math.max(1,totalEta-DELIVERY_BUFFER);
+    return 15;
+  }
+  function getOrderEtaMinutes(o){
+    var n=Number(o&&o.eta_minutes);
+    if(n>0)return n;
+    var prep=getPrepMinutes(o);
+    return prep+DELIVERY_BUFFER;
   }
 
   var outletMediaCache={};
@@ -214,7 +223,8 @@
       return {leftMs:left2,label:'Delivery countdown',note:'Up to '+DELIVERY_BUFFER+' min delivery buffer after READY'};
     }
     if(status==='new'){
-      return {leftMs:(prep+DELIVERY_BUFFER)*60000,label:'Estimated arrival up to '+(prep+DELIVERY_BUFFER)+' minutes',note:'Initial estimate: preparation + up to '+DELIVERY_BUFFER+' min delivery buffer'};
+      var initialEta=getOrderEtaMinutes(o);
+      return {leftMs:initialEta*60000,label:'Estimated arrival up to '+initialEta+' minutes',note:'Initial estimate from order ETA'};
     }
     return null;
   }
