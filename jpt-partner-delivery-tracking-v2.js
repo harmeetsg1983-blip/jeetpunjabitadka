@@ -6,10 +6,8 @@
   'use strict';
   const VERSION='delivery-tracking-v2';
   let timer=null, channel=null, booted=false, lastAccepted=new Set();
-  const ASSIGNMENT_TONE='./ringtones/1000449491.mp4';
-  function playAssignmentTone(row){try{const a=new Audio(ASSIGNMENT_TONE);a.preload='auto';a.volume=1;a.play().catch(()=>{});}catch(e){}}
-
-
+  /* Delivery-partner ORDER ACCEPTED audio belongs to delivery-partner-app.html.
+     This admin/partner tracking layer must not play that locked rider-only asset. */
   const $=id=>document.getElementById(id);
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const outletId=()=>String(
@@ -141,7 +139,7 @@
         return;
       }
       const rows=Array.isArray(r.data)?r.data:[];
-      rows.forEach(x=>{const key=String(x.order_id||x.order_no||'');const st=String(x.delivery_status||'').toLowerCase();if(key&&st==='accepted'&&!lastAccepted.has(key)){lastAccepted.add(key);playAssignmentTone(x);}if(key&&st!=='accepted')lastAccepted.delete(key);});
+      rows.forEach(x=>{const key=String(x.order_id||x.order_no||'');const st=String(x.delivery_status||'').toLowerCase();if(key&&st==='accepted'&&!lastAccepted.has(key)){lastAccepted.add(key);}if(key&&st!=='accepted')lastAccepted.delete(key);});
       render(rows);
       decorateVisibleCards(rows);
     }catch(e){
