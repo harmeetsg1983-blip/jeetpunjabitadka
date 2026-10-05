@@ -264,6 +264,30 @@ async function directAction(row,next,extra={}){
      applyServerRow(retry.data);
      return retry.data;
    }
+
+   /* Bounded optimistic-concurrency fallback:
+      if the row is still exactly the version we just read, retry the write
+      without the status predicate. The updated_at predicate prevents an
+      older operator action from overwriting a newer status. */
+   if(retryStatus===serverStatus && retry.data.updated_at===current.data.updated_at){
+     const retryWrite=await window.sb.from('orders').update(patch)
+       .eq('id',row.id).eq('outlet_id',row.outlet_id)
+       .eq('updated_at',current.data.updated_at);
+     if(retryWrite.error)throw retryWrite.error;
+
+     const confirm=await window.sb.from('orders')
+       .select('id,status,target_minutes,accepted_at,deadline_at,updated_at')
+       .eq('id',row.id).eq('outlet_id',row.outlet_id).maybeSingle();
+     if(confirm.error)throw confirm.error;
+     if(confirm.data){
+       const confirmStatus=status(confirm.data.status);
+       if(confirmStatus===target || (rank[confirmStatus]!==undefined && rank[target]!==undefined && rank[confirmStatus]>rank[target] && confirmStatus!=='cancelled')){
+         applyServerRow(confirm.data);
+         return confirm.data;
+       }
+     }
+   }
+
    throw new Error('Order status could not be confirmed by the server. Board refreshed; please retry.');
  }
 
