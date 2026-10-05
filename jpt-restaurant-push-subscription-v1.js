@@ -1,9 +1,14 @@
 (function(){'use strict';
-window.JPT_VAPID_PUBLIC_KEY=window.JPT_VAPID_PUBLIC_KEY||'BD7qHYAE7IPGRqdoeDIHts3f8NzVbIj6gR7t948-AkPHqmKNWegH-3fv4gwRp__-HKI3ZPz0VtWFNJ2ezr1_EnI';
 if(window.__JPT_RESTAURANT_PUSH_SUB_V1__) return;
 window.__JPT_RESTAURANT_PUSH_SUB_V1__=true;
 
-function getPublicKey(){
+async function getPublicKey(){
+  try{
+    if(window.sb&&typeof window.sb.rpc==='function'){
+      const r=await window.sb.rpc('jpt_get_vapid_public_key');
+      if(!r.error&&typeof r.data==='string'&&r.data.trim()) return r.data.trim();
+    }
+  }catch(e){}
   return window.JPT_VAPID_PUBLIC_KEY||document.querySelector('meta[name="jpt-vapid-public-key"]')?.content||'';
 }
 function base64ToUint8Array(base64){
@@ -18,8 +23,6 @@ async function enable(){
   try{
     if(!('serviceWorker' in navigator)||!('PushManager' in window)) return {ok:false,reason:'push_unsupported'};
     if(!window.sb) return {ok:false,reason:'supabase_not_ready'};
-    const key=getPublicKey();
-    if(!key) return {ok:false,reason:'vapid_public_key_missing'};
     const outlet=getOutlet();
     if(!outlet) return {ok:false,reason:'outlet_missing'};
     const session=await window.sb.auth.getSession();
@@ -29,6 +32,8 @@ async function enable(){
       if(permission!=='granted') return {ok:false,reason:'notification_permission_'+permission};
     }
     if(Notification.permission!=='granted') return {ok:false,reason:'notification_permission_denied'};
+    const key=await getPublicKey();
+    if(!key) return {ok:false,reason:'vapid_public_key_missing'};
     const registration=await navigator.serviceWorker.ready;
     let subscription=await registration.pushManager.getSubscription();
     if(!subscription){
@@ -41,7 +46,7 @@ async function enable(){
       p_outlet_id:outlet,
       p_subscription:subscription.toJSON(),
       p_platform:/Android/i.test(navigator.userAgent)?'android':'web',
-      p_app_version:'partner-v107-push-v1'
+      p_app_version:'partner-v107-push-v2'
     });
     if(r.error) throw r.error;
     localStorage.setItem('jpt_restaurant_push_enabled','1');
