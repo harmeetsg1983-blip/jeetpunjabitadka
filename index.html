@@ -377,11 +377,13 @@ async function placeOrder(){
   window.JPT_LAST_PLACED_ORDER=placed;
   try{localStorage.setItem('jpt_v106_last_order',JSON.stringify(placed))}catch(e){}
   try{window.dispatchEvent(new CustomEvent('jpt:order-placed',{detail:placed}))}catch(e){}
-  if(waWindow){
-    try{waWindow.location.href='https://wa.me/91'+JPT_WHATSAPP_NUMBER+'?text='+msg}catch(e){}
-  }else{
-    try{window.open('https://wa.me/91'+JPT_WHATSAPP_NUMBER+'?text='+msg,'_blank')}catch(e){}
-  }
+  /* WhatsApp is intentionally secondary now.
+     The tracking screen is opened by the jpt:order-placed event above.
+     Preserve the exact existing message for an explicit WhatsApp action
+     from the tracking screen; do not navigate the customer away here. */
+  try{localStorage.setItem('jpt_last_order_whatsapp_message',msg)}catch(e){}
+  try{if(waWindow)waWindow.close()}catch(e){}
+  cartState={};selectedPromo=null;updateCart();closeCart();toast('Order placed successfully — live tracking opened')
   cartState={};selectedPromo=null;updateCart();closeCart();
   toast('Order placed successfully');
  }catch(e){console.error(e);toast('Order could not be completed. Please try again.')} finally {jptCheckoutBusy=false}
