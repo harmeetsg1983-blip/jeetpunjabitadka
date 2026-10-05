@@ -383,12 +383,25 @@ async function bindRealtime(){
  }catch(e){console.warn('[JPT Central Orders V2] realtime unavailable',e)}
 }
 
+function bindCoreRuntime(){
+ if(!window.JPTRestaurantLiveOrderCore)return false;
+ if(window.__JPTOrdersCoreBound)return true;
+ window.__JPTOrdersCoreBound=true;
+ window.addEventListener('jpt:restaurant-order-core',function(ev){
+   const type=ev?.detail?.type;
+   if(type==='status'||type==='snapshot'||type==='row'||type==='deleted'){
+     load().catch(()=>{});
+   }
+ });
+ try{window.JPTRestaurantLiveOrderCore.start?.().catch?.(()=>{})}catch(e){}
+ return true;
+}
 function start(){
  try{window.__JPTDisableLegacyOrderRuntime?.()}catch(e){}
  ensureRoot();load();clearInterval(timer);timer=setInterval(load,15000);
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')load()});
  const sel=document.getElementById('outletSelect');if(sel)sel.addEventListener('change',()=>{lastNewest='';selected='new';load()});
- bindRealtime();
+ if(!bindCoreRuntime())bindRealtime();
 }
 
 window.JPTPartnerOrdersUI={version:'v3',reload:load,render,openOrderDetail};
