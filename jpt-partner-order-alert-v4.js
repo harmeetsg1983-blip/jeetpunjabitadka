@@ -6,7 +6,7 @@
   'use strict';
   if(window.JPTPartnerOrderAlertV4)return;
 
-  const DB='jptPartnerAlertDB', STORE='settings', KEY='jpt_v4_active_order', PREFS_KEY='notificationPrefs', RING_MS=9000, PROD_RINGTONES_URL='';
+  const DB='jptPartnerAlertDB', STORE='settings', KEY='jpt_v4_active_order', PREFS_KEY='notificationPrefs', RING_KEY='ringtone', RING_MS=9000, PROD_RINGTONES_URL='';
   let audio=null, objectUrl=null, ringTimer=null, activeId=null, generation=0, armed=false, ringInFlight=new Map(), audioCtx=null, toneTimer=null;
 
   function stopTone(){
@@ -70,13 +70,13 @@
   }
 
   async function getRingtone(){
-    // Production source of truth: the exact locked NEW ORDER binary.
-    // Do not let an old/invalid IndexedDB custom file override it.
     try{
-      const r=await fetch(PROD_RINGTONES_URL,{cache:'no-store'});
-      if(!r.ok)return null;
-      return await r.blob();
-    }catch(e){return null}
+      const db=await new Promise((resolve,reject)=>{const q=indexedDB.open(DB,1);q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error)});
+      const saved=await new Promise((resolve,reject)=>{const q=db.transaction(STORE,'readonly').objectStore(STORE).get(RING_KEY);q.onsuccess=()=>resolve(q.result||null);q.onerror=()=>reject(q.error)});
+      if(saved instanceof Blob && saved.size>0)return saved;
+    }catch(e){}
+    if(!PROD_RINGTONES_URL)return null;
+    try{const r=await fetch(PROD_RINGTONES_URL,{cache:'no-store'});if(!r.ok)return null;return await r.blob()}catch(e){return null}
   }
 
   async function arm(){
@@ -100,23 +100,18 @@
   async function play(){
     const prefs=await getPrefs();
     if(prefs.orderNotifications===false)return false;
-    if(!PROD_RINGTONES_URL){armed=playFallbackTone();return armed;}
-    if(!audio){
-      audio=new Audio(PROD_RINGTONES_URL);
-      audio.preload='auto';
-      audio.playsInline=true;
-    }
-    audio.loop=true;
-    audio.volume=Math.max(0,Math.min(1,Number(prefs.ringVolume??100)/100));
-    audio.muted=false;
+    const blob=await getRingtone();
+    if(!blob){armed=playFallbackTone();return armed;}
+    stopAudio();
     try{
-      await audio.play();
-      stopTone();
-      armed=true;
-      return true;
+      objectUrl=URL.createObjectURL(blob);
+      const a=new Audio(objectUrl); audio=a;
+      a.preload='auto'; a.playsInline=true; a.loop=true;
+      a.volume=Math.max(0,Math.min(1,Number(prefs.ringVolume??100)/100));
+      await a.play();
+      stopTone(); armed=true; return true;
     }catch(e){
-      armed=playFallbackTone();
-      return armed;
+      stopAudio(); armed=playFallbackTone(); return armed;
     }
   }
 
@@ -271,7 +266,7 @@
     }catch(e){}
   }
 
-  window.JPTPartnerOrderAlertV4={version:'4.5-sound-only-fallback',arm,ring,stop:hardStop,active:()=>activeId,getPrefs,resumeAudioFromGesture};
+  window.JPTPartnerOrderAlertV4={version:'4.6-exact-idb-ringtone',arm,ring,stop:hardStop,active:()=>activeId,getPrefs,resumeAudioFromGesture};
   window.addEventListener('jpt:notification-settings',()=>{if(activeId!==null)arm()});
 
   let n=0, restored=false;
