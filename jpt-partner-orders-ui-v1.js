@@ -263,16 +263,19 @@ async function load(){
   const hasNew=rowsCache.some(x=>x.__status==='new'&&OWNER_OUTLET_CODES.has(String(x.outlet_id||'')));
   if(hasNew) selected='new';
   else if(selected==='new') selected='preparing';
-  const newest=rowsCache[0];
+  const newestNew=rowsCache.find(x=>x.__status==='new'&&OWNER_OUTLET_CODES.has(String(x.outlet_id||'')));
   rowsCache.filter(x=>x.__status==='new'&&OWNER_OUTLET_CODES.has(String(x.outlet_id||''))).forEach(x=>pendingNew.set(String(x.id||x.order_no),x));
   syncCentralBell();
   syncOrderBellBar();
-  if(newest){
-   const stamp=String(newest.created_at||'')+'|'+String(newest.id||'')+'|'+String(newest.outlet_id||'');
-   if(lastNewest && stamp!==lastNewest && newest.__status==='new'){
+  if(newestNew){
+   const stamp=String(newestNew.created_at||'')+'|'+String(newestNew.id||'')+'|'+String(newestNew.outlet_id||'');
+   /* Alert on both realtime arrival and the first polling load after a missed
+      realtime event. This keeps NEW orders audible/visible without touching
+      the orders table or Supabase schema. */
+   if(lastNewest!==stamp){
     selected='new';
     try{window.showPanel?.('orders')}catch(e){}
-    if(typeof window.showOrderAlarm==='function')window.showOrderAlarm(newest);
+    if(typeof window.showOrderAlarm==='function')window.showOrderAlarm(newestNew);
    }
    lastNewest=stamp;
   }
