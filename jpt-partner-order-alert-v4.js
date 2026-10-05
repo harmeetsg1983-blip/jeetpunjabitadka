@@ -92,9 +92,18 @@
     stopAudio();
     let a=null;
     try{
-      // Use the production URL directly. This avoids an extra async blob step
-      // before playback and keeps the source stable across reloads.
-      a=new Audio(PROD_RINGTONES_URL); audio=a;
+      const blob=await getRingtone();
+      if(g!==generation)return false;
+      if(blob){
+        objectUrl=URL.createObjectURL(blob);
+        a=new Audio(objectUrl);
+      }else if(PROD_RINGTONES_URL){
+        a=new Audio(PROD_RINGTONES_URL);
+      }else{
+        armed=!!ensureToneContext();
+        return armed;
+      }
+      audio=a;
       a.preload='auto'; a.playsInline=true;
       a.volume=Math.max(0,Math.min(1,Number(prefs.ringVolume??100)/100));
       a.muted=true;
@@ -140,9 +149,14 @@
       const prefsVolume=1;
       if(audio && armed)return true;
       stopAudio();
-      const a=new Audio(PROD_RINGTONES_URL); audio=a;
-      a.preload='auto'; a.playsInline=true; a.volume=prefsVolume; a.muted=true;
-      const p=a.play();
+      const use=async()=>{
+        const blob=await getRingtone();
+        const a=blob?new Audio(URL.createObjectURL(blob)):new Audio(PROD_RINGTONES_URL||'');
+        if(blob)objectUrl=a.src; audio=a;
+        a.preload='auto'; a.playsInline=true; a.volume=prefsVolume; a.muted=true;
+        return a;
+      };
+      const p=use().then(a=>a.play().then(()=>a));
       if(p&&typeof p.then==='function'){
         p.then(()=>{
           if(audio!==a)return;
