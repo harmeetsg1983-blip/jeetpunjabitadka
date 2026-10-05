@@ -244,12 +244,14 @@ async function directAction(row,next,extra={}){
    throw new Error('Order is currently '+serverStatus.toUpperCase()+'. Board refreshed; no invalid status change was made.');
  }
 
+ /* Write first, then verify with a separate SELECT.
+    Do not depend on UPDATE ... SELECT returning a row: under RLS/PostgREST
+    that response can be empty even when the UPDATE has already committed. */
  let q=await window.sb.from('orders').update(patch)
-   .eq('id',row.id).eq('outlet_id',row.outlet_id).eq('status',serverStatus)
-   .select('id,status,target_minutes,accepted_at,deadline_at,updated_at').maybeSingle();
+   .eq('id',row.id).eq('outlet_id',row.outlet_id).eq('status',serverStatus);
 
  /* Supabase can occasionally complete the UPDATE while the response body
-    is empty or the immediate read briefly still shows the previous version.
+    is empty or the immediate read briefly shows the previous version.
     Recover the committed server state before declaring the action failed. */
  const isAtOrBeyond=(data)=>{
    if(!data)return false;
