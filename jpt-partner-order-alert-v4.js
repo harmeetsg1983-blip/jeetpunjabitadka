@@ -146,23 +146,28 @@
   function primeAudioFromGesture(){
     try{
       ensureToneContext();
-      const prefsVolume=1;
       if(audio && armed)return true;
       stopAudio();
-      const use=async()=>{
+      const generationAtStart=generation;
+      const p=(async()=>{
         const blob=await getRingtone();
-        const a=blob?new Audio(URL.createObjectURL(blob)):new Audio(PROD_RINGTONES_URL||'');
-        if(blob)objectUrl=a.src; audio=a;
-        a.preload='auto'; a.playsInline=true; a.volume=prefsVolume; a.muted=true;
-        return a;
-      };
-      const p=use().then(a=>a.play().then(()=>a));
-      if(p&&typeof p.then==='function'){
-        p.then(()=>{
-          if(audio!==a)return;
-          try{a.pause();a.currentTime=0;a.muted=false;armed=true}catch(e){}
-        }).catch(()=>{if(audio===a){armed=false;}});
-      }
+        if(generationAtStart!==generation)return false;
+        let a=null;
+        if(blob){
+          objectUrl=URL.createObjectURL(blob);
+          a=new Audio(objectUrl);
+        }else if(PROD_RINGTONES_URL){
+          a=new Audio(PROD_RINGTONES_URL);
+        }else{
+          return !!ensureToneContext();
+        }
+        audio=a;
+        a.preload='auto';a.playsInline=true;a.volume=1;a.muted=true;
+        await a.play();
+        if(generationAtStart!==generation || audio!==a){try{a.pause()}catch(e){};return false;}
+        a.pause();a.currentTime=0;a.muted=false;armed=true;return true;
+      })();
+      p.catch(()=>{armed=false;});
       return true;
     }catch(e){armed=false;return false;}
   }
