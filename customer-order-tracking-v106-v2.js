@@ -196,6 +196,11 @@
     try{
       var saved=Number(localStorage.getItem(key)||0);
       if(saved>0)return saved;
+      var serverTs=Date.parse(String(o&&o.updated_at||o&&o.ready_at||''));
+      if(Number.isFinite(serverTs)&&serverTs>0){
+        localStorage.setItem(key,String(serverTs));
+        return serverTs;
+      }
       var now=Date.now();
       localStorage.setItem(key,String(now));
       return now;
