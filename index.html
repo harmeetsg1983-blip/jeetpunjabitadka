@@ -374,7 +374,7 @@ async function placeOrder(){
     try{waWindow?.close()}catch(e){}
     jptCheckoutBusy=false;return toast('Order save failed: '+result.error.message);
   }
-  let placed={order_no:ord.order_no,phone:phone,created_at:new Date().toISOString(),outlet_id:outletId,status:'new',target_minutes:null,deadline_at:null};
+  let placed={order_no:ord.order_no,phone:phone,created_at:new Date().toISOString(),outlet_id:outletId,status:'new',eta_minutes:ord.eta_minutes,target_minutes:null,deadline_at:null};
   window.JPT_LAST_PLACED_ORDER=placed;
   try{localStorage.setItem('jpt_v106_last_order',JSON.stringify(placed))}catch(e){}
   try{window.dispatchEvent(new CustomEvent('jpt:order-placed',{detail:placed}))}catch(e){}
