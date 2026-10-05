@@ -570,6 +570,9 @@ function renderOrderSummaries(rows){
 }
 
 let orderChannel=null;
+window.__JPTDisableLegacyOrderRuntime=async function(){
+  try{if(orderChannel){await sb.removeChannel(orderChannel);orderChannel=null;}}catch(e){}
+};
 let jptNewOrderAudio=null;
 const JPT_NEW_ORDER_AUDIO='./ringtones/1000449570.mp4';
 function ensureNewOrderAudio(){
@@ -622,6 +625,7 @@ async function enableOrderAlarm(){
 $('enableAlarm').onclick=enableOrderAlarm;$('stopAlarm').onclick=stopOrderAlarm;
 const jptOrderActionBusy=new Set();
 async function orderAction(id,status,extra={}){
+  if(window.__JPTOrdersV3Active)return false;
   const key=String(id||'')+'|'+String(status||'');
   if(jptOrderActionBusy.has(key))return false;
   jptOrderActionBusy.add(key);
@@ -649,6 +653,7 @@ function normalizeOrderStatus(v){const s=String(v||'new').toLowerCase();if(s==='
 function setOrderQueue(q){activeOrderQueue=q||'all';document.querySelectorAll('.orderQueueBtn').forEach(b=>b.classList.toggle('gold',b.dataset.queue===activeOrderQueue));loadOrders().catch(()=>{})}
 document.querySelectorAll('.orderQueueBtn').forEach(b=>b.onclick=()=>setOrderQueue(b.dataset.queue));
 async function loadOrders(){
+  if(window.__JPTOrdersV3Active)return true;
   if(ordersLoadBusy){ordersLoadQueued=true;return}
   ordersLoadBusy=true;
   const pageY=window.scrollY,wrap=document.getElementById('ordersTableWrap'),wrapY=wrap?.scrollTop||0;
@@ -689,6 +694,7 @@ async function loadOrders(){
   }
 }
 async function bindOrderRealtime(){
+  if(window.__JPTOrdersV3Active)return;
   try{if(orderChannel) await sb.removeChannel(orderChannel);orderChannel=sb.channel('jpt-v107-orders-'+activeOutlet+'-'+Date.now()).on('postgres_changes',{event:'INSERT',schema:'public',table:'orders',filter:'outlet_id=eq.'+activeOutlet},p=>{if(window.JPTLiveBridge?.receive&&p?.new){window.JPTLiveBridge.receive({event_id:'order.created:'+String(p.new.id),event_type:'order.created',entity_type:'order',entity_id:p.new.id,outlet_id:p.new.outlet_id,audience:'partner',occurred_at:p.new.created_at,payload:p.new},'supabase-realtime')}if(p?.new?.status==='new'){showOrderAlarm(p.new)}loadOrders().catch(()=>{})}).on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders',filter:'outlet_id=eq.'+activeOutlet},p=>{if(window.JPTLiveBridge?.receive&&p?.new){window.JPTLiveBridge.receive({event_id:'order.updated:'+String(p.new.id)+':'+String(p.new.updated_at||Date.now()),event_type:'order.updated',entity_type:'order',entity_id:p.new.id,outlet_id:p.new.outlet_id,audience:'partner',occurred_at:p.new.updated_at,payload:p.new},'supabase-realtime')}loadOrders().catch(()=>{})}).subscribe();}catch(e){console.warn('Order realtime unavailable',e)}
 }
 $('ordersRefresh').onclick=loadOrders;
