@@ -70,12 +70,18 @@
   }
 
   async function getRingtone(){
-    // Production source of truth: the exact locked NEW ORDER binary.
-    // Do not let an old/invalid IndexedDB custom file override it.
     try{
-      const r=await fetch(PROD_RINGTONES_URL,{cache:'no-store'});
-      if(!r.ok)return null;
-      return await r.blob();
+      if(PROD_RINGTONES_URL){
+        const r=await fetch(PROD_RINGTONES_URL,{cache:'no-store'});
+        if(r.ok)return await r.blob();
+      }
+      const db=await new Promise((resolve,reject)=>{
+        const q=indexedDB.open(DB,1);q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error);
+      });
+      return await new Promise((resolve,reject)=>{
+        const q=db.transaction(STORE,'readonly').objectStore(STORE).get(RING_KEY);
+        q.onsuccess=()=>resolve(q.result||null);q.onerror=()=>reject(q.error);
+      });
     }catch(e){return null}
   }
 
@@ -101,12 +107,20 @@
   async function play(){
     const prefs=await getPrefs();
     if(prefs.orderNotifications===false)return false;
-    if(!audio){
+    const blob=await getRingtone();
+    if(blob){
+      try{
+        stopAudio();
+        objectUrl=URL.createObjectURL(blob);
+        audio=new Audio(objectUrl);
+        audio.preload='auto'; audio.playsInline=true; audio.loop=true;
+      }catch(e){armed=playFallbackTone();return armed;}
+    }else if(PROD_RINGTONES_URL){
       audio=new Audio(PROD_RINGTONES_URL);
-      audio.preload='auto';
-      audio.playsInline=true;
+      audio.preload='auto'; audio.playsInline=true; audio.loop=true;
+    }else{
+      armed=playFallbackTone();return armed;
     }
-    audio.loop=true;
     audio.volume=Math.max(0,Math.min(1,Number(prefs.ringVolume??100)/100));
     audio.muted=false;
     try{
