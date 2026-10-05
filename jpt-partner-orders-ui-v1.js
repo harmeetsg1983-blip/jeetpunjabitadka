@@ -248,44 +248,70 @@ async function directAction(row,next,extra={}){
    .eq('id',row.id).eq('outlet_id',row.outlet_id).eq('status',serverStatus)
    .select('id,status,target_minutes,accepted_at,deadline_at,updated_at').maybeSingle();
 
- if(q.error)throw q.error;
-
- /* A second operator/device may win the tiny race after the read. Re-read
-    once before reporting an error; if it reached target or a later state,
-    treat the action as idempotently completed. */
- if(!q.data){
-   const retry=await window.sb.from('orders')
+ /* Supabase can occasionally complete the UPDATE while the response body
+    is empty or the immediate read briefly still shows the previous version.
+    Recover the committed server state before declaring the action failed. */
+ const isAtOrBeyond=(data)=>{
+   if(!data)return false;
+   const s=status(data.status);
+   return s===target || (rank[s]!==undefined && rank[target]!==undefined && rank[s]>rank[target] && s!=='cancelled');
+ };
+ const readCurrent=async()=>{
+   const r=await window.sb.from('orders')
      .select('id,status,target_minutes,accepted_at,deadline_at,updated_at')
      .eq('id',row.id).eq('outlet_id',row.outlet_id).maybeSingle();
-   if(retry.error)throw retry.error;
-   if(!retry.data)throw new Error('Order was not found on the server. Please refresh and try again.');
-   const retryStatus=status(retry.data.status);
-   if(retryStatus===target || (rank[retryStatus]!==undefined && rank[target]!==undefined && rank[retryStatus]>rank[target] && retryStatus!=='cancelled')){
-     applyServerRow(retry.data);
-     return retry.data;
+   if(r.error)throw r.error;
+   return r.data||null;
+ };
+ const waitForServerState=async(attempts=5,delayMs=250)=>{
+   let latest=null;
+   for(let i=0;i<attempts;i++){
+     latest=await readCurrent();
+     if(isAtOrBeyond(latest)){
+       applyServerRow(latest);
+       return latest;
+     }
+     if(i<attempts-1)await new Promise(resolve=>setTimeout(resolve,delayMs));
+   }
+   return null;
+ };
+
+ if(q.error){
+   const recovered=await waitForServerState();
+   if(recovered)return recovered;
+   throw q.error;
+ }
+
+ /* If the write returned no row, first give the server a short bounded
+    window to expose the committed state. This avoids a false failure toast
+    when the database write already succeeded. */
+ if(!q.data){
+   const recovered=await waitForServerState();
+   if(recovered)return recovered;
+
+   const retry=await readCurrent();
+   if(!retry)throw new Error('Order was not found on the server. Please refresh and try again.');
+   const retryStatus=status(retry.status);
+   if(retryStatus!==serverStatus){
+     throw new Error('Order changed on the server to '+retryStatus.toUpperCase()+'. Board refreshed; please retry.');
    }
 
    /* Bounded optimistic-concurrency fallback:
       if the row is still exactly the version we just read, retry the write
       without the status predicate. The updated_at predicate prevents an
       older operator action from overwriting a newer status. */
-   if(retryStatus===serverStatus && retry.data.updated_at===current.data.updated_at){
+   if(retry.updated_at===current.data.updated_at){
      const retryWrite=await window.sb.from('orders').update(patch)
        .eq('id',row.id).eq('outlet_id',row.outlet_id)
        .eq('updated_at',current.data.updated_at);
-     if(retryWrite.error)throw retryWrite.error;
-
-     const confirm=await window.sb.from('orders')
-       .select('id,status,target_minutes,accepted_at,deadline_at,updated_at')
-       .eq('id',row.id).eq('outlet_id',row.outlet_id).maybeSingle();
-     if(confirm.error)throw confirm.error;
-     if(confirm.data){
-       const confirmStatus=status(confirm.data.status);
-       if(confirmStatus===target || (rank[confirmStatus]!==undefined && rank[target]!==undefined && rank[confirmStatus]>rank[target] && confirmStatus!=='cancelled')){
-         applyServerRow(confirm.data);
-         return confirm.data;
-       }
+     if(retryWrite.error){
+       const recoveredAfterError=await waitForServerState();
+       if(recoveredAfterError)return recoveredAfterError;
+       throw retryWrite.error;
      }
+
+     const recoveredAfterRetry=await waitForServerState(6,250);
+     if(recoveredAfterRetry)return recoveredAfterRetry;
    }
 
    throw new Error('Order status could not be confirmed by the server. Board refreshed; please retry.');
