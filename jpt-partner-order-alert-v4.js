@@ -62,6 +62,27 @@
     }catch(e){if(audio===a)stopAudio();armed=false;return false;}
   }
 
+  async function play(){
+    const prefs=await getPrefs();
+    if(prefs.orderNotifications===false)return false;
+    if(!audio){
+      audio=new Audio(PROD_RINGTONES_URL);
+      audio.preload='auto';
+      audio.playsInline=true;
+    }
+    audio.loop=true;
+    audio.volume=Math.max(0,Math.min(1,Number(prefs.ringVolume??100)/100));
+    audio.muted=false;
+    try{
+      await audio.play();
+      armed=true;
+      return true;
+    }catch(e){
+      armed=false;
+      return false;
+    }
+  }
+
   function primeAudioFromGesture(){
     try{
       const prefsVolume=1;
