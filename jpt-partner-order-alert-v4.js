@@ -7,7 +7,7 @@
   if(window.JPTPartnerOrderAlertV4)return;
 
   const DB='jptPartnerAlertDB', STORE='settings', KEY='jpt_v4_active_order', PREFS_KEY='notificationPrefs', RING_KEY='ringtone', RING_MS=9000, PROD_RINGTONES_URL='';
-  let audio=null, objectUrl=null, ringTimer=null, activeId=null, generation=0, armed=false, ringInFlight=new Map(), audioCtx=null, toneTimer=null;
+  let audio=null, objectUrl=null, cachedRingUrl=null, cachedRingBlob=null, ringTimer=null, activeId=null, generation=0, armed=false, ringInFlight=new Map(), audioCtx=null, toneTimer=null;
 
   function stopTone(){
     clearInterval(toneTimer); toneTimer=null;
@@ -42,6 +42,17 @@
     stopTone();
     const tick=()=>{toneOnce(880,0.22);setTimeout(()=>toneOnce(660,0.22),260)};
     tick();toneTimer=setInterval(tick,900);return true;
+  }
+
+  async function preloadSavedRingtone(){
+    try{
+      const blob=await getRingtone();
+      if(!(blob instanceof Blob)||!blob.size)return false;
+      if(cachedRingUrl){try{URL.revokeObjectURL(cachedRingUrl)}catch(e){}}
+      cachedRingBlob=blob;
+      cachedRingUrl=URL.createObjectURL(blob);
+      return true;
+    }catch(e){return false}
   }
 
   function stopAudio(){
@@ -85,6 +96,15 @@
     if(g!==generation)return false;
     stopAudio();
     let a=null;
+    if(cachedRingUrl){
+      try{
+        a=new Audio(cachedRingUrl); audio=a; a.preload='auto'; a.playsInline=true;
+        a.volume=Math.max(0,Math.min(1,Number(prefs.ringVolume??100)/100)); a.muted=true;
+        await a.play();
+        if(g!==generation || audio!==a){try{a.pause()}catch(e){};return false}
+        a.pause(); a.currentTime=0; a.muted=false; armed=true; return true;
+      }catch(e){if(audio===a)stopAudio();}
+    }
     if(!PROD_RINGTONES_URL){armed=!!ensureToneContext();return armed;}
     try{
       a=new Audio(PROD_RINGTONES_URL); audio=a;
@@ -100,12 +120,20 @@
   async function play(){
     const prefs=await getPrefs();
     if(prefs.orderNotifications===false)return false;
-    const blob=await getRingtone();
-    if(!blob){armed=playFallbackTone();return armed;}
+    let url=cachedRingUrl;
+    if(!url){
+      const blob=await getRingtone();
+      if(blob instanceof Blob && blob.size){
+        cachedRingBlob=blob;
+        cachedRingUrl=URL.createObjectURL(blob);
+        url=cachedRingUrl;
+      }
+    }
+    if(!url){armed=playFallbackTone();return armed;}
     stopAudio();
     try{
-      objectUrl=URL.createObjectURL(blob);
-      const a=new Audio(objectUrl); audio=a;
+      objectUrl=url;
+      const a=new Audio(url); audio=a;
       a.preload='auto'; a.playsInline=true; a.loop=true;
       a.volume=Math.max(0,Math.min(1,Number(prefs.ringVolume??100)/100));
       await a.play();
@@ -118,6 +146,13 @@
   function primeAudioFromGesture(){
     try{
       if(!ensureToneContext())return false;
+      if(cachedRingUrl){
+        if(audio && armed)return true;
+        const a=new Audio(cachedRingUrl); audio=a; a.preload='auto'; a.playsInline=true; a.volume=1; a.muted=true;
+        const p=a.play();
+        if(p&&typeof p.then==='function')p.then(()=>{if(audio!==a)return;try{a.pause();a.currentTime=0;a.muted=false;armed=true}catch(e){}}).catch(()=>{});
+        return true;
+      }
       if(!PROD_RINGTONES_URL){armed=true;return true;}
       const prefsVolume=1;
       if(audio && armed)return true;
@@ -266,9 +301,10 @@
     }catch(e){}
   }
 
-  window.JPTPartnerOrderAlertV4={version:'4.6-exact-idb-ringtone',arm,ring,stop:hardStop,active:()=>activeId,getPrefs,resumeAudioFromGesture};
-  window.addEventListener('jpt:notification-settings',()=>{if(activeId!==null)arm()});
+  window.JPTPartnerOrderAlertV4={version:'4.7-exact-idb-preload-ringtone',arm,ring,stop:hardStop,active:()=>activeId,getPrefs,resumeAudioFromGesture,preloadSavedRingtone};
+  window.addEventListener('jpt:notification-settings',()=>{preloadSavedRingtone().then(()=>{if(activeId!==null)arm()})});
 
+  preloadSavedRingtone();
   let n=0, restored=false;
   setInterval(()=>{if(activeId!==null)verifyActiveOrder()},2000);
   const timer=setInterval(()=>{
