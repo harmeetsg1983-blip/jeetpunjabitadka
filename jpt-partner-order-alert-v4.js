@@ -6,7 +6,7 @@
   'use strict';
   if(window.JPTPartnerOrderAlertV4)return;
 
-  const DB='jptPartnerAlertDB', STORE='settings', KEY='jpt_v4_active_order', PREFS_KEY='notificationPrefs', RING_MS=9000, PROD_RINGTONES_URL='./ringtones/1000449570.mp4';
+  const DB='jptPartnerAlertDB', STORE='settings', KEY='jpt_v4_active_order', PREFS_KEY='notificationPrefs', RING_MS=9000, PROD_RINGTONES_URL='';
   let audio=null, objectUrl=null, ringTimer=null, activeId=null, generation=0, armed=false, ringInFlight=new Map(), audioCtx=null, toneTimer=null;
 
   function stopTone(){
@@ -85,9 +85,8 @@
     if(g!==generation)return false;
     stopAudio();
     let a=null;
+    if(!PROD_RINGTONES_URL){armed=!!ensureToneContext();return armed;}
     try{
-      // Use the production URL directly. This avoids an extra async blob step
-      // before playback and keeps the source stable across reloads.
       a=new Audio(PROD_RINGTONES_URL); audio=a;
       a.preload='auto'; a.playsInline=true;
       a.volume=Math.max(0,Math.min(1,Number(prefs.ringVolume??100)/100));
@@ -101,6 +100,7 @@
   async function play(){
     const prefs=await getPrefs();
     if(prefs.orderNotifications===false)return false;
+    if(!PROD_RINGTONES_URL){armed=playFallbackTone();return armed;}
     if(!audio){
       audio=new Audio(PROD_RINGTONES_URL);
       audio.preload='auto';
@@ -122,7 +122,8 @@
 
   function primeAudioFromGesture(){
     try{
-      ensureToneContext();
+      if(!ensureToneContext())return false;
+      if(!PROD_RINGTONES_URL){armed=true;return true;}
       const prefsVolume=1;
       if(audio && armed)return true;
       stopAudio();
