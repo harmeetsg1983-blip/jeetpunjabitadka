@@ -1,5 +1,6 @@
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import postgres from "npm:postgres@3.4.5";
 
 type PushRequest = {
   event_type?: string;
@@ -35,18 +36,39 @@ function safeEqual(a: string, b: string) {
   return diff === 0;
 }
 
+let vaultCache: Record<string,string> | null = null;
+
+async function vaultSecrets() {
+  if (vaultCache) return vaultCache;
+  const dbUrl = Deno.env.get("SUPABASE_DB_URL") || "";
+  if (!dbUrl) return {};
+  const sql = postgres(dbUrl, { prepare: false, max: 1 });
+  try {
+    const rows = await sql<{name:string; value:string}>\`
+      select name, decrypted_secret as value
+      from vault.decrypted_secrets
+      where name in ('jpt_push_internal_secret','jpt_vapid_subject','jpt_vapid_public_key','jpt_vapid_private_key')
+    \`;
+    vaultCache = Object.fromEntries(rows.map(r => [r.name, r.value]));
+    return vaultCache;
+  } finally {
+    await sql.end({ timeout: 2 });
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ ok: false, error: "METHOD_NOT_ALLOWED" }, 405);
 
-  const internalSecret = Deno.env.get("JPT_PUSH_INTERNAL_SECRET") || "";
+  const vault = await vaultSecrets();
+  const internalSecret = Deno.env.get("JPT_PUSH_INTERNAL_SECRET") || vault.jpt_push_internal_secret || "";
   const supplied = req.headers.get("x-jpt-push-secret") || "";
   if (!internalSecret || !safeEqual(supplied, internalSecret)) {
     return json({ ok: false, error: "UNAUTHORIZED" }, 401);
   }
 
-  const vapidSubject = Deno.env.get("JPT_VAPID_SUBJECT") || "";
-  const vapidPublic = Deno.env.get("JPT_VAPID_PUBLIC_KEY") || "";
-  const vapidPrivate = Deno.env.get("JPT_VAPID_PRIVATE_KEY") || "";
+  const vapidSubject = Deno.env.get("JPT_VAPID_SUBJECT") || vault.jpt_vapid_subject || "";
+  const vapidPublic = Deno.env.get("JPT_VAPID_PUBLIC_KEY") || vault.jpt_vapid_public_key || "";
+  const vapidPrivate = Deno.env.get("JPT_VAPID_PRIVATE_KEY") || vault.jpt_vapid_private_key || "";
   if (!vapidSubject || !vapidPublic || !vapidPrivate) {
     return json({ ok: false, error: "VAPID_NOT_CONFIGURED" }, 503);
   }
