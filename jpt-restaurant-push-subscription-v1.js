@@ -1,4 +1,5 @@
 (function(){'use strict';
+window.JPT_VAPID_PUBLIC_KEY=window.JPT_VAPID_PUBLIC_KEY||'BD7qHYAE7IPGRqdoeDIHts3f8NzVbIj6gR7t948-AkPHqmKNWegH-3fv4gwRp__-HKI3ZPz0VtWFNJ2ezr1_EnI';
 if(window.__JPT_RESTAURANT_PUSH_SUB_V1__) return;
 window.__JPT_RESTAURANT_PUSH_SUB_V1__=true;
 
