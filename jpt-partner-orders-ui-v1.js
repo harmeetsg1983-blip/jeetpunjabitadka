@@ -252,7 +252,7 @@ async function load(){
   freshRows.forEach(r=>{
     const lock=statusLocks.get(String(r.id));
     if(!lock)return;
-    if(nowMs-lock.at>15000){statusLocks.delete(String(r.id));return;}
+    if(nowMs-lock.at>120000){statusLocks.delete(String(r.id));return;}
     const serverMs=Date.parse(r.updated_at||r.created_at||0)||0;
     if(serverMs < lock.updatedMs){r.status=lock.status;r.__status=lock.status;r.target_minutes=lock.target_minutes;r.accepted_at=lock.accepted_at;r.deadline_at=lock.deadline_at;r.updated_at=lock.updatedAt;}
     else statusLocks.delete(String(r.id));
@@ -302,7 +302,7 @@ async function bindRealtime(){
 }
 
 function start(){
- ensureRoot();load();clearInterval(timer);timer=setInterval(load,5000);
+ ensureRoot();load();clearInterval(timer);timer=setInterval(load,15000);
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')load()});
  const sel=document.getElementById('outletSelect');if(sel)sel.addEventListener('change',()=>{lastNewest='';selected='new';load()});
  bindRealtime();
