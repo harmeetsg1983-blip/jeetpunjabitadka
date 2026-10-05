@@ -195,6 +195,7 @@ async function directAction(row,next,extra={}){
  if(q.error)throw q.error;
  if(!q.data)throw new Error('Order status was not saved. Please refresh and try again.');
  Object.assign(row,q.data);
+ row.__status=status(q.data.status);
  statusLocks.set(String(row.id),{status:String(q.data.status||next).toLowerCase(),target_minutes:q.data.target_minutes,accepted_at:q.data.accepted_at,deadline_at:q.data.deadline_at,updatedAt:q.data.updated_at||new Date().toISOString(),updatedMs:Date.parse(q.data.updated_at||'')||Date.now(),at:Date.now()});
  if(String(next)!=='new'){
    try{window.JPTPartnerOrderAlertV4?.stop?.();window.stopOrderAlarm?.();}catch(e){}
@@ -299,7 +300,7 @@ async function bindRealtime(){
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'orders'},p=>{
       const o=p?.new||{};
       if(OWNER_OUTLET_CODES.has(String(o.outlet_id||'')) && String(o.status||'').toLowerCase()==='new'){
-        pendingNew.set(String(o.id||o.order_no),o);selected='new';try{window.showPanel?.('orders')}catch(e){};
+        pendingNew.set(String(o.id||o.order_no),o);alertedNewIds.add(String(o.id||o.order_no));selected='new';try{window.showPanel?.('orders')}catch(e){};
         if(typeof window.showOrderAlarm==='function')window.showOrderAlarm(o);
         setTimeout(()=>{try{openOrderDetail(o.id)}catch(e){}},180);
       }
@@ -309,7 +310,11 @@ async function bindRealtime(){
       const o=p?.new||{};
       if(OWNER_OUTLET_CODES.has(String(o.outlet_id||'')) && String(o.status||'').toLowerCase()!=='new')pendingNew.delete(String(o.id||o.order_no));
       load().catch(()=>{});
-    }).subscribe();
+    }).subscribe((status,err)=>{
+      console.log('[JPT Central Orders V2] realtime status',status,err||'');
+      if(status==='SUBSCRIBED') load().catch(()=>{});
+      if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED') setTimeout(()=>load().catch(()=>{}),1000);
+    });
  }catch(e){console.warn('[JPT Central Orders V2] realtime unavailable',e)}
 }
 
