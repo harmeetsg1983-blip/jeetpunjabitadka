@@ -449,31 +449,9 @@
     }catch(err){}
   });
 
-  function hook(){
-    if(typeof window.placeOrder!=='function')return false;
-    if(window.placeOrder.__jptV106TrackingV4)return true;
-    var original=window.placeOrder;
-    window.placeOrder=async function(){
-      var phone=(document.getElementById('phone')?.value||'').trim();
-      var fixed=Date.now(),expected='JPT-'+String(fixed).slice(-7),nativeNow=Date.now;
-      try{
-        Date.now=function(){return fixed};
-        var result=await original.apply(this,arguments);
-        var sb=getSb(),found=null;
-        if(sb&&phone){
-          try{
-            var r=await sb.rpc('get_customer_order',{p_order_no:expected,p_phone:phone});
-            if(!r.error)found=Array.isArray(r.data)?r.data[0]:r.data;
-          }catch(e){}
-        }
-        if(found){save(Object.assign({order_no:expected,phone:phone,created_at:new Date(fixed).toISOString()},found));ensureUI();start()}
-        return result;
-      }finally{Date.now=nativeNow}
-    };
-    window.placeOrder.__jptV106TrackingV4=true;
-    return true;
-  }
-
+  /* Current customer checkout dispatches the canonical jpt:order-placed event.
+     Do not wrap placeOrder or override Date.now(): that legacy compatibility hook
+     could hold a frozen clock across the async order insert and affect unrelated code. */
   function boot(){
     try{if('serviceWorker' in navigator)navigator.serviceWorker.register('./customer-app-sw.js?v=5',{scope:'./',updateViaCache:'none'}).catch(function(){})}catch(e){}
     var tries=0;
