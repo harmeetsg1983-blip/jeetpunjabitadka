@@ -190,7 +190,29 @@ function render(){
 async function directAction(row,next,extra={}){
  const patch={status:next,updated_at:new Date().toISOString(),...extra};
  const expected=String(row.__status||row.status||'new').toLowerCase();
- const q=await window.sb.from('orders').update(patch).eq('id',row.id).eq('outlet_id',row.outlet_id).eq('status',expected)
+ /* Re-read the server state before a guarded transition. The card can be
+    stale when a realtime UPDATE/load races with a button tap. If the server
+    is already at the requested state, treat the action as idempotently done;
+    otherwise only allow the known restaurant transition READY from
+    ACCEPTED/PREPARING. All other transitions keep the strict expected-state
+    guard. */
+ const current=await window.sb.from('orders').select('id,status,target_minutes,accepted_at,deadline_at,updated_at').eq('id',row.id).eq('outlet_id',row.outlet_id).maybeSingle();
+ if(current.error)throw current.error;
+ if(!current.data)throw new Error('Order was not found on the server. Please refresh and try again.');
+ const serverStatus=status(current.data.status);
+ if(serverStatus===String(next).toLowerCase()){
+   Object.assign(row,current.data);
+   row.__status=serverStatus;
+   statusLocks.set(String(row.id),{status:serverStatus,target_minutes:current.data.target_minutes,accepted_at:current.data.accepted_at,deadline_at:current.data.deadline_at,updatedAt:current.data.updated_at||new Date().toISOString(),updatedMs:Date.parse(current.data.updated_at||'')||Date.now(),at:Date.now()});
+   return current.data;
+ }
+ const allowedReady=String(next).toLowerCase()==='ready' && (serverStatus==='accepted'||serverStatus==='preparing');
+ if(serverStatus!==expected && !allowedReady){
+   load().catch(()=>{});
+   throw new Error('Order changed on the server to '+serverStatus.toUpperCase()+'. Refreshing the order board.');
+ }
+ const guardedExpected=allowedReady?serverStatus:expected;
+ const q=await window.sb.from('orders').update(patch).eq('id',row.id).eq('outlet_id',row.outlet_id).eq('status',guardedExpected)
    .select('id,status,target_minutes,accepted_at,deadline_at,updated_at').maybeSingle();
  if(q.error)throw q.error;
  if(!q.data)throw new Error('Order status was not saved. Please refresh and try again.');
