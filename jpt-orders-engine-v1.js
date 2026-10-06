@@ -9,7 +9,7 @@ window.__JPT_CLEAN_ORDERS_ENGINE_V1__=true;
 window.__JPTOrdersV3Active=true;
 window.__JPTDisableLegacyOrderRuntime=()=>true;
 
-const V='orders-engine-v1.0.7';
+const V='orders-engine-v1.0.8';
 const JPT_RESTAURANT_NEW_ORDER_AUDIO='./ringtones/1000449570.mp4';
 const STATES={new:'NEW ORDER',preparing:'PREPARING',accepted:'PREPARING',ready:'READY',out_for_delivery:'OUT FOR DELIVERY',delivered:'HISTORY',completed:'HISTORY',cancelled:'HISTORY'};
 const HISTORY=new Set(['delivered','completed','cancelled']);
