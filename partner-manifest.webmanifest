@@ -1,8 +1,8 @@
 {
-  "id": "./partner-v107.html",
+  "id": "./admin.html",
   "name": "Jeet Punjabi Tadka — Restaurant Partner",
   "short_name": "JPT Partner",
-  "start_url": "./partner-v107.html",
+  "start_url": "./admin.html?section=home",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

@@ -28,7 +28,8 @@
       }
     }catch(e){}
     try{
-      if(typeof window.loadOrders==='function') window.loadOrders();
+      if(window.JPTCleanOrdersEngineV1?.reload) window.JPTCleanOrdersEngineV1.reload();
+      else if(typeof window.loadOrders==='function') window.loadOrders();
       else if(typeof window.reloadAll==='function') window.reloadAll();
     }catch(e){}
   }

@@ -288,7 +288,7 @@
   if(typeof window.showPanel==='function')window.showPanel(panel);
   try{
     const fn={
-      orders:window.loadOrders,
+      orders:()=>window.JPTCleanOrdersEngineV1?.reload?.(),
       menu:window.loadMenu,
       images:window.loadImages,
       offers:window.loadOffers,

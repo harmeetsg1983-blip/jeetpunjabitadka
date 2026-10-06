@@ -93,10 +93,10 @@ async function startDeliveryPrivateBroadcast(){
   }catch(e){console.warn('Delivery private live unavailable',e)}
 }
 async function startOfferPolling(){stopOfferPolling();offerTimer=setInterval(async()=>{await loadOffer();await loadActive()},5000);await loadOffer();await loadActive()}function stopOfferPolling(){if(offerTimer){clearInterval(offerTimer);offerTimer=null}}async function loadOffer(){try{let {data,error}=await sb.rpc('delivery_partner_offer_snapshot');if(error)throw error;if(data&&((Array.isArray(data)&&data.length)||data.id)){let x=Array.isArray(data)?data[0]:data;if(!offer||offer.id!==x.id){offer=x;showOffer(x);startTone()}}else{if(!$('offer').classList.contains('hidden')&&!current)$('offer').classList.add('hidden')}}catch(e){console.warn(e)}}function showOffer(x){$('offer').classList.remove('hidden');$('offerText').textContent='Order #'+(x.order_id||'—');$('offerDetails').textContent=(x.outlet_id||'')+' • '+(x.status||'offered')+' • '+(x.customer_address||'Delivery details after acceptance')}
-async function respondOffer(accept){if(!offer)return;stopTone();try{let r=await sb.rpc('delivery_assignment_respond',{p_assignment_id:offer.id,p_accept:accept,p_reason:accept?null:'rider_rejected'});if(r.error)throw r.error;$('offer').classList.add('hidden');offer=null;if(accept)playDeliveryAcceptedTone();await loadActive()}catch(e){alert(e.message)}}
+async function respondOffer(accept){if(!offer)return;stopTone();try{let r=await sb.rpc('delivery_assignment_respond',{p_assignment_id:offer.id,p_accept:accept,p_reason:accept?null:'rider_rejected'});if(r.error)throw r.error;$('offer').classList.add('hidden');offer=null;await loadActive()}catch(e){alert(e.message)}}
 async function loadActive(){let {data,error}=await sb.rpc('delivery_partner_assignment_snapshot');if(error)return;let x=Array.isArray(data)?data.find(a=>['accepted','picked_up','out_for_delivery'].includes(a.status)):data;if(!x)return;current=x;$('current').classList.remove('hidden');$('currentOrder').textContent='Order #'+x.order_id;$('currentStatus').textContent=(x.status||'accepted').replace(/_/g,' ').toUpperCase();updateNextButton(x.status);await checkRestaurantReady(x.order_id);startLocation()}
-async function checkRestaurantReady(orderId){try{const r=await sb.from('orders').select('status').eq('id',orderId).maybeSingle();if(r.error||!r.data)return;const st=String(r.data.status||'').toLowerCase();if(st==='ready'&&lastOrderStatus!=='ready'){playDeliveryReadyTone();}lastOrderStatus=st;}catch(e){}}
-function playDeliveryReadyTone(){try{const a=new Audio(JPT_DELIVERY_OFFER_AUDIO);a.preload='auto';a.loop=false;a.volume=1;const p=a.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}}
+async function checkRestaurantReady(orderId){try{const r=await sb.from('orders').select('status').eq('id',orderId).maybeSingle();if(r.error||!r.data)return;const st=String(r.data.status||'').toLowerCase();const key='jpt_delivery_ready_alert_'+String(orderId||'');if(st==='ready'&&lastOrderStatus!=='ready'){try{if(localStorage.getItem(key)!=='1'){localStorage.setItem(key,'1');playDeliveryReadyTone();}}catch(e){playDeliveryReadyTone();}}lastOrderStatus=st;}catch(e){}}
+
 function updateNextButton(s){$('nextBtn').textContent=s==='accepted'?'PICK UP':s==='picked_up'?'OUT FOR DELIVERY':s==='out_for_delivery'?'MARK DELIVERED':'DONE'}
 async function nextDeliveryStatus(){if(!current)return;let next=current.status==='accepted'?'picked_up':current.status==='out_for_delivery'?'delivered':current.status==='picked_up'?'out_for_delivery':null;if(!next)return;let r=await sb.rpc('delivery_assignment_status',{p_assignment_id:current.id,p_status:next});if(r.error)return alert(r.error.message);let serverStatus=typeof r.data==='object'&&r.data?.status?r.data.status:next;current.status=serverStatus;$('currentStatus').textContent=serverStatus.replace(/_/g,' ').toUpperCase();updateNextButton(serverStatus);if(serverStatus==='out_for_delivery'){$('nextBtn').textContent='MARK DELIVERED'}if(serverStatus==='delivered'){stopLocation();current=null;$('current').classList.add('hidden');await loadEarnings()}}
 function openMaps(){if(current)window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(current.customer_address||'Bidar'),'_blank')}
@@ -105,21 +105,27 @@ function startLocation(){if(locationWatchId!==null)return;if(!current||!navigato
 function stopLocation(){if(locationWatchId!==null&&navigator.geolocation){navigator.geolocation.clearWatch(locationWatchId);locationWatchId=null}if(locationTimer){clearInterval(locationTimer);locationTimer=null}if(current)sb.rpc('delivery_partner_stop_location_sharing',{p_assignment_id:current.id}).catch(()=>{})}
 async function loadEarnings(){try{let {data,error}=await sb.rpc('delivery_partner_earnings_summary',{p_days:30});if(error)throw error;let rows=Array.isArray(data)?data:[];let delivered=rows.reduce((a,x)=>a+Number(x.delivered_count||0),0),earn=rows.reduce((a,x)=>a+Number(x.earnings||0),0);$('earnings').textContent='Last 30 days: '+delivered+' delivered × ₹50 = ₹'+earn}catch(e){$('earnings').textContent='Earnings unavailable until a verified rider has deliveries.'}}
 const JPT_DELIVERY_OFFER_AUDIO='./ringtones/1000449571.mp4';
-const JPT_DELIVERY_ACCEPTED_AUDIO='./ringtones/1000449491.mp4';
-function toneFile(){return null}
+const JPT_DELIVERY_READY_AUDIO='./ringtones/1000449491.mp4';
+const JPT_DELIVERY_ACCEPTED_AUDIO='./ringtones/1000449572.mp4';
+function toneFile(eventCode){
+  switch(String(eventCode||'')){
+    case 'JPT_DELIVERY_NEW_OFFER_ALERT': return JPT_DELIVERY_OFFER_AUDIO;
+    case 'JPT_DELIVERY_READY_ALERT': return JPT_DELIVERY_READY_AUDIO;
+    case 'JPT_ORDER_ACCEPTED_ALERT': return JPT_DELIVERY_ACCEPTED_AUDIO;
+    default: return JPT_DELIVERY_OFFER_AUDIO;
+  }
+}
 function startTone(){
   stopTone();
-  try{audio=new Audio(JPT_DELIVERY_OFFER_AUDIO);audio.preload='auto';audio.loop=true;audio.play().catch(()=>{})}catch(e){}
+  try{audio=new Audio(toneFile('JPT_DELIVERY_NEW_OFFER_ALERT'));audio.preload='auto';audio.loop=true;audio.volume=1;audio.play().catch(()=>{})}catch(e){}
+}
+function playDeliveryReadyTone(){
+  try{const a=new Audio(toneFile('JPT_DELIVERY_READY_ALERT'));a.preload='auto';a.loop=false;a.volume=1;const p=a.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}
+}
+function playDeliveryAcceptedTone(){
+  try{const a=new Audio(toneFile('JPT_ORDER_ACCEPTED_ALERT'));a.preload='auto';a.loop=false;a.volume=1;const p=a.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}
 }
 function stopTone(){if(audio){audio.pause();audio.currentTime=0;audio=null}}
-function playDeliveryAcceptedTone(){
-  try{
-    const a=new Audio(JPT_DELIVERY_ACCEPTED_AUDIO);
-    a.preload='auto';
-    a.loop=false;
-    a.play().catch(()=>{});
-  }catch(e){}
-}
 function testTone(){startTone();setTimeout(stopTone,5000)}
 window.addEventListener('load',async()=>{let s=await ensureSession();if(!s){showLogin();return}await refresh();await startDeliveryLiveChannel();await startDeliveryPrivateBroadcast();await loadActive();});
 </script><script>

@@ -3,6 +3,8 @@ name: JPT Production Gate V1 - Safe Preflight
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -30,12 +32,10 @@ jobs:
           set -euo pipefail
           grep -Fq '<option value="COD"' index.html
           grep -Fq '<option value="UPI"' index.html
-
           if grep -Eqi 'UPI payment required|Complete payment first|jpt-upi-required' index.html; then
             echo "RED: legacy UPI-only gate found in index.html"
             exit 1
           fi
-
           echo "GREEN: COD + UPI payment choices present"
           echo "GREEN: legacy UPI-only gate absent"
 
@@ -55,10 +55,98 @@ jobs:
           set -euo pipefail
           grep -Fq 'outlet' admin.html
           grep -Fq 'Orders' admin.html
-          grep -Fq 'delivery_offer_next' admin.html
-          grep -Fq 'delivery_offer_next' jpt-partner-orders-ui-v1.js
-          grep -Fq 'outlet' jpt-partner-orders-ui-v1.js
-          echo "GREEN: partner outlet/order/delivery-offer markers present"
+          grep -Fq 'delivery_offer_next' jpt-orders-engine-v1.js
+          grep -Fq 'jpt-orders-engine-v1.js' admin.html
+          grep -Fq 'JPTCleanOrdersEngineV1' jpt-orders-engine-v1.js
+          if grep -Fq 'jpt-partner-orders-ui-v1.js' admin.html || grep -Fq 'jpt-order-control-bridge-v1.js' admin.html || grep -Fq 'jpt-partner-order-alert-v4.js' admin.html; then
+            echo "RED: legacy order bridge still active in admin.html"
+            exit 1
+          fi
+          test -f jpt-orders-engine-v1.js
+          test ! -f jpt-partner-orders-ui-v1.js
+          test ! -f jpt-order-control-bridge-v1.js
+          test ! -f jpt-partner-order-alert-v4.js
+          echo "GREEN: clean partner Orders Engine markers present; legacy order bridges inactive"
+
+      - name: Verify single active order mutation/realtime owner
+        shell: bash
+        run: |
+          set -euo pipefail
+          offenders=""
+          while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            [ "$f" = "jpt-orders-engine-v1.js" ] && continue
+            if grep -Fq "from('orders').update" "$f" || grep -Fq "table:'orders'" "$f" || grep -Fq 'table:"orders"' "$f"; then
+              offenders="${offenders}${f}"$'\n'
+            fi
+          done < <(grep -oE '\./[^"[:space:]]+\.js' admin.html | sed 's#^\./##;s#?.*$##' | sort -u)
+          if [ -n "$offenders" ]; then
+            echo "RED: an actively loaded Partner script contains an orders update/realtime marker:"
+            printf '%s' "$offenders"
+            exit 1
+          fi
+          grep -Fq "rpc('jpt_partner_transition_order'" jpt-orders-engine-v1.js
+          grep -Fq "table:'orders'" jpt-orders-engine-v1.js
+          echo "GREEN: Partner Orders status mutation (server RPC) + realtime ownership is isolated to jpt-orders-engine-v1.js"
+
+      - name: Verify clean order alert lifecycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "const V='orders-engine-v1.0.7'" jpt-orders-engine-v1.js
+          grep -Fq 'const activeNotifications=new Map()' jpt-orders-engine-v1.js
+          grep -Fq 'activeNotifications.get(key)' jpt-orders-engine-v1.js
+          grep -Fq 'n.close()' jpt-orders-engine-v1.js
+          grep -Fq 'alertQueue=[]' jpt-orders-engine-v1.js
+          grep -Fq 'alertQueue.shift()' jpt-orders-engine-v1.js
+          grep -Fq 'playSavedRingtone()' jpt-orders-engine-v1.js
+          grep -Fq 'stopRingtone()' jpt-orders-engine-v1.js
+          grep -Fq 'jpt-orders-engine-v1.js?v=1.0.7' admin.html
+          echo "GREEN: OS notification handles are retained and closed by the clean Orders Engine"
+
+      - name: Verify alert-related JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in jpt-orders-engine-v1.js jpt-partner-delivery-tracking-v2.js customer-order-tracking-v106-v2.js; do
+            node --check "$f" >/dev/null
+            echo "GREEN: syntax $f"
+          done
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, subprocess, tempfile
+          html=Path('delivery-partner-app.html').read_text()
+          scripts=re.findall(r'<script>(.*?)</script>', html, re.S)
+          assert scripts, 'No inline script block found in delivery-partner-app.html'
+          for idx,src in enumerate(scripts,1):
+              with tempfile.NamedTemporaryFile('w',suffix='.js',delete=False) as tmp:
+                  tmp.write(src)
+                  name=tmp.name
+              subprocess.run(['node','--check',name],check=True,stdout=subprocess.DEVNULL)
+          print('GREEN: inline delivery-partner-app.html JavaScript syntax verified')
+          PY
+          echo "GREEN: alert-layer JS syntax checks completed"
+
+      - name: Verify four-role alert sound policy wiring
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f JPT_ALERT_SOUND_POLICY_V1.md
+          grep -Fq "1000449570.mp4" JPT_ALERT_SOUND_POLICY_V1.md
+          grep -Fq "1000449571.mp4" JPT_ALERT_SOUND_POLICY_V1.md
+          grep -Fq "1000449491.mp4" JPT_ALERT_SOUND_POLICY_V1.md
+          grep -Fq "1000449572.mp4" JPT_ALERT_SOUND_POLICY_V1.md
+          grep -Fq "const JPT_RESTAURANT_NEW_ORDER_AUDIO='./ringtones/1000449570.mp4'" jpt-orders-engine-v1.js
+          grep -Fq "const JPT_DELIVERY_OFFER_AUDIO='./ringtones/1000449571.mp4'" delivery-partner-app.html
+          grep -Fq "const JPT_DELIVERY_READY_AUDIO='./ringtones/1000449491.mp4'" delivery-partner-app.html
+          grep -Fq "const JPT_RESTAURANT_ASSIGNMENT_ACCEPTED_AUDIO='./ringtones/1000449572.mp4'" jpt-partner-delivery-tracking-v2.js
+          grep -Fq "var JPT_CUSTOMER_ACCEPTED_AUDIO='./ringtones/1000449572.mp4'" customer-order-tracking-v106-v2.js
+          grep -Fq "loop=true" jpt-orders-engine-v1.js
+          grep -Fq "loop=true" delivery-partner-app.html
+          grep -Fq "loop=false" delivery-partner-app.html
+          grep -Fq "playRestaurantAssignmentAcceptedTone" jpt-partner-delivery-tracking-v2.js
+          grep -Fq "playCustomerAcceptedToneOnce" customer-order-tracking-v106-v2.js
+          echo "GREEN: four-role alert mapping and continuous/one-shot wiring verified"
 
       - name: Verify locked ringtone integrity
         shell: bash
@@ -68,22 +156,24 @@ jobs:
             [ringtones/1000449570.mp4]=2780660
             [ringtones/1000449571.mp4]=2825197
             [ringtones/1000449572.mp4]=237252
-            [ringtones/1000449491.mp4]=630716
+            [ringtones/1000449491.mp4]=240411
           )
           declare -A expected_sha=(
             [ringtones/1000449570.mp4]=9106a098deac4d9493924457ea676ec3bc2bc2460e54d902703aa1c878fd63c4
             [ringtones/1000449571.mp4]=d491bc664f55ac0c4e717e60b9b85827fad589c15153436000367e6264a3860c
             [ringtones/1000449572.mp4]=34231d662e3416f66278820b187c4116189019e7bae4122e9d0295d10cedbb15
-            [ringtones/1000449491.mp4]=8fed117c7e7c66966d546e87351c6e31513b3862f42624a72c3f382cc64e6aeb
+            [ringtones/1000449491.mp4]=a58e72cf61fb57a380cdbdb570468afa72e85f795499fc8485a6d8faffbaaefa
           )
+          missing=0
           for f in "${!expected_size[@]}"; do
-            test -f "$f" || { echo "RED: missing locked ringtone $f"; exit 1; }
+            if [ ! -f "$f" ]; then echo "RED: missing locked ringtone $f"; missing=1; continue; fi
             actual_size=$(stat -c '%s' "$f")
             test "$actual_size" = "${expected_size[$f]}" || { echo "RED: size mismatch $f ($actual_size != ${expected_size[$f]})"; exit 1; }
             actual_sha=$(sha256sum "$f" | awk '{print $1}')
             test "$actual_sha" = "${expected_sha[$f]}" || { echo "RED: SHA-256 mismatch $f"; exit 1; }
             echo "GREEN: locked ringtone verified $f"
           done
+          [ "$missing" -eq 0 ] || exit 1
 
       - name: Verify root JavaScript syntax
         shell: bash

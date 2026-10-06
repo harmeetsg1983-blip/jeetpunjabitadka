@@ -26,6 +26,14 @@
       a.play().catch(function(){});
     }catch(e){}
   }
+  function playCustomerAcceptedToneOnce(orderNo){
+    try{
+      var key='jpt_customer_accepted_tone_'+String(orderNo||'');
+      if(!orderNo || localStorage.getItem(key)==='1')return;
+      localStorage.setItem(key,'1');
+      playCustomerAcceptedTone();
+    }catch(e){playCustomerAcceptedTone();}
+  }
 
   function getSb(){
     if(sbClient) return sbClient;
@@ -390,15 +398,14 @@
       if(row){
         var nextStatus=String(row.status||'').toLowerCase().trim().replace(/\s+/g,'_');
         if(!lastStatus){addCustomerNotice('Order placed','Your order is saved and waiting for restaurant acceptance.');notifyCustomer('JPT — Order placed','Your order is saved and waiting for restaurant acceptance.','jpt-order-placed-'+o.order_no);}
-        else if(nextStatus!==lastStatus){var titles={accepted:'Order accepted',preparing:'Order is being prepared',ready:'Order is READY',out_for_delivery:'Order is out for delivery',delivered:'Order delivered',cancelled:'Order cancelled'};var nt=titles[nextStatus]||'Order status updated';addCustomerNotice(nt,statusInfo(row).sub);notifyCustomer('JPT — '+nt,statusInfo(row).sub,'jpt-order-status-'+o.order_no+'-'+nextStatus);}
-        if(lastStatus && lastStatus!=='accepted' && nextStatus==='accepted') playCustomerAcceptedTone();
+        else if(nextStatus!==lastStatus){var titles={accepted:'👍 Your order accepted',preparing:'Order is being prepared',ready:'Order is READY',out_for_delivery:'Order is out for delivery',delivered:'Order delivered',cancelled:'Order cancelled'};var nt=titles[nextStatus]||'Order status updated';addCustomerNotice(nt,statusInfo(row).sub);notifyCustomer('JPT — '+nt,statusInfo(row).sub,'jpt-order-status-'+o.order_no+'-'+nextStatus);}
+        if(lastStatus && lastStatus!=='accepted' && nextStatus==='accepted') playCustomerAcceptedToneOnce(o.order_no);
         lastStatus=nextStatus;
         var tr=await sb.rpc('get_customer_delivery_tracking',{p_order_no:o.order_no,p_phone:o.phone});
         var tracking=tr.error?{}:(Array.isArray(tr.data)?tr.data[0]:tr.data)||{};
         var nextAssignment=String(tracking.assignment_status||'');
         if(nextAssignment && nextAssignment!==lastAssignmentStatus){var at='',ab='';if(nextAssignment==='accepted'){at='Delivery partner assigned';ab='A rider has been assigned to your order.';}else if(nextAssignment==='picked_up'){at='Order picked up';ab='Your delivery partner has picked up the order.';}else if(nextAssignment==='out_for_delivery'){at='Rider is on the way';ab='Your order is out for delivery.';}if(at){addCustomerNotice(at,ab);notifyCustomer('JPT — '+at,ab,'jpt-order-assignment-'+o.order_no+'-'+nextAssignment);}}
-        if(nextAssignment && nextAssignment!==lastAssignmentStatus && nextAssignment==='accepted') playCustomerAcceptedToneOnce(o.order_no);
-        lastAssignmentStatus=nextAssignment;
+                lastAssignmentStatus=nextAssignment;
         o=Object.assign({},o,row,tracking);save(o);render(o);
         if(nextStatus==='delivered'){
           active=false;if(timer){clearInterval(timer);timer=null}
