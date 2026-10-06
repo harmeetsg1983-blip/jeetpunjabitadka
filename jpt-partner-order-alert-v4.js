@@ -66,7 +66,7 @@
   function stopAudio(){
     const a=audio; audio=null;
     if(a){try{a.pause()}catch(e){} try{a.currentTime=0}catch(e){} try{a.src=''}catch(e){} try{a.load()}catch(e){}}
-    if(objectUrl){try{URL.revokeObjectURL(objectUrl)}catch(e){} objectUrl=null;}
+    if(objectUrl && objectUrl!==cachedRingUrl){try{URL.revokeObjectURL(objectUrl)}catch(e){}} objectUrl=null;
   }
 
   function hardStop(clearOrder=true){
