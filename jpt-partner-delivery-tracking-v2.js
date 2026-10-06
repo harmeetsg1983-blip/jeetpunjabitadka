@@ -142,7 +142,7 @@
         return;
       }
       const rows=Array.isArray(r.data)?r.data:[];
-      rows.forEach(x=>{const key=String(x.order_id||x.order_no||'');const st=String(x.delivery_status||'').toLowerCase();if(key&&st==='accepted'&&!lastAccepted.has(key)){lastAccepted.add(key);playRestaurantAssignmentAcceptedTone();}if(key&&st!=='accepted')lastAccepted.delete(key);});
+      rows.forEach(x=>{const key=String(x.order_id||x.order_no||'');const st=String(x.delivery_status||'').toLowerCase();const assignmentKey=String(x.assignment_id||x.id||key);if(key&&st==='accepted'&&!lastAccepted.has(key)){lastAccepted.add(key);try{const lk='jpt_restaurant_assignment_accepted_'+assignmentKey;if(localStorage.getItem(lk)!=='1'){localStorage.setItem(lk,'1');playRestaurantAssignmentAcceptedTone();}}catch(e){playRestaurantAssignmentAcceptedTone();}}if(key&&st!=='accepted')lastAccepted.delete(key);});
       render(rows);
       decorateVisibleCards(rows);
     }catch(e){
