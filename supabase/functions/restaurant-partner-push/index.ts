@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
   const notification = {
     title: payload.title || "Jeet Punjabi Tadka — New Order",
     body: payload.body || ("New order " + (payload.order_no || orderId)),
-    url: payload.url || ("./partner-v107.html?push=order&order_id=" + encodeURIComponent(orderId) + "&outlet_id=" + encodeURIComponent(outletId)),
+    url: payload.url || ("./admin.html?push=order&section=orders&order_id=" + encodeURIComponent(orderId) + "&outlet_id=" + encodeURIComponent(outletId)),
     tag: payload.tag || ("jpt-new-order-" + orderId),
     event_type: payload.event_type || "order.created",
     order_id: orderId,
