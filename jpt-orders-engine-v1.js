@@ -9,7 +9,8 @@ window.__JPT_CLEAN_ORDERS_ENGINE_V1__=true;
 window.__JPTOrdersV3Active=true;
 window.__JPTDisableLegacyOrderRuntime=()=>true;
 
-const V='orders-engine-v1.0.5';
+const V='orders-engine-v1.0.6';
+const JPT_RESTAURANT_NEW_ORDER_AUDIO='./ringtones/1000449570.mp4';
 const STATES={new:'NEW ORDER',preparing:'PREPARING',accepted:'PREPARING',ready:'READY',out_for_delivery:'OUT FOR DELIVERY',delivered:'HISTORY',completed:'HISTORY',cancelled:'HISTORY'};
 const HISTORY=new Set(['delivered','completed','cancelled']);
 let rows=[],outlets=[],selectedView='new',selectedOutlet='ALL',central=false,channel=null,refreshing=false,queued=false,seenNew=new Set(),baseline=false,alertId=null,pushOrderId=null,pushOutletId=null,pushHandled=false,alertQueue=[];
@@ -19,6 +20,17 @@ async function playSavedRingtone(){
   try{
     if(activeRingtoneAudio){try{activeRingtoneAudio.pause()}catch(e){}activeRingtoneAudio=null}
     if(activeRingtoneUrl){try{URL.revokeObjectURL(activeRingtoneUrl)}catch(e){}activeRingtoneUrl=null}
+    let volume=1;
+    try{const prefs=await window.JPTPartnerNotificationCenterV1?.getPrefs?.();volume=Math.max(0,Math.min(1,Number(prefs?.ringVolume??100)/100))}catch(e){}
+    try{
+      const exact=new Audio(JPT_RESTAURANT_NEW_ORDER_AUDIO);
+      exact.loop=true; exact.volume=volume; exact.preload='auto';
+      activeRingtoneAudio=exact;
+      await exact.play();
+      return true;
+    }catch(e){
+      activeRingtoneAudio=null;
+    }
     const db=await new Promise((resolve,reject)=>{
       const q=indexedDB.open('jptPartnerAlertDB',1);
       q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error);
@@ -31,14 +43,10 @@ async function playSavedRingtone(){
     if(!file)return false;
     activeRingtoneUrl=URL.createObjectURL(file);
     const a=new Audio(activeRingtoneUrl);
-    a.loop=true;
-    let volume=1;
-    try{const prefs=await window.JPTPartnerNotificationCenterV1?.getPrefs?.();volume=Math.max(0,Math.min(1,Number(prefs?.ringVolume??100)/100))}catch(e){}
-    a.volume=volume;
-    activeRingtoneAudio=a;
+    a.loop=true;a.volume=volume;activeRingtoneAudio=a;
     await a.play();
     return true;
-  }catch(e){console.warn('[JPT Orders] saved ringtone playback unavailable',e);return false}
+  }catch(e){console.warn('[JPT Orders] saved/fixed ringtone playback unavailable',e);return false}
 }
 function stopRingtone(){
   if(activeRingtoneAudio){try{activeRingtoneAudio.pause();activeRingtoneAudio.currentTime=0}catch(e){}activeRingtoneAudio=null}
