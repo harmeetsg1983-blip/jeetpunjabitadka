@@ -137,7 +137,7 @@ async function action(idv,a,b){
  const i=rows.findIndex(x=>id(x)===idv);if(i>=0)rows[i]=v;render();toast('Order updated successfully.')}catch(e){toast('Order update failed: '+(e?.message||e))}finally{if(b)b.disabled=false}
 }
 function toast(m){if(typeof window.toast==='function')window.toast(m);else{const n=document.getElementById('jptOeNotice');if(n)n.textContent=m}}
-function stopAlert(i){const key=String(i||'');const n=activeNotifications.get(key);if(n){try{n.close()}catch(e){}activeNotifications.delete(key)}stopRingtone();if(alertId!==null&&String(alertId)===key){alertId=null;document.getElementById('jptOeAlert')?.remove();const next=alertQueue.shift();if(next&&norm(next.status)==='new'&&!seenNew.has(id(next))){showAlert(next)}}}
+function stopAlert(i){const key=String(i||'');const n=activeNotifications.get(key);if(n){try{n.close()}catch(e){}activeNotifications.delete(key)}stopRingtone();if(alertId!==null&&String(alertId)===key){alertId=null;document.getElementById('jptOeAlert')?.remove();const next=alertQueue.shift();if(next&&norm(next.status)==='new'){showAlert(next)}}}
 function showAlert(x){
  const aid=id(x);if(!aid)return;if(alertId&&alertId!==aid){if(!alertQueue.some(q=>id(q)===aid))alertQueue.push(x);return}if(alertId===aid)return;alertId=aid;try{navigator.vibrate?.([450,150,450,150,700])}catch(e){}
  playSavedRingtone();
