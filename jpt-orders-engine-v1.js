@@ -136,7 +136,7 @@ async function transition(row,next,extra={}){
   const now=new Date().toISOString(),p={...extra,status:to,updated_at:now};
   if(to==='preparing'&&from==='new'){const m=Math.max(5,Math.min(120,Number(extra.target_minutes||30)));p.target_minutes=m;p.accepted_at=now;p.preparing_at=now;p.deadline_at=new Date(Date.now()+m*60000).toISOString();p.eta_minutes=m+20}
   if(to==='preparing'&&from==='accepted'&&!p.preparing_at)p.preparing_at=now;if(to==='ready')p.ready_at=now;if(to==='out_for_delivery')p.out_for_delivery_at=now;if(to==='delivered')p.delivered_at=now;if(to==='cancelled')p.rejection_reason=extra.rejection_reason||'Rejected by restaurant';
-  const q=await window.sb.from('orders').update(p).eq('id',idv).eq('outlet_id',oc).eq('status',from).select('id,status,outlet_id,target_minutes,accepted_at,deadline_at,preparing_at,ready_at,out_for_delivery_at,delivered_at,updated_at').maybeSingle();if(q.error)throw q.error;if(!q.data)throw new Error('Server did not confirm this status change. Please retry.');
+  const q=await window.sb.from('orders').update(p).eq('id',idv).eq('outlet_id',oc).eq('status',from);if(q.error)throw q.error;
   const v=await read(idv,oc);if(norm(v.status)!==to)throw new Error('Server status verification failed.');if(alertId===idv)stopAlert(idv);return v;
  }finally{busy.delete(key)}
 }
