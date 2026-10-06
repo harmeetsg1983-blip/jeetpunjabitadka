@@ -250,6 +250,12 @@ async function directAction(row,next,extra={}){
  if(!window.JPTOrderControlBridge?.transition)throw new Error('Order control bridge unavailable. Please refresh the dashboard.');
  const data=await window.JPTOrderControlBridge.transition(row.id,row.outlet_id,target,extra);
  Object.assign(row,data); row.__status=status(data.status);
+ if(target!=='new'){
+   try{
+     if(typeof window.stopOrderAlarm==='function')window.stopOrderAlarm();
+     if(window.JPTPartnerOrderAlertV4?.stop)window.JPTPartnerOrderAlertV4.stop();
+   }catch(e){}
+ }
  statusLocks.set(String(row.id),{status:row.__status,target_minutes:data.target_minutes,accepted_at:data.accepted_at,deadline_at:data.deadline_at,updatedAt:data.updated_at||new Date().toISOString(),updatedMs:Date.parse(data.updated_at||'')||Date.now(),at:Date.now()});
  if(target!=='new')window.JPTOrderControlBridge.stopAlerts(row.id);
  return data;
