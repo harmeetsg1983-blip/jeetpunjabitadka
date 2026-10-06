@@ -9,7 +9,7 @@ window.__JPT_CLEAN_ORDERS_ENGINE_V1__=true;
 window.__JPTOrdersV3Active=true;
 window.__JPTDisableLegacyOrderRuntime=()=>true;
 
-const V='orders-engine-v1.0.1';
+const V='orders-engine-v1.0.2';
 const STATES={new:'NEW ORDER',preparing:'PREPARING',accepted:'PREPARING',ready:'READY',out_for_delivery:'OUT FOR DELIVERY',delivered:'HISTORY',completed:'HISTORY',cancelled:'HISTORY'};
 const HISTORY=new Set(['delivered','completed','cancelled']);
 let rows=[],outlets=[],selectedView='new',selectedOutlet='ALL',central=false,channel=null,refreshing=false,queued=false,seenNew=new Set(),baseline=false,alertId=null,pushOrderId=null,pushOutletId=null,pushHandled=false;
@@ -133,7 +133,9 @@ async function load(manual){
 function realtime(){
  try{if(channel)window.sb.removeChannel(channel);channel=window.sb.channel('jpt-clean-orders-'+Date.now()).on('postgres_changes',{event:'INSERT',schema:'public',table:'orders'},p=>{const x=p?.new;if(!x||!outlets.some(o=>o.code===String(x.outlet_id)))return;if(selectedOutlet!=='ALL'&&String(x.outlet_id)!==selectedOutlet)return;const row={...x,status:norm(x.status)};rows=[row,...rows.filter(r=>id(r)!==id(row))];render();if(norm(row.status)==='new'&&!seenNew.has(id(row))){seenNew.add(id(row));selectedView='new';render();showAlert(row)}}).on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders'},p=>{const x=p?.new;if(!x||!outlets.some(o=>o.code===String(x.outlet_id)))return;if(selectedOutlet!=='ALL'&&String(x.outlet_id)!==selectedOutlet)return;rows=rows.map(r=>id(r)===id(x)?{...x,status:norm(x.status)}:r);if(norm(x.status)!=='new')stopAlert(id(x));render()}).subscribe((st)=>{if(st==='CHANNEL_ERROR'||st==='TIMED_OUT'||st==='CLOSED')setTimeout(()=>load(false),1200)})}catch(e){console.warn('[JPT Orders] realtime unavailable',e)}
 }
-async function boot(){if(!document.getElementById('orders')||!window.sb){setTimeout(boot,300);return}if(!mount())return;try{const u=new URLSearchParams(location.search);if(u.get('push')==='order'){pushOrderId=u.get('order_id')||null;pushOutletId=u.get('outlet_id')||null}}catch(e){}await load(false);realtime();clearInterval(window.__JPTCleanOrdersRefresh);window.__JPTCleanOrdersRefresh=setInterval(()=>load(false),20000);clearInterval(window.__JPTCleanOrdersCountdown);window.__JPTCleanOrdersCountdown=setInterval(tick,1000)}
+function readPushUrl(){try{const u=new URLSearchParams(location.search);if(u.get('push')!=='order')return false;const oi=u.get('order_id')||null,oo=u.get('outlet_id')||null;if(!oi)return false;pushOrderId=oi;pushOutletId=oo;pushHandled=false;return true}catch(e){return false}}
+async function handlePushUrl(){if(!readPushUrl())return;selectedView='new';render();setTimeout(()=>detail(pushOrderId),150)}
+async function boot(){if(!document.getElementById('orders')||!window.sb){setTimeout(boot,300);return}if(!mount())return;readPushUrl();window.addEventListener('pageshow',()=>handlePushUrl());window.addEventListener('popstate',()=>handlePushUrl());await load(false);realtime();clearInterval(window.__JPTCleanOrdersRefresh);window.__JPTCleanOrdersRefresh=setInterval(()=>load(false),20000);clearInterval(window.__JPTCleanOrdersCountdown);window.__JPTCleanOrdersCountdown=setInterval(tick,1000)}
 window.JPTCleanOrdersEngineV1={version:V,reload:()=>load(true),stopAlert,openOrder:detail,getRows:()=>rows.slice()};
 boot();
 })();
