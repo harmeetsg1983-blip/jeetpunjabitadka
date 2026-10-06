@@ -3,6 +3,8 @@ name: JPT Production Gate V1 - Safe Preflight
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
