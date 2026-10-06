@@ -103,6 +103,7 @@ jobs:
             actual_size=$(stat -c '%s' "$f")
             test "$actual_size" = "${expected_size[$f]}" || { echo "RED: size mismatch $f ($actual_size != ${expected_size[$f]})"; exit 1; }
             actual_sha=$(sha256sum "$f" | awk '{print $1}')
+            echo "INFO: locked ringtone $f size=$actual_size sha256=$actual_sha gitblob=$(git hash-object "$f")"
             test "$actual_sha" = "${expected_sha[$f]}" || { echo "RED: SHA-256 mismatch $f"; exit 1; }
             echo "GREEN: locked ringtone verified $f"
           done
