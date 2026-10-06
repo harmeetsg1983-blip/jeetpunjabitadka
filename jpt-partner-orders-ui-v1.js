@@ -332,6 +332,8 @@ async function load(){
   if(hasNew) selected='new';
   else if(selected==='new') selected='preparing';
   const currentNew=rowsCache.filter(x=>x.__status==='new'&&OWNER_OUTLET_CODES.has(String(x.outlet_id||'')));
+  const currentNewIds=new Set(currentNew.map(x=>String(x.id||x.order_no)));
+  pendingNew.forEach((_,id)=>{if(!currentNewIds.has(String(id)))pendingNew.delete(id)});
   currentNew.forEach(x=>pendingNew.set(String(x.id||x.order_no),x));
   syncCentralBell();
   syncOrderBellBar();
