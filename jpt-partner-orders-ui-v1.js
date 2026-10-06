@@ -138,6 +138,7 @@ async function openOrderDetail(id){
  '<div class="jpt-order-detail-card"><div style="font-size:12px;color:#aaa">ORDER ITEMS</div><div class="jpt-order-detail-items">'+parseItems(row).map(i=>{const q=Number(i.qty??i.quantity??1),p=Number(i.price??i.unit_price??0);return '<div class="jpt-order-detail-item"><div><b>'+esc(i.name||i.item_name||'Item')+'</b><div style="color:#aaa;margin-top:3px">Qty × '+q+'</div></div><strong>'+money(p*q)+'</strong></div>'}).join('')+'</div><div style="margin-top:12px;color:#bbb">Item subtotal <span style="float:right">'+money(sub)+'</span></div>'+(del?'<div style="margin-top:6px;color:#bbb">Delivery <span style="float:right">'+money(del)+'</span></div>':'')+(disc?'<div style="margin-top:6px;color:#7bd99a">Discount <span style="float:right">−'+money(disc)+'</span></div>':'')+'<div class="jpt-order-detail-total"><span>Total</span><span>'+money(total)+'</span></div><div style="margin-top:8px;color:#aaa;font-size:11px">Payment • '+esc(payment)+'</div></div>'+
  '<div class="jpt-order-detail-card"><div style="font-size:12px;color:#aaa">RESTAURANT ACTION</div><div class="jpt-order-detail-actions">'+detailActionHtml(row)+'</div></div>';
  body.querySelectorAll('[data-act]').forEach(b=>b.onclick=async()=>{await doAction(b);if(m.classList.contains('show')){const updated=rowsCache.find(x=>String(x.id)===String(id));if(updated&&updated.__status!=='new')m.classList.remove('show');}});
+ body.querySelectorAll('[data-payment-verify]').forEach(b=>b.onclick=async()=>{const updated=rowsCache.find(x=>String(x.id)===String(id));if(updated)await verifyOrderPayment(updated,b);});
  body.querySelectorAll('[data-time]').forEach(b=>b.onclick=()=>{const input=b.parentElement.querySelector('.jpt-cob-minutes');if(!input)return;let v=Number(input.value)||30;v=Math.max(5,Math.min(120,v+(b.dataset.time==='plus'?5:-5)));input.value=String(v);prepDrafts.set(String(id),v);});
  body.querySelectorAll('.jpt-cob-minutes').forEach(input=>input.oninput=()=>{const v=Math.max(5,Math.min(120,Number(input.value)||30));input.value=String(v);prepDrafts.set(String(id),v);});
  m.classList.add('show');
@@ -158,11 +159,37 @@ function ensureRoot(){
  return root;
 }
 
+async function verifyOrderPayment(row,btn){
+ const payment=String(row?.payment||'').trim().toUpperCase();
+ if(payment!=='UPI' || row.payment_verified===true)return true;
+ const ok=confirm('Confirm REAL merchant UPI payment for order '+String(row.order_no||row.id||'')+' and exact amount ₹'+Number(row.total||0).toLocaleString('en-IN')+'. Continue?');
+ if(!ok)return false;
+ if(btn)btn.disabled=true;
+ try{
+  const r=await window.sb.from('orders').update({payment_verified:true,payment_verified_at:new Date().toISOString(),payment_verification_method:'manual_merchant_check'})
+   .eq('id',row.id).eq('outlet_id',row.outlet_id)
+   .select('id,payment,payment_verified,payment_verified_at,payment_verification_method,status,total').maybeSingle();
+  if(r.error)throw r.error;
+  if(!r.data||r.data.payment_verified!==true)throw new Error('Server did not confirm payment verification.');
+  Object.assign(row,r.data);
+  if(typeof window.toast==='function')window.toast('UPI payment verified • ACCEPT unlocked');
+  render(); return true;
+ }catch(e){
+  if(typeof window.toast==='function')window.toast('Payment verification failed: '+(e?.message||e));
+  return false;
+ }finally{if(btn)btn.disabled=false}
+}
+
 function actionHtml(x){
  const id=esc(x.id||''),st=x.__status;
- if(st==='new')return `<div class="jpt-cob-timepick" aria-label="Preparation time"><button type="button" data-time="minus" data-id="${id}" aria-label="Decrease preparation time">−</button><input class="jpt-cob-minutes" data-id="${id}" type="number" min="5" max="120" step="5" value="${Number(prepDrafts.get(String(x.id))??x.target_minutes??30)}"><button type="button" data-time="plus" data-id="${id}" aria-label="Increase preparation time">+</button><span class="jpt-cob-muted">min</span></div><div class="jpt-cob-decision"><button type="button" class="primary" data-act="accept" data-id="${id}">ACCEPT</button><button type="button" data-act="reject" data-id="${id}">REJECT</button></div>`;
- if(st==='accepted')return `<button class="primary" data-act="preparing" data-id="${id}">START PREPARING</button>`;
- if(st==='preparing')return `<button class="primary" data-act="ready" data-id="${id}">MARK READY</button>`;
+ if(st==='new'){
+  const upi=String(x.payment||'').trim().toUpperCase()==='UPI', verified=x.payment_verified===true;
+  const verify=upi&&!verified?'<button type="button" data-payment-verify="'+id+'">VERIFY UPI PAYMENT</button>':'';
+  const accept=(!upi||verified)?'<button type="button" class="primary" data-act="accept" data-id="'+id+'">ACCEPT</button>':'<button type="button" class="primary" data-act="accept" data-id="'+id+'" disabled title="Verify UPI payment first" style="opacity:.45">ACCEPT — VERIFY PAYMENT FIRST</button>';
+  return '<div class="jpt-cob-timepick" aria-label="Preparation time"><button type="button" data-time="minus" data-id="'+id+'" aria-label="Decrease preparation time">−</button><input class="jpt-cob-minutes" data-id="'+id+'" type="number" min="5" max="120" step="5" value="'+Number(prepDrafts.get(String(x.id))??x.target_minutes??30)+'"><button type="button" data-time="plus" data-id="'+id+'" aria-label="Increase preparation time">+</button><span class="jpt-cob-muted">min</span></div><div class="jpt-cob-decision">'+verify+accept+'<button type="button" data-act="reject" data-id="'+id+'">REJECT</button></div>';
+ }
+ if(st==='accepted')return '<button class="primary" data-act="preparing" data-id="'+id+'">START PREPARING</button>';
+ if(st==='preparing')return '<button class="primary" data-act="ready" data-id="'+id+'">MARK READY</button>';
  if(st==='ready')return '<span class="jpt-cob-history">READY • DELIVERY OFFER IS CHECKED AUTOMATICALLY</span>';
  if(st==='out_for_delivery')return '<span class="jpt-cob-history">OUT FOR DELIVERY • DELIVERY FLOW ACTIVE</span>';
  return '';
@@ -180,27 +207,39 @@ function render(){
   ${(st==='accepted'||st==='preparing')&&deadlineAt?`<div class="jpt-cob-prep" data-deadline="${esc(deadlineAt)}">PREPARING • <b class="jpt-cob-countdown">--:--</b> remaining</div>`:''}
   <div class="jpt-cob-items">${itemsHtml(x)}</div><div class="jpt-cob-summary"><div class="jpt-cob-line"><span>Item subtotal</span><span>${money(sub)}</span></div>${del?`<div class="jpt-cob-line"><span>Delivery charge</span><span>${money(del)}</span></div>`:''}${disc?`<div class="jpt-cob-line discount"><span>Discount</span><span>−${money(disc)}</span></div>`:''}<div class="jpt-cob-line total"><span>Total</span><span>${money(total)}</span></div></div></div><button type="button" class="jpt-order-open-btn" data-open-order-btn="${esc(x.id||'')}">VIEW FULL ORDER</button></div>${selected==='history'?'<div class="jpt-cob-actions"><span class="jpt-cob-history">'+(st==='cancelled'?'CANCELLED ORDER':'COMPLETED ORDER')+'</span></div>':'<div class="jpt-cob-actions">'+actionHtml(x)+'</div>'}</article>`
  }).join(''):'<div class="jpt-cob-empty">No '+esc(selected.replaceAll('_',' '))+' orders right now.</div>'}</div>`;
+ root.querySelectorAll('[data-payment-verify]').forEach(b=>{
+   b.onclick=async()=>{const row=rowsCache.find(x=>String(x.id)===String(b.dataset.paymentVerify));if(row)await verifyOrderPayment(row,b);};
+ });
  root.querySelectorAll('[data-act]').forEach(b=>{
-   const runAction=(ev,fromTouch=false)=>{
+   const runAction=ev=>{
      ev.preventDefault();ev.stopPropagation();
      if(b.dataset.busy==='1')return;
-     if(!fromTouch&&b.dataset.touchHandled==='1')return;
+     const now=Date.now(),last=Number(b.dataset.lastActionMs||0);
+     if(now-last<900)return;
+     b.dataset.lastActionMs=String(now);
      b.dataset.busy='1';
      doAction(b).finally(()=>{b.dataset.busy='0';});
    };
-   b.onclick=ev=>runAction(ev,false);
-   b.ontouchend=ev=>{
-     if(b.dataset.busy==='1')return;
-     b.dataset.touchHandled='1';
-     runAction(ev,true);
-     setTimeout(()=>{b.dataset.touchHandled='0';},700);
-   };
+   if('PointerEvent' in window){
+     b.addEventListener('pointerup',runAction,{passive:false});
+     b.addEventListener('click',ev=>{if(ev.detail===0)runAction(ev);});
+   }else{
+     b.addEventListener('touchend',runAction,{passive:false});
+     b.addEventListener('click',runAction);
+   }
  });
+
  root.querySelectorAll('[data-open-order-btn]').forEach(b=>b.onclick=()=>openOrderDetail(b.dataset.openOrderBtn));
  root.querySelectorAll('.jpt-cob-minutes').forEach(input=>input.oninput=()=>{prepDrafts.set(String(input.dataset.id),Math.max(5,Math.min(120,Number(input.value)||30)));});
  root.querySelectorAll('[data-time]').forEach(b=>{
-   const input=b.parentElement.querySelector('.jpt-cob-minutes'); if(!input)return;
-   let v=Number(input.value)||30; v=Math.max(5,Math.min(120,v+(b.dataset.time==='plus'?5:-5))); input.value=String(v); prepDrafts.set(String(b.dataset.id),v);
+   b.onclick=ev=>{
+     ev.preventDefault(); ev.stopPropagation();
+     const input=b.parentElement.querySelector('.jpt-cob-minutes'); if(!input)return;
+     let v=Number(input.value)||30;
+     v=Math.max(5,Math.min(120,v+(b.dataset.time==='plus'?5:-5)));
+     input.value=String(v);
+     prepDrafts.set(String(b.dataset.id),v);
+   };
  });
  if(window.__jptCountdownTimer)clearInterval(window.__jptCountdownTimer);
  const tickCountdowns=()=>{
@@ -218,6 +257,12 @@ async function directAction(row,next,extra={}){
  if(!window.JPTOrderControlBridge?.transition)throw new Error('Order control bridge unavailable. Please refresh the dashboard.');
  const data=await window.JPTOrderControlBridge.transition(row.id,row.outlet_id,target,extra);
  Object.assign(row,data); row.__status=status(data.status);
+ if(target!=='new'){
+   try{
+     if(typeof window.stopOrderAlarm==='function')window.stopOrderAlarm();
+     if(window.JPTPartnerOrderAlertV4?.stop)window.JPTPartnerOrderAlertV4.stop();
+   }catch(e){}
+ }
  statusLocks.set(String(row.id),{status:row.__status,target_minutes:data.target_minutes,accepted_at:data.accepted_at,deadline_at:data.deadline_at,updatedAt:data.updated_at||new Date().toISOString(),updatedMs:Date.parse(data.updated_at||'')||Date.now(),at:Date.now()});
  if(target!=='new')window.JPTOrderControlBridge.stopAlerts(row.id);
  return data;
@@ -288,6 +333,8 @@ async function load(){
   if(hasNew) selected='new';
   else if(selected==='new') selected='preparing';
   const currentNew=rowsCache.filter(x=>x.__status==='new'&&OWNER_OUTLET_CODES.has(String(x.outlet_id||'')));
+  const currentNewIds=new Set(currentNew.map(x=>String(x.id||x.order_no)));
+  pendingNew.forEach((_,id)=>{if(!currentNewIds.has(String(id)))pendingNew.delete(id)});
   currentNew.forEach(x=>pendingNew.set(String(x.id||x.order_no),x));
   syncCentralBell();
   syncOrderBellBar();
