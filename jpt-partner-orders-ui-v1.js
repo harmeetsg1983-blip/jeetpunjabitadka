@@ -115,15 +115,19 @@ function ensureOrderDetailModal(){
 function detailActionHtml(x){
  const id=esc(x.id||''),st=x.__status;
  if(st==='new')return actionHtml(x);
- if(st==='accepted')return '<button class="primary" data-act="preparing" data-id="'+id+'">START PREPARING</button>';
- if(st==='preparing')return '<button class="primary" data-act="ready" data-id="'+id+'">MARK READY</button>';
+ if(st==='accepted')return '<button type="button" class="primary" data-act="preparing" data-id="'+id+'">START PREPARING</button>';
+ if(st==='preparing')return '<button type="button" class="primary" data-act="ready" data-id="'+id+'">MARK READY</button>';
  if(st==='ready')return '<span class="jpt-cob-history">READY • DELIVERY OFFER IS CHECKED AUTOMATICALLY</span>';
  if(st==='out_for_delivery')return '<span class="jpt-cob-history">OUT FOR DELIVERY • DELIVERY FLOW ACTIVE</span>';
  return '<span class="jpt-cob-history">Delivery flow active.</span>';
 }
 
-function openOrderDetail(id){
+async function openOrderDetail(id){
  const row=rowsCache.find(x=>String(x.id)===String(id));if(!row)return;
+ try{
+  const fresh=await window.sb.from('orders').select('status,target_minutes,accepted_at,deadline_at,updated_at').eq('id',row.id).eq('outlet_id',row.outlet_id).maybeSingle();
+  if(!fresh.error&&fresh.data){Object.assign(row,fresh.data);row.__status=status(fresh.data.status);}
+ }catch(e){console.warn('[JPT Central Orders V2] detail state refresh skipped',e);}
  const m=ensureOrderDetailModal(),body=document.getElementById('jptOrderDetailBody');
  const st=row.__status,total=Number(row.total??0),sub=Number(row.subtotal??0),disc=Number(row.discount??0),del=Number(row.delivery_charge??0);
  const oid=String(row.outlet_id||'—'),oname=outlets[oid]||oid,customer=row.customer_name||'Customer',phone=row.customer_phone||'',address=row.customer_address||'Address not provided',payment=row.payment||'—';
@@ -155,7 +159,7 @@ function ensureRoot(){
 
 function actionHtml(x){
  const id=esc(x.id||''),st=x.__status;
- if(st==='new')return `<div class="jpt-cob-timepick" aria-label="Preparation time"><button type="button" data-time="minus" data-id="${id}" aria-label="Decrease preparation time">−</button><input class="jpt-cob-minutes" data-id="${id}" type="number" min="5" max="120" step="5" value="${Number(prepDrafts.get(String(x.id))??x.target_minutes??30)}"><button type="button" data-time="plus" data-id="${id}" aria-label="Increase preparation time">+</button><span class="jpt-cob-muted">min</span></div><div class="jpt-cob-decision"><button class="primary" data-act="accept" data-id="${id}">ACCEPT</button><button data-act="reject" data-id="${id}">REJECT</button></div>`;
+ if(st==='new')return `<div class="jpt-cob-timepick" aria-label="Preparation time"><button type="button" data-time="minus" data-id="${id}" aria-label="Decrease preparation time">−</button><input class="jpt-cob-minutes" data-id="${id}" type="number" min="5" max="120" step="5" value="${Number(prepDrafts.get(String(x.id))??x.target_minutes??30)}"><button type="button" data-time="plus" data-id="${id}" aria-label="Increase preparation time">+</button><span class="jpt-cob-muted">min</span></div><div class="jpt-cob-decision"><button type="button" class="primary" data-act="accept" data-id="${id}">ACCEPT</button><button type="button" data-act="reject" data-id="${id}">REJECT</button></div>`;
  if(st==='accepted')return `<button class="primary" data-act="preparing" data-id="${id}">START PREPARING</button>`;
  if(st==='preparing')return `<button class="primary" data-act="ready" data-id="${id}">MARK READY</button>`;
  if(st==='ready')return '<span class="jpt-cob-history">READY • DELIVERY OFFER IS CHECKED AUTOMATICALLY</span>';
