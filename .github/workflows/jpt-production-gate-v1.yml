@@ -3,6 +3,8 @@ name: JPT Production Gate V1 - Safe Preflight
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -30,12 +32,10 @@ jobs:
           set -euo pipefail
           grep -Fq '<option value="COD"' index.html
           grep -Fq '<option value="UPI"' index.html
-
           if grep -Eqi 'UPI payment required|Complete payment first|jpt-upi-required' index.html; then
             echo "RED: legacy UPI-only gate found in index.html"
             exit 1
           fi
-
           echo "GREEN: COD + UPI payment choices present"
           echo "GREEN: legacy UPI-only gate absent"
 
@@ -49,16 +49,38 @@ jobs:
           grep -Fq 'customer-app.html' customer-app-sw.js
           echo "GREEN: customer PWA install/service-worker wiring present"
 
-      - name: Verify partner and delivery flow markers
+      - name: Verify clean partner orders engine
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq 'outlet' admin.html
-          grep -Fq 'Orders' admin.html
-          grep -Fq 'delivery_offer_next' admin.html
-          grep -Fq 'delivery_offer_next' jpt-partner-orders-ui-v1.js
-          grep -Fq 'outlet' jpt-partner-orders-ui-v1.js
-          echo "GREEN: partner outlet/order/delivery-offer markers present"
+          test -f jpt-orders-engine-v1.js
+          grep -Fq "orders-engine-v1.0.8" jpt-orders-engine-v1.js
+          grep -Fq 'jpt-orders-engine-v1.js?v=1.0.8' admin.html
+          grep -Fq 'JPTCleanOrdersEngineV1' jpt-orders-engine-v1.js
+          grep -Fq 'data-a="accept"' jpt-orders-engine-v1.js
+          grep -Fq 'data-a="reject"' jpt-orders-engine-v1.js
+          grep -Fq 'data-target-minutes=' jpt-orders-engine-v1.js
+          grep -Fq "transition(row,'preparing'" jpt-orders-engine-v1.js
+          if grep -Fq 'START PREPARING' jpt-orders-engine-v1.js; then
+            echo "RED: obsolete START PREPARING action remains"
+            exit 1
+          fi
+          echo "GREEN: Partner Orders Engine V1.0.8 wired"
+          echo "GREEN: NEW order has ACCEPT/REJECT + prep-time selector"
+          echo "GREEN: obsolete START PREPARING action absent"
+
+      - name: Verify legacy order runtime is removed
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in jpt-order-control-bridge-v1.js jpt-partner-orders-ui-v1.js jpt-partner-order-alert-v4.js partner-order-flow-v106-hotfix.js jpt-v106-partner-operations-v2.js; do
+            test ! -e "$f" || { echo "RED: legacy order runtime still present: $f"; exit 1; }
+          done
+          if grep -Eq 'function (loadOrders|orderAction|acceptOrder|bindOrderRealtime|stopOrderAlarm)' admin.html; then
+            echo "RED: legacy inline order runtime remains in admin.html"
+            exit 1
+          fi
+          echo "GREEN: single clean order runtime owner verified"
 
       - name: Verify locked ringtone integrity
         shell: bash
@@ -68,13 +90,13 @@ jobs:
             [ringtones/1000449570.mp4]=2780660
             [ringtones/1000449571.mp4]=2825197
             [ringtones/1000449572.mp4]=237252
-            [ringtones/1000449491.mp4]=630716
+            [ringtones/1000449491.mp4]=240411
           )
           declare -A expected_sha=(
             [ringtones/1000449570.mp4]=9106a098deac4d9493924457ea676ec3bc2bc2460e54d902703aa1c878fd63c4
-            [ringtones/1000449571.mp4]=d491bc664f55ac0c4e717e60b9b85827fad589c15153436000367e6264a3860c
+            [ringtones/1000449571.mp4]=d491bc664f55ac0c4e717e60b9b85827fad589c15153436000367e6264a3860c4
             [ringtones/1000449572.mp4]=34231d662e3416f66278820b187c4116189019e7bae4122e9d0295d10cedbb15
-            [ringtones/1000449491.mp4]=8fed117c7e7c66966d546e87351c6e31513b3862f42624a72c3f382cc64e6aeb
+            [ringtones/1000449491.mp4]=a58e72cf61fb57a380cdbdb570468afa72e85f795499fc8485a6d8faffbaaefa
           )
           for f in "${!expected_size[@]}"; do
             test -f "$f" || { echo "RED: missing locked ringtone $f"; exit 1; }
@@ -96,10 +118,10 @@ jobs:
           done < <(find . -maxdepth 1 -type f -name '*.js' -print0)
           echo "GREEN: $count root JavaScript files passed node syntax validation"
 
-      - name: Report missing future production layers
+      - name: Report deployment gate
         shell: bash
         run: |
           set -euo pipefail
-          echo "INFO: This gate does not modify source, Supabase, or deployment."
-          echo "INFO: FCM/Sentry/Playwright are future reliability layers."
+          echo "INFO: This gate does not modify Supabase or merge/deploy production."
+          echo "INFO: Authenticated device E2E remains a manual release gate."
           echo "GREEN: production source preflight completed"
