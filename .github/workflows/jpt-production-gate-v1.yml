@@ -76,13 +76,13 @@ jobs:
           while IFS= read -r f; do
             [ -n "$f" ] || continue
             [ "$f" = "jpt-orders-engine-v1.js" ] && continue
-            if grep -Eq "from\(['"]orders['"]\)[[:space:]]*\.update|table:[[:space:]]*['"]orders['"]" "$f"; then
-              offenders="${offenders}${f}\n"
+            if grep -Fq "from('orders').update" "$f" || grep -Fq "table:'orders'" "$f" || grep -Fq 'table:"orders"' "$f"; then
+              offenders="${offenders}${f}"$'\n'
             fi
-          done < <(grep -oE '\./[^"\047[:space:]]+\.js' admin.html | sed 's#^\./##;s#?.*$##' | sort -u)
+          done < <(grep -oE '\./[^"[:space:]]+\.js' admin.html | sed 's#^\./##;s#?.*$##' | sort -u)
           if [ -n "$offenders" ]; then
             echo "RED: an actively loaded Partner script contains an orders update/realtime marker:"
-            printf '%b' "$offenders"
+            printf '%s' "$offenders"
             exit 1
           fi
           grep -Fq "from('orders').update" jpt-orders-engine-v1.js
