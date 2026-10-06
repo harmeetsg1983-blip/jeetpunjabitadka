@@ -128,16 +128,22 @@ function render(){
 function tick(){document.querySelectorAll('#jptOrdersOpsV1 [data-d]').forEach(x=>{const left=new Date(x.dataset.d)-Date.now();x.classList.toggle('late',left<0);const b=x.querySelector('[data-c]');if(b)b.textContent=fmt(left)})}
 
 async function read(idv,oc){const r=await window.sb.from('orders').select('*').eq('id',idv).eq('outlet_id',oc).maybeSingle();if(r.error)throw r.error;if(!r.data)throw new Error('Order not found or access denied.');return r.data}
-async function transition(row,next,extra={}){
- const idv=id(row),oc=outlet(row),to=norm(next),key=idv+'|'+to;if(busy.has(key))return false;busy.add(key);
+async function transition(row,next,extra={}){ 
+ const idv=id(row),to=norm(next),key=idv+'|'+to;if(busy.has(key))return false;busy.add(key);
  try{
-  const cur=await read(idv,oc),from=norm(cur.status);
-  if(to==='preparing'&&(from==='new'||from==='accepted')){}else if(to==='ready'&&from!=='preparing')throw new Error('Order is not in PREPARING.');else if(to==='out_for_delivery'&&from!=='ready')throw new Error('Order is not READY.');else if(to==='delivered'&&from!=='out_for_delivery')throw new Error('Order is not OUT FOR DELIVERY.');else if(to==='cancelled'&&from!=='new')throw new Error('Only a NEW order can be rejected.');else if(to!=='preparing'&&to!=='ready'&&to!=='out_for_delivery'&&to!=='delivered'&&to!=='cancelled')throw new Error('Unsupported order transition.');
-  const now=new Date().toISOString(),p={...extra,status:to,updated_at:now};
-  if(to==='preparing'&&from==='new'){const m=Math.max(5,Math.min(120,Number(extra.target_minutes||30)));p.target_minutes=m;p.accepted_at=now;p.preparing_at=now;p.deadline_at=new Date(Date.now()+m*60000).toISOString();p.eta_minutes=m+20}
-  if(to==='preparing'&&from==='accepted'&&!p.preparing_at)p.preparing_at=now;if(to==='ready')p.ready_at=now;if(to==='out_for_delivery')p.out_for_delivery_at=now;if(to==='delivered')p.delivered_at=now;if(to==='cancelled')p.rejection_reason=extra.rejection_reason||'Rejected by restaurant';
-  const q=await window.sb.from('orders').update(p).eq('id',idv).eq('outlet_id',oc).eq('status',from);if(q.error)throw q.error;
-  const v=await read(idv,oc);if(norm(v.status)!==to)throw new Error('Server status verification failed.');if(alertId===idv)stopAlert(idv);return v;
+  const payload={
+    p_order_id:Number(idv),
+    p_next_status:to,
+    p_target_minutes:Math.max(5,Math.min(120,Number(extra.target_minutes||30))),
+    p_rejection_reason:extra.rejection_reason||null
+  };
+  const q=await window.sb.rpc('jpt_partner_transition_order',payload);
+  if(q.error)throw q.error;
+  if(!q.data)throw new Error('Server did not return the updated order.');
+  const v=Array.isArray(q.data)?q.data[0]:q.data;
+  if(!v||norm(v.status)!==to)throw new Error('Server status verification failed.');
+  if(alertId===idv)stopAlert(idv);
+  return v;
  }finally{busy.delete(key)}
 }
 async function action(idv,a,b){
