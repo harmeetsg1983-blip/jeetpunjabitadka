@@ -93,7 +93,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq "const V='orders-engine-v1.0.6'" jpt-orders-engine-v1.js
+          grep -Fq "const V='orders-engine-v1.0.7'" jpt-orders-engine-v1.js
           grep -Fq 'const activeNotifications=new Map()' jpt-orders-engine-v1.js
           grep -Fq 'activeNotifications.get(key)' jpt-orders-engine-v1.js
           grep -Fq 'n.close()' jpt-orders-engine-v1.js
