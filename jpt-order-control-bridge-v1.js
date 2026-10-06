@@ -61,15 +61,22 @@ async function transition(id,outlet,next,extra){
 
     const patch={...(extra||{}),status:to,updated_at:new Date().toISOString()};
     let q=await window.sb.from('orders').update(patch)
-      .eq('id',id).eq('outlet_id',outlet).eq('status',from);
+      .eq('id',id).eq('outlet_id',outlet).eq('status',from)
+      .select('id,outlet_id,status,target_minutes,accepted_at,deadline_at,eta_minutes,updated_at')
+      .maybeSingle();
 
     if(q.error){
-      const recovered=await waitFor(id,outlet,to,8,250);
+      const recovered=await waitFor(id,outlet,to,20,500);
       if(recovered) return recovered;
       throw q.error;
     }
 
-    let verified=await waitFor(id,outlet,to,8,250);
+    /* Prefer the same write response when PostgREST returns the changed row.
+       This removes the old confirmation race where a successful ACCEPT could
+       be committed but the follow-up read arrived before the new state. */
+    if(q.data && atOrBeyond(q.data.status,to)) return q.data;
+
+    let verified=await waitFor(id,outlet,to,20,500);
     if(verified) return verified;
 
     const latest=await read(id,outlet);
