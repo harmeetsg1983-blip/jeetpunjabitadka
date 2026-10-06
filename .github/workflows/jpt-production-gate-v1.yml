@@ -56,7 +56,6 @@ jobs:
           grep -Fq 'outlet' admin.html
           grep -Fq 'Orders' admin.html
           grep -Fq 'delivery_offer_next' admin.html
-          grep -Fq 'Orders' admin.html
           grep -Fq 'jpt-orders-engine-v1.js' admin.html
           grep -Fq 'delivery_offer_next' jpt-orders-engine-v1.js
           if grep -Fq 'jpt-partner-orders-ui-v1.js' admin.html || grep -Fq 'jpt-order-control-bridge-v1.js' admin.html || grep -Fq 'jpt-partner-order-alert-v4.js' admin.html; then
