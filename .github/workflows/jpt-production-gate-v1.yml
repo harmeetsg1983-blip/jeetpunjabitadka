@@ -93,7 +93,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq "const V='orders-engine-v1.0.5'" jpt-orders-engine-v1.js
+          grep -Fq "const V='orders-engine-v1.0.6'" jpt-orders-engine-v1.js
           grep -Fq 'const activeNotifications=new Map()' jpt-orders-engine-v1.js
           grep -Fq 'activeNotifications.get(key)' jpt-orders-engine-v1.js
           grep -Fq 'n.close()' jpt-orders-engine-v1.js
@@ -101,8 +101,29 @@ jobs:
           grep -Fq 'alertQueue.shift()' jpt-orders-engine-v1.js
           grep -Fq 'playSavedRingtone()' jpt-orders-engine-v1.js
           grep -Fq 'stopRingtone()' jpt-orders-engine-v1.js
-          grep -Fq 'jpt-orders-engine-v1.js?v=1.0.5' admin.html
+          grep -Fq 'jpt-orders-engine-v1.js?v=1.0.6' admin.html
           echo "GREEN: OS notification handles are retained and closed by the clean Orders Engine"
+
+      - name: Verify four-role alert sound policy wiring
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f JPT_ALERT_SOUND_POLICY_V1.md
+          grep -Fq "1000449570.mp4" JPT_ALERT_SOUND_POLICY_V1.md
+          grep -Fq "1000449571.mp4" JPT_ALERT_SOUND_POLICY_V1.md
+          grep -Fq "1000449491.mp4" JPT_ALERT_SOUND_POLICY_V1.md
+          grep -Fq "1000449572.mp4" JPT_ALERT_SOUND_POLICY_V1.md
+          grep -Fq "const JPT_RESTAURANT_NEW_ORDER_AUDIO='./ringtones/1000449570.mp4'" jpt-orders-engine-v1.js
+          grep -Fq "const JPT_DELIVERY_OFFER_AUDIO='./ringtones/1000449571.mp4'" delivery-partner-app.html
+          grep -Fq "const JPT_DELIVERY_READY_AUDIO='./ringtones/1000449491.mp4'" delivery-partner-app.html
+          grep -Fq "const JPT_RESTAURANT_ASSIGNMENT_ACCEPTED_AUDIO='./ringtones/1000449572.mp4'" jpt-partner-delivery-tracking-v2.js
+          grep -Fq "var JPT_CUSTOMER_ACCEPTED_AUDIO='./ringtones/1000449572.mp4'" customer-order-tracking-v106-v2.js
+          grep -Fq "loop=true" jpt-orders-engine-v1.js
+          grep -Fq "loop=true" delivery-partner-app.html
+          grep -Fq "loop=false" delivery-partner-app.html
+          grep -Fq "playRestaurantAssignmentAcceptedTone" jpt-partner-delivery-tracking-v2.js
+          grep -Fq "playCustomerAcceptedToneOnce" customer-order-tracking-v106-v2.js
+          echo "GREEN: four-role alert mapping and continuous/one-shot wiring verified"
 
       - name: Verify locked ringtone integrity
         shell: bash
