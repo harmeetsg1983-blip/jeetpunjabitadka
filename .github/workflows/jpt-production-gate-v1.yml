@@ -93,11 +93,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq "const V='orders-engine-v1.0.3'" jpt-orders-engine-v1.js
+          grep -Fq "const V='orders-engine-v1.0.4'" jpt-orders-engine-v1.js
           grep -Fq 'const activeNotifications=new Map()' jpt-orders-engine-v1.js
           grep -Fq 'activeNotifications.get(key)' jpt-orders-engine-v1.js
           grep -Fq 'n.close()' jpt-orders-engine-v1.js
-          grep -Fq 'jpt-orders-engine-v1.js?v=1.0.3' admin.html
+          grep -Fq 'alertQueue=[]' jpt-orders-engine-v1.js
+          grep -Fq 'alertQueue.shift()' jpt-orders-engine-v1.js
+          grep -Fq 'playSavedRingtone()' jpt-orders-engine-v1.js
+          grep -Fq 'stopRingtone()' jpt-orders-engine-v1.js
+          grep -Fq 'jpt-orders-engine-v1.js?v=1.0.4' admin.html
           echo "GREEN: OS notification handles are retained and closed by the clean Orders Engine"
 
       - name: Verify locked ringtone integrity
