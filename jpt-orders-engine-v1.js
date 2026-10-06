@@ -99,10 +99,11 @@ async function loadOutlets(){
  try{const c=await window.sb.rpc('partner_access_is_central_owner');if(!c.error)central=!!c.data}catch(e){central=false}
  if(central){const a=await window.sb.from('outlets').select('code,name,is_active').eq('is_active',true).order('code');if(!a.error)outlets=(a.data||[]).map(x=>({code:String(x.code),name:String(x.name||x.code),access:'manage'}))}
  if(!outlets.length)throw new Error('No authorized outlets found.');
- if(selectedOutlet!=='ALL'&&!outlets.some(x=>x.code===selectedOutlet))selectedOutlet=outlets[0].code;
+ if((central||outlets.length>1)&&selectedOutlet!=='ALL'&&!outlets.some(x=>x.code===selectedOutlet))selectedOutlet='ALL';
+ if(!central&&outlets.length===1&&selectedOutlet!=='ALL'&&!outlets.some(x=>x.code===selectedOutlet))selectedOutlet=outlets[0].code;
  renderOutlets();
 }
-function renderOutlets(){const h=document.getElementById('jptOeOutlets');if(!h)return;h.innerHTML=(central?'<button class="jpt-oe-chip '+(selectedOutlet==='ALL'?'active':'')+'" data-o="ALL">ALL OUTLETS</button>':'')+outlets.map(x=>'<button class="jpt-oe-chip '+(selectedOutlet===x.code?'active':'')+'" data-o="'+esc(x.code)+'">'+esc(x.name)+'</button>').join('');h.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{selectedOutlet=b.dataset.o;selectedView='new';load(false)})}
+function renderOutlets(){const h=document.getElementById('jptOeOutlets');if(!h)return;h.innerHTML=((central||outlets.length>1)?'<button class="jpt-oe-chip '+(selectedOutlet==='ALL'?'active':'')+'" data-o="ALL">ALL OUTLETS</button>':'')+outlets.map(x=>'<button class="jpt-oe-chip '+(selectedOutlet===x.code?'active':'')+'" data-o="'+esc(x.code)+'">'+esc(x.name)+'</button>').join('');h.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{selectedOutlet=b.dataset.o;selectedView='new';load(false)})}
 
 function renderTabs(){
  const h=document.getElementById('jptOeTabs');if(!h)return;const scoped=rows.filter(x=>selectedOutlet==='ALL'||outlet(x)===selectedOutlet),c={new:0,preparing:0,ready:0,out_for_delivery:0,history:0};
@@ -142,7 +143,7 @@ async function transition(row,next,extra={}){
 async function action(idv,a,b){
  if(b)b.disabled=true;const row=rows.find(x=>id(x)===String(idv));if(!row){if(b)b.disabled=false;return}
  try{let v;if(a==='accept'){v=await transition(row,'preparing',{target_minutes:30});selectedView='preparing'}else if(a==='reject'){if(!confirm('Reject this customer order?'))return;v=await transition(row,'cancelled',{rejection_reason:'Rejected by restaurant'});selectedView='history'}else{v=await transition(row,a);selectedView=a==='delivered'?'history':view(a);if(a==='ready'){try{const r=await window.sb.rpc('delivery_offer_next',{p_order_id:Number(row.id)});if(r.error)console.warn('[JPT Orders] delivery offer',r.error.message)}catch(e){console.warn('[JPT Orders] delivery offer check',e)}}}
- const i=rows.findIndex(x=>id(x)===idv);if(i>=0)rows[i]=v;render();toast('Order updated successfully.')}catch(e){toast('Order update failed: '+(e?.message||e))}finally{if(b)b.disabled=false}
+ const i=rows.findIndex(x=>id(x)===idv);if(i>=0)rows[i]=v;render();await load(false);toast('Order updated successfully.')}catch(e){toast('Order update failed: '+(e?.message||e))}finally{if(b)b.disabled=false}
 }
 function toast(m){if(typeof window.toast==='function')window.toast(m);else{const n=document.getElementById('jptOeNotice');if(n)n.textContent=m}}
 function stopAlert(i){const key=String(i||'');const n=activeNotifications.get(key);if(n){try{n.close()}catch(e){}activeNotifications.delete(key)}alertQueue=alertQueue.filter(q=>id(q)!==key);if(alertId!==null&&String(alertId)===key){stopRingtone();alertId=null;document.getElementById('jptOeAlert')?.remove();const next=alertQueue.shift();if(next&&norm(next.status)==='new'){showAlert(next)}}}
@@ -162,7 +163,7 @@ async function load(manual){
  if(refreshing){queued=true;return}refreshing=true;
  try{
   await loadOutlets();if(pushOutletId&&outlets.some(o=>o.code===pushOutletId))selectedOutlet=pushOutletId;let q=window.sb.from('orders').select('id,customer_name,customer_phone,customer_address,items,subtotal,discount,delivery_charge,total,total_amount,status,eta_minutes,notes,created_at,updated_at,order_no,order_id,payment,outlet_id,target_minutes,accepted_at,deadline_at,rejection_reason,preparing_at,ready_at,out_for_delivery_at,delivered_at').order('created_at',{ascending:false}).limit(150);
-  if(!central||selectedOutlet!=='ALL')q=q.eq('outlet_id',selectedOutlet);const r=await q;if(r.error)throw r.error;
+  if(selectedOutlet!=='ALL')q=q.eq('outlet_id',selectedOutlet);const r=await q;if(r.error)throw r.error;
   const fresh=(r.data||[]).map(x=>({...x,status:norm(x.status)})).filter(x=>outlets.some(o=>o.code===outlet(x))).sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
   const freshNew=new Set(fresh.filter(x=>norm(x.status)==='new').map(id));
   alertQueue=alertQueue.filter(x=>freshNew.has(id(x)));
@@ -173,7 +174,7 @@ async function load(manual){
  }catch(e){toast('Orders load failed: '+(e?.message||e))}finally{refreshing=false;if(queued){queued=false;load(false)}}
 }
 function realtime(){
- try{if(channel)window.sb.removeChannel(channel);channel=window.sb.channel('jpt-clean-orders-'+Date.now()).on('postgres_changes',{event:'INSERT',schema:'public',table:'orders'},p=>{const x=p?.new;if(!x||!outlets.some(o=>o.code===String(x.outlet_id)))return;if(selectedOutlet!=='ALL'&&String(x.outlet_id)!==selectedOutlet)return;const row={...x,status:norm(x.status)};rows=[row,...rows.filter(r=>id(r)!==id(row))];render();if(norm(row.status)==='new'&&!seenNew.has(id(row))){seenNew.add(id(row));selectedView='new';render();showAlert(row)}}).on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders'},p=>{const x=p?.new;if(!x||!outlets.some(o=>o.code===String(x.outlet_id)))return;if(selectedOutlet!=='ALL'&&String(x.outlet_id)!==selectedOutlet)return;rows=rows.map(r=>id(r)===id(x)?{...x,status:norm(x.status)}:r);if(norm(x.status)!=='new')stopAlert(id(x));render()}).subscribe((st)=>{if(st==='CHANNEL_ERROR'||st==='TIMED_OUT'||st==='CLOSED')setTimeout(()=>load(false),1200)})}catch(e){console.warn('[JPT Orders] realtime unavailable',e)}
+ try{if(channel)window.sb.removeChannel(channel);channel=window.sb.channel('jpt-clean-orders-'+Date.now()).on('postgres_changes',{event:'INSERT',schema:'public',table:'orders'},p=>{const x=p?.new;if(!x||!outlets.some(o=>o.code===String(x.outlet_id)))return;const row={...x,status:norm(x.status)};rows=[row,...rows.filter(r=>id(r)!==id(row))];render();if(norm(row.status)==='new'&&!seenNew.has(id(row))){seenNew.add(id(row));selectedView='new';render();showAlert(row)}}).on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders'},p=>{const x=p?.new;if(!x||!outlets.some(o=>o.code===String(x.outlet_id)))return;rows=rows.map(r=>id(r)===id(x)?{...x,status:norm(x.status)}:r);if(norm(x.status)!=='new')stopAlert(id(x));render()}).subscribe((st)=>{if(st==='CHANNEL_ERROR'||st==='TIMED_OUT'||st==='CLOSED')setTimeout(()=>load(false),1200)})}catch(e){console.warn('[JPT Orders] realtime unavailable',e)}
 }
 function readPushUrl(){try{const u=new URLSearchParams(location.search);if(u.get('push')!=='order')return false;const oi=u.get('order_id')||null,oo=u.get('outlet_id')||null;if(!oi)return false;pushOrderId=oi;pushOutletId=oo;pushHandled=false;return true}catch(e){return false}}
 async function handlePushUrl(){if(!readPushUrl())return;try{if(window.showPanel)window.showPanel('orders')}catch(e){}selectedView='new';render();setTimeout(()=>detail(pushOrderId),150)}
