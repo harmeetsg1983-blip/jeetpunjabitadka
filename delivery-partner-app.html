@@ -106,10 +106,24 @@ function stopLocation(){if(locationWatchId!==null&&navigator.geolocation){naviga
 async function loadEarnings(){try{let {data,error}=await sb.rpc('delivery_partner_earnings_summary',{p_days:30});if(error)throw error;let rows=Array.isArray(data)?data:[];let delivered=rows.reduce((a,x)=>a+Number(x.delivered_count||0),0),earn=rows.reduce((a,x)=>a+Number(x.earnings||0),0);$('earnings').textContent='Last 30 days: '+delivered+' delivered × ₹50 = ₹'+earn}catch(e){$('earnings').textContent='Earnings unavailable until a verified rider has deliveries.'}}
 const JPT_DELIVERY_OFFER_AUDIO='./ringtones/1000449571.mp4';
 const JPT_DELIVERY_READY_AUDIO='./ringtones/1000449491.mp4';
-function toneFile(){return null}
+const JPT_DELIVERY_ACCEPTED_AUDIO='./ringtones/1000449572.mp4';
+function toneFile(eventCode){
+  switch(String(eventCode||'')){
+    case 'JPT_DELIVERY_NEW_OFFER_ALERT': return JPT_DELIVERY_OFFER_AUDIO;
+    case 'JPT_DELIVERY_READY_ALERT': return JPT_DELIVERY_READY_AUDIO;
+    case 'JPT_ORDER_ACCEPTED_ALERT': return JPT_DELIVERY_ACCEPTED_AUDIO;
+    default: return JPT_DELIVERY_OFFER_AUDIO;
+  }
+}
 function startTone(){
   stopTone();
-  try{audio=new Audio(JPT_DELIVERY_OFFER_AUDIO);audio.preload='auto';audio.loop=true;audio.play().catch(()=>{})}catch(e){}
+  try{audio=new Audio(toneFile('JPT_DELIVERY_NEW_OFFER_ALERT'));audio.preload='auto';audio.loop=true;audio.volume=1;audio.play().catch(()=>{})}catch(e){}
+}
+function playDeliveryReadyTone(){
+  try{const a=new Audio(toneFile('JPT_DELIVERY_READY_ALERT'));a.preload='auto';a.loop=false;a.volume=1;const p=a.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}
+}
+function playDeliveryAcceptedTone(){
+  try{const a=new Audio(toneFile('JPT_ORDER_ACCEPTED_ALERT'));a.preload='auto';a.loop=false;a.volume=1;const p=a.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}
 }
 function stopTone(){if(audio){audio.pause();audio.currentTime=0;audio=null}}
 function testTone(){startTone();setTimeout(stopTone,5000)}
