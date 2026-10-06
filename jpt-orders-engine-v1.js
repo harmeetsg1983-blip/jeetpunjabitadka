@@ -165,7 +165,7 @@ async function load(manual){
   if(!central||selectedOutlet!=='ALL')q=q.eq('outlet_id',selectedOutlet);const r=await q;if(r.error)throw r.error;
   const fresh=(r.data||[]).map(x=>({...x,status:norm(x.status)})).filter(x=>outlets.some(o=>o.code===outlet(x))).sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
   const freshNew=new Set(fresh.filter(x=>norm(x.status)==='new').map(id));
-  alertQueue=alertQueue.filter(x=>freshNew.has(id(x)));
+  alertQueue=alertQueue.filter(x=>freshNew.has(id(x)));\n  const active=alertId&&fresh.find(x=>id(x)===String(alertId));if(alertId&&(!active||norm(active.status)!=='new'))stopAlert(alertId);
   if(baseline){for(const x of fresh){if(norm(x.status)==='new'&&!seenNew.has(id(x))){seenNew.add(id(x));selectedView='new';showAlert(x)}}}else freshNew.forEach(x=>seenNew.add(x));
   for(const old of [...seenNew])if(!freshNew.has(old))seenNew.delete(old);baseline=true;rows=fresh;render();if(pushOrderId&&!pushHandled){pushHandled=true;selectedView='new';render();setTimeout(()=>detail(pushOrderId),0)}
   const n=document.getElementById('jptOeNotice');if(n)n.textContent=(central?'Central':'Partner')+' Orders • '+rows.length+' latest records';if(manual)toast('Orders refreshed.');
