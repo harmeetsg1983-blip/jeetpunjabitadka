@@ -181,17 +181,18 @@ function render(){
   <div class="jpt-cob-items">${itemsHtml(x)}</div><div class="jpt-cob-summary"><div class="jpt-cob-line"><span>Item subtotal</span><span>${money(sub)}</span></div>${del?`<div class="jpt-cob-line"><span>Delivery charge</span><span>${money(del)}</span></div>`:''}${disc?`<div class="jpt-cob-line discount"><span>Discount</span><span>−${money(disc)}</span></div>`:''}<div class="jpt-cob-line total"><span>Total</span><span>${money(total)}</span></div></div></div><button type="button" class="jpt-order-open-btn" data-open-order-btn="${esc(x.id||'')}">VIEW FULL ORDER</button></div>${selected==='history'?'<div class="jpt-cob-actions"><span class="jpt-cob-history">'+(st==='cancelled'?'CANCELLED ORDER':'COMPLETED ORDER')+'</span></div>':'<div class="jpt-cob-actions">'+actionHtml(x)+'</div>'}</article>`
  }).join(''):'<div class="jpt-cob-empty">No '+esc(selected.replaceAll('_',' '))+' orders right now.</div>'}</div>`;
  root.querySelectorAll('[data-act]').forEach(b=>{
-   const runAction=(ev)=>{
+   const runAction=(ev,fromTouch=false)=>{
      ev.preventDefault();ev.stopPropagation();
-     if(b.dataset.busy==='1'||b.dataset.touchHandled==='1')return;
+     if(b.dataset.busy==='1')return;
+     if(!fromTouch&&b.dataset.touchHandled==='1')return;
      b.dataset.busy='1';
      doAction(b).finally(()=>{b.dataset.busy='0';});
    };
-   b.onclick=runAction;
-   b.ontouchend=(ev)=>{
+   b.onclick=ev=>runAction(ev,false);
+   b.ontouchend=ev=>{
      if(b.dataset.busy==='1')return;
      b.dataset.touchHandled='1';
-     runAction(ev);
+     runAction(ev,true);
      setTimeout(()=>{b.dataset.touchHandled='0';},700);
    };
  });
