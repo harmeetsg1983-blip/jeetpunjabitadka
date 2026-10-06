@@ -32,7 +32,9 @@ async function playSavedRingtone(){
     activeRingtoneUrl=URL.createObjectURL(file);
     const a=new Audio(activeRingtoneUrl);
     a.loop=true;
-    a.volume=Math.max(0,Math.min(1,Number(window.JPTPartnerNotificationCenterV1?.getPrefs?._ringVolume||1)));
+    let volume=1;
+    try{const prefs=await window.JPTPartnerNotificationCenterV1?.getPrefs?.();volume=Math.max(0,Math.min(1,Number(prefs?.ringVolume??100)/100))}catch(e){}
+    a.volume=volume;
     activeRingtoneAudio=a;
     await a.play();
     return true;
