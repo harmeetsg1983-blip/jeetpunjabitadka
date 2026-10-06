@@ -12,7 +12,7 @@ window.__JPTDisableLegacyOrderRuntime=()=>true;
 const V='orders-engine-v1.0.3';
 const STATES={new:'NEW ORDER',preparing:'PREPARING',accepted:'PREPARING',ready:'READY',out_for_delivery:'OUT FOR DELIVERY',delivered:'HISTORY',completed:'HISTORY',cancelled:'HISTORY'};
 const HISTORY=new Set(['delivered','completed','cancelled']);
-let rows=[],outlets=[],selectedView='new',selectedOutlet='ALL',central=false,channel=null,refreshing=false,queued=false,seenNew=new Set(),baseline=false,alertId=null,pushOrderId=null,pushOutletId=null,pushHandled=false;
+let rows=[],outlets=[],selectedView='new',selectedOutlet='ALL',central=false,channel=null,refreshing=false,queued=false,seenNew=new Set(),baseline=false,alertId=null,pushOrderId=null,pushOutletId=null,pushHandled=false,alertQueue=[];
 const activeNotifications=new Map();
 let activeRingtoneAudio=null,activeRingtoneUrl=null;
 async function playSavedRingtone(){
@@ -137,9 +137,9 @@ async function action(idv,a,b){
  const i=rows.findIndex(x=>id(x)===idv);if(i>=0)rows[i]=v;render();toast('Order updated successfully.')}catch(e){toast('Order update failed: '+(e?.message||e))}finally{if(b)b.disabled=false}
 }
 function toast(m){if(typeof window.toast==='function')window.toast(m);else{const n=document.getElementById('jptOeNotice');if(n)n.textContent=m}}
-function stopAlert(i){const key=String(i||'');const n=activeNotifications.get(key);if(n){try{n.close()}catch(e){}activeNotifications.delete(key)}stopRingtone();if(alertId!==null&&String(alertId)===key){alertId=null;document.getElementById('jptOeAlert')?.remove()}}
+function stopAlert(i){const key=String(i||'');const n=activeNotifications.get(key);if(n){try{n.close()}catch(e){}activeNotifications.delete(key)}stopRingtone();if(alertId!==null&&String(alertId)===key){alertId=null;document.getElementById('jptOeAlert')?.remove();const next=alertQueue.shift();if(next&&norm(next.status)==='new'&&!seenNew.has(id(next))){showAlert(next)}}}
 function showAlert(x){
- const aid=id(x);if(!aid||alertId===aid)return;alertId=aid;try{navigator.vibrate?.([450,150,450,150,700])}catch(e){}
+ const aid=id(x);if(!aid)return;if(alertId&&alertId!==aid){if(!alertQueue.some(q=>id(q)===aid))alertQueue.push(x);return}if(alertId===aid)return;alertId=aid;try{navigator.vibrate?.([450,150,450,150,700])}catch(e){}
  playSavedRingtone();
  try{if('Notification' in window&&Notification.permission==='granted'){const n=new Notification('JPT — NEW ORDER',{body:'Order '+(x.order_no||x.id)+' received. Tap to open Orders.',tag:'jpt-clean-'+id(x),requireInteraction:true,vibrate:[450,150,450],data:{order_id:id(x),outlet_id:outlet(x)}});const key=id(x);activeNotifications.set(key,n);n.onclose=()=>{if(activeNotifications.get(key)===n)activeNotifications.delete(key)};n.onclick=()=>{window.focus();selectedView='new';render();detail(key);n.close()}}}catch(e){}
  const root=document.getElementById('jptOrdersOpsV1');if(root){const a=document.createElement('div');a.id='jptOeAlert';a.className='jpt-oe-alert';a.innerHTML='<b>🔔 NEW ORDER — '+esc(x.order_no||x.id)+'</b><span>Accept or Reject to stop the alert.</span><br><button>OPEN ORDER</button>';root.prepend(a);a.querySelector('button').onclick=()=>detail(id(x))}
@@ -157,6 +157,7 @@ async function load(manual){
   if(!central||selectedOutlet!=='ALL')q=q.eq('outlet_id',selectedOutlet);const r=await q;if(r.error)throw r.error;
   const fresh=(r.data||[]).map(x=>({...x,status:norm(x.status)})).filter(x=>outlets.some(o=>o.code===outlet(x)));
   const freshNew=new Set(fresh.filter(x=>norm(x.status)==='new').map(id));
+  alertQueue=alertQueue.filter(x=>freshNew.has(id(x)));
   if(baseline){for(const x of fresh){if(norm(x.status)==='new'&&!seenNew.has(id(x))){seenNew.add(id(x));selectedView='new';showAlert(x)}}}else freshNew.forEach(x=>seenNew.add(x));
   for(const old of [...seenNew])if(!freshNew.has(old))seenNew.delete(old);baseline=true;rows=fresh;render();if(pushOrderId&&!pushHandled){pushHandled=true;selectedView='new';render();setTimeout(()=>detail(pushOrderId),0)}
   const n=document.getElementById('jptOeNotice');if(n)n.textContent=(central?'Central':'Partner')+' Orders • '+rows.length+' latest records';if(manual)toast('Orders refreshed.');
