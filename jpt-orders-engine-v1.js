@@ -12,7 +12,7 @@ window.__JPTDisableLegacyOrderRuntime=()=>true;
 const V='orders-engine-v1.0.0';
 const STATES={new:'NEW ORDER',preparing:'PREPARING',accepted:'PREPARING',ready:'READY',out_for_delivery:'OUT FOR DELIVERY',delivered:'HISTORY',completed:'HISTORY',cancelled:'HISTORY'};
 const HISTORY=new Set(['delivered','completed','cancelled']);
-let rows=[],outlets=[],selectedView='new',selectedOutlet='ALL',central=false,channel=null,refreshing=false,queued=false,seenNew=new Set(),baseline=false,alertId=null;
+let rows=[],outlets=[],selectedView='new',selectedOutlet='ALL',central=false,channel=null,refreshing=false,queued=false,seenNew=new Set(),baseline=false,alertId=null,pushOrderId=null,pushOutletId=null,pushHandled=false;
 const busy=new Set();
 const esc=s=>String(s??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
@@ -121,19 +121,19 @@ function detail(i){
 async function load(manual){
  if(refreshing){queued=true;return}refreshing=true;
  try{
-  await loadOutlets();let q=window.sb.from('orders').select('id,customer_name,customer_phone,customer_address,items,subtotal,discount,delivery_charge,total,total_amount,status,eta_minutes,notes,created_at,updated_at,order_no,order_id,payment,outlet_id,target_minutes,accepted_at,deadline_at,rejection_reason,preparing_at,ready_at,out_for_delivery_at,delivered_at').order('created_at',{ascending:false}).limit(150);
+  await loadOutlets();if(pushOutletId&&outlets.some(o=>o.code===pushOutletId))selectedOutlet=pushOutletId;let q=window.sb.from('orders').select('id,customer_name,customer_phone,customer_address,items,subtotal,discount,delivery_charge,total,total_amount,status,eta_minutes,notes,created_at,updated_at,order_no,order_id,payment,outlet_id,target_minutes,accepted_at,deadline_at,rejection_reason,preparing_at,ready_at,out_for_delivery_at,delivered_at').order('created_at',{ascending:false}).limit(150);
   if(!central||selectedOutlet!=='ALL')q=q.eq('outlet_id',selectedOutlet);const r=await q;if(r.error)throw r.error;
   const fresh=(r.data||[]).map(x=>({...x,status:norm(x.status)})).filter(x=>outlets.some(o=>o.code===outlet(x)));
   const freshNew=new Set(fresh.filter(x=>norm(x.status)==='new').map(id));
   if(baseline){for(const x of fresh){if(norm(x.status)==='new'&&!seenNew.has(id(x))){seenNew.add(id(x));selectedView='new';showAlert(x)}}}else freshNew.forEach(x=>seenNew.add(x));
-  for(const old of [...seenNew])if(!freshNew.has(old))seenNew.delete(old);baseline=true;rows=fresh;render();
+  for(const old of [...seenNew])if(!freshNew.has(old))seenNew.delete(old);baseline=true;rows=fresh;render();if(pushOrderId&&!pushHandled){pushHandled=true;selectedView='new';render();setTimeout(()=>detail(pushOrderId),0)}
   const n=document.getElementById('jptOeNotice');if(n)n.textContent=(central?'Central':'Partner')+' Orders • '+rows.length+' latest records';if(manual)toast('Orders refreshed.');
  }catch(e){toast('Orders load failed: '+(e?.message||e))}finally{refreshing=false;if(queued){queued=false;load(false)}}
 }
 function realtime(){
  try{if(channel)window.sb.removeChannel(channel);channel=window.sb.channel('jpt-clean-orders-'+Date.now()).on('postgres_changes',{event:'INSERT',schema:'public',table:'orders'},p=>{const x=p?.new;if(!x||!outlets.some(o=>o.code===String(x.outlet_id)))return;if(selectedOutlet!=='ALL'&&String(x.outlet_id)!==selectedOutlet)return;const row={...x,status:norm(x.status)};rows=[row,...rows.filter(r=>id(r)!==id(row))];render();if(norm(row.status)==='new'){seenNew.add(id(row));selectedView='new';render();showAlert(row)}}).on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders'},p=>{const x=p?.new;if(!x||!outlets.some(o=>o.code===String(x.outlet_id)))return;if(selectedOutlet!=='ALL'&&String(x.outlet_id)!==selectedOutlet)return;rows=rows.map(r=>id(r)===id(x)?{...x,status:norm(x.status)}:r);if(norm(x.status)!=='new')stopAlert(id(x));render()}).subscribe((st)=>{if(st==='CHANNEL_ERROR'||st==='TIMED_OUT'||st==='CLOSED')setTimeout(()=>load(false),1200)})}catch(e){console.warn('[JPT Orders] realtime unavailable',e)}
 }
-async function boot(){if(!document.getElementById('orders')||!window.sb){setTimeout(boot,300);return}if(!mount())return;await load(false);realtime();clearInterval(window.__JPTCleanOrdersRefresh);window.__JPTCleanOrdersRefresh=setInterval(()=>load(false),20000);clearInterval(window.__JPTCleanOrdersCountdown);window.__JPTCleanOrdersCountdown=setInterval(tick,1000)}
+async function boot(){if(!document.getElementById('orders')||!window.sb){setTimeout(boot,300);return}if(!mount())return;try{const u=new URLSearchParams(location.search);if(u.get('push')==='order'){pushOrderId=u.get('order_id')||null;pushOutletId=u.get('outlet_id')||null}}catch(e){}await load(false);realtime();clearInterval(window.__JPTCleanOrdersRefresh);window.__JPTCleanOrdersRefresh=setInterval(()=>load(false),20000);clearInterval(window.__JPTCleanOrdersCountdown);window.__JPTCleanOrdersCountdown=setInterval(tick,1000)}
 window.JPTCleanOrdersEngineV1={version:V,reload:()=>load(true),stopAlert,openOrder:detail,getRows:()=>rows.slice()};
 boot();
 })();
