@@ -8,7 +8,7 @@ self.addEventListener('push',event=>{
   const outlet=data.outlet_name||data.outlet||'Restaurant Partner';
   const order=data.order_no||data.order_id||'New order';
   const body=data.body||('New order '+order+' • '+outlet+' • ACCEPT / REJECT');
-  const target=data.url||('./partner-v107.html?push=order&order_id='+encodeURIComponent(data.order_id||'')+'&outlet_id='+encodeURIComponent(data.outlet_id||'')+'&order_no='+encodeURIComponent(data.order_no||''));
+  const target=data.url||('./admin.html?push=order&section=orders&order_id='+encodeURIComponent(data.order_id||'')+'&outlet_id='+encodeURIComponent(data.outlet_id||'')+'&order_no='+encodeURIComponent(data.order_no||''));
   event.waitUntil(self.registration.showNotification(title,{body,icon:'./jpt-partner-icon-512.png',badge:'./jpt-partner-icon-512.png',tag:data.tag||('jpt-new-order-'+String(data.order_id||order)),renotify:true,requireInteraction:true,data:{url:target,order_id:data.order_id||'',outlet_id:data.outlet_id||'',order_no:data.order_no||''}}));
 });
 self.addEventListener('notificationclick',event=>{
