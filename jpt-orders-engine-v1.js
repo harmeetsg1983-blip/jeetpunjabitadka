@@ -25,7 +25,7 @@ const view=s=>{s=norm(s);return s==='accepted'?'preparing':HISTORY.has(s)?'histo
 function style(){
  if(document.getElementById('jptOrdersEngineStyleV1'))return;
  const s=document.createElement('style');s.id='jptOrdersEngineStyleV1';
- s.textContent=\`
+ s.textContent=`
  #jptOrdersOpsV1{margin:0;background:#080808;color:#fff;border:1px solid #302718;border-radius:18px;overflow:hidden}
  #jptOrdersOpsV1 *{box-sizing:border-box}.jpt-oe-head{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:16px;border-bottom:1px solid #2b2b2b;background:linear-gradient(135deg,#1b1408,#0d0d0d)}
  .jpt-oe-k{font-size:9px;letter-spacing:1.5px;color:#a98532;font-weight:950}.jpt-oe-head h2{margin:2px 0;color:#e0b84d;font-size:25px}.jpt-oe-muted{color:#8e8e8e;font-size:11px}
@@ -40,15 +40,15 @@ function style(){
  .jpt-oe-empty{padding:35px 15px;text-align:center;color:#777;font-size:12px}.jpt-oe-alert{margin:12px;padding:12px;border:1px solid #9a7729;border-radius:13px;background:#211707;color:#f2d57e}.jpt-oe-alert b{display:block;font-size:13px}.jpt-oe-alert button{margin-top:8px;border:1px solid #d8ae42;background:#d8ae42;color:#111;border-radius:9px;padding:8px 10px;font-weight:950}
  .jpt-oe-detail{position:fixed;inset:0;z-index:10000;background:#000b;padding:4vh 12px;display:grid;place-items:center}.jpt-oe-detail[hidden]{display:none}.jpt-oe-box{width:min(620px,100%);max-height:90vh;overflow:auto;background:#111;border:1px solid #3d321c;border-radius:18px;padding:16px}.jpt-oe-close{border:1px solid #444;background:#181818;color:#fff;border-radius:9px;padding:8px 10px}.jpt-oe-detail-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.jpt-oe-detail-actions button{border:1px solid #444;background:#171717;color:#fff;border-radius:10px;padding:10px 12px;font-weight:950}.jpt-oe-detail-actions .primary{background:#d8ae42;color:#111;border-color:#d8ae42}
  @media(max-width:700px){.jpt-oe-head{align-items:flex-start}.jpt-oe-actions-head{flex-direction:column}}
- \`;document.head.appendChild(s);
+ `;document.head.appendChild(s);
 }
 
 function mount(){
  const p=document.getElementById('orders');if(!p)return false;
- p.innerHTML=\`<div id="jptOrdersOpsV1">
+ p.innerHTML=`<div id="jptOrdersOpsV1">
  <div class="jpt-oe-head"><div><div class="jpt-oe-k">RESTAURANT PARTNER</div><h2>Orders</h2><div id="jptOeNotice" class="jpt-oe-muted">Connecting…</div></div>
  <div class="jpt-oe-actions-head"><button id="jptOeRefresh" class="jpt-oe-btn">↻ Refresh</button><button id="jptOeBell" class="jpt-oe-bell">🔔 <span id="jptOeBellCount">0</span></button></div></div>
- <div id="jptOeOutlets" class="jpt-oe-outlets"></div><div id="jptOeTabs" class="jpt-oe-tabs"></div><div id="jptOeList" class="jpt-oe-list"></div><div id="jptOeDetail" class="jpt-oe-detail" hidden></div></div>\`;
+ <div id="jptOeOutlets" class="jpt-oe-outlets"></div><div id="jptOeTabs" class="jpt-oe-tabs"></div><div id="jptOeList" class="jpt-oe-list"></div><div id="jptOeDetail" class="jpt-oe-detail" hidden></div></div>`;
  style();
  document.getElementById('jptOeRefresh').onclick=()=>load(true);document.getElementById('jptOeBell').onclick=openNew;
  return true;
