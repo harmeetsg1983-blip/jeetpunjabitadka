@@ -14,6 +14,34 @@ const STATES={new:'NEW ORDER',preparing:'PREPARING',accepted:'PREPARING',ready:'
 const HISTORY=new Set(['delivered','completed','cancelled']);
 let rows=[],outlets=[],selectedView='new',selectedOutlet='ALL',central=false,channel=null,refreshing=false,queued=false,seenNew=new Set(),baseline=false,alertId=null,pushOrderId=null,pushOutletId=null,pushHandled=false;
 const activeNotifications=new Map();
+let activeRingtoneAudio=null,activeRingtoneUrl=null;
+async function playSavedRingtone(){
+  try{
+    if(activeRingtoneAudio){try{activeRingtoneAudio.pause()}catch(e){}activeRingtoneAudio=null}
+    if(activeRingtoneUrl){try{URL.revokeObjectURL(activeRingtoneUrl)}catch(e){}activeRingtoneUrl=null}
+    const db=await new Promise((resolve,reject)=>{
+      const q=indexedDB.open('jptPartnerAlertDB',1);
+      q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error);
+    });
+    const file=await new Promise((resolve,reject)=>{
+      const tx=db.transaction('settings','readonly'),req=tx.objectStore('settings').get('ringtone');
+      req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+    });
+    try{db.close()}catch(e){}
+    if(!file)return false;
+    activeRingtoneUrl=URL.createObjectURL(file);
+    const a=new Audio(activeRingtoneUrl);
+    a.loop=true;
+    a.volume=Math.max(0,Math.min(1,Number(window.JPTPartnerNotificationCenterV1?.getPrefs?._ringVolume||1)));
+    activeRingtoneAudio=a;
+    await a.play();
+    return true;
+  }catch(e){console.warn('[JPT Orders] saved ringtone playback unavailable',e);return false}
+}
+function stopRingtone(){
+  if(activeRingtoneAudio){try{activeRingtoneAudio.pause();activeRingtoneAudio.currentTime=0}catch(e){}activeRingtoneAudio=null}
+  if(activeRingtoneUrl){try{URL.revokeObjectURL(activeRingtoneUrl)}catch(e){}activeRingtoneUrl=null}
+}
 const busy=new Set();
 const esc=s=>String(s??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
@@ -107,9 +135,10 @@ async function action(idv,a,b){
  const i=rows.findIndex(x=>id(x)===idv);if(i>=0)rows[i]=v;render();toast('Order updated successfully.')}catch(e){toast('Order update failed: '+(e?.message||e))}finally{if(b)b.disabled=false}
 }
 function toast(m){if(typeof window.toast==='function')window.toast(m);else{const n=document.getElementById('jptOeNotice');if(n)n.textContent=m}}
-function stopAlert(i){const key=String(i||'');const n=activeNotifications.get(key);if(n){try{n.close()}catch(e){}activeNotifications.delete(key)}if(alertId!==null&&String(alertId)===key){alertId=null;document.getElementById('jptOeAlert')?.remove()}}
+function stopAlert(i){const key=String(i||'');const n=activeNotifications.get(key);if(n){try{n.close()}catch(e){}activeNotifications.delete(key)}stopRingtone();if(alertId!==null&&String(alertId)===key){alertId=null;document.getElementById('jptOeAlert')?.remove()}}
 function showAlert(x){
  const aid=id(x);if(!aid||alertId===aid)return;alertId=aid;try{navigator.vibrate?.([450,150,450,150,700])}catch(e){}
+ playSavedRingtone();
  try{if('Notification' in window&&Notification.permission==='granted'){const n=new Notification('JPT — NEW ORDER',{body:'Order '+(x.order_no||x.id)+' received. Tap to open Orders.',tag:'jpt-clean-'+id(x),requireInteraction:true,vibrate:[450,150,450],data:{order_id:id(x),outlet_id:outlet(x)}});const key=id(x);activeNotifications.set(key,n);n.onclose=()=>{if(activeNotifications.get(key)===n)activeNotifications.delete(key)};n.onclick=()=>{window.focus();selectedView='new';render();detail(key);n.close()}}}catch(e){}
  const root=document.getElementById('jptOrdersOpsV1');if(root){const a=document.createElement('div');a.id='jptOeAlert';a.className='jpt-oe-alert';a.innerHTML='<b>🔔 NEW ORDER — '+esc(x.order_no||x.id)+'</b><span>Accept or Reject to stop the alert.</span><br><button>OPEN ORDER</button>';root.prepend(a);a.querySelector('button').onclick=()=>detail(id(x))}
 }
