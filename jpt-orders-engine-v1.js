@@ -9,10 +9,11 @@ window.__JPT_CLEAN_ORDERS_ENGINE_V1__=true;
 window.__JPTOrdersV3Active=true;
 window.__JPTDisableLegacyOrderRuntime=()=>true;
 
-const V='orders-engine-v1.0.2';
+const V='orders-engine-v1.0.3';
 const STATES={new:'NEW ORDER',preparing:'PREPARING',accepted:'PREPARING',ready:'READY',out_for_delivery:'OUT FOR DELIVERY',delivered:'HISTORY',completed:'HISTORY',cancelled:'HISTORY'};
 const HISTORY=new Set(['delivered','completed','cancelled']);
 let rows=[],outlets=[],selectedView='new',selectedOutlet='ALL',central=false,channel=null,refreshing=false,queued=false,seenNew=new Set(),baseline=false,alertId=null,pushOrderId=null,pushOutletId=null,pushHandled=false;
+const activeNotifications=new Map();
 const busy=new Set();
 const esc=s=>String(s??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
@@ -106,10 +107,10 @@ async function action(idv,a,b){
  const i=rows.findIndex(x=>id(x)===idv);if(i>=0)rows[i]=v;render();toast('Order updated successfully.')}catch(e){toast('Order update failed: '+(e?.message||e))}finally{if(b)b.disabled=false}
 }
 function toast(m){if(typeof window.toast==='function')window.toast(m);else{const n=document.getElementById('jptOeNotice');if(n)n.textContent=m}}
-function stopAlert(i){if(alertId!==null&&String(alertId)===String(i)){alertId=null;document.getElementById('jptOeAlert')?.remove()}}
+function stopAlert(i){const key=String(i||'');const n=activeNotifications.get(key);if(n){try{n.close()}catch(e){}activeNotifications.delete(key)}if(alertId!==null&&String(alertId)===key){alertId=null;document.getElementById('jptOeAlert')?.remove()}}
 function showAlert(x){
  const aid=id(x);if(!aid||alertId===aid)return;alertId=aid;try{navigator.vibrate?.([450,150,450,150,700])}catch(e){}
- try{if('Notification' in window&&Notification.permission==='granted'){const n=new Notification('JPT — NEW ORDER',{body:'Order '+(x.order_no||x.id)+' received. Tap to open Orders.',tag:'jpt-clean-'+id(x),requireInteraction:true,vibrate:[450,150,450],data:{order_id:id(x),outlet_id:outlet(x)}});n.onclick=()=>{window.focus();selectedView='new';render();detail(id(x));n.close()}}}catch(e){}
+ try{if('Notification' in window&&Notification.permission==='granted'){const n=new Notification('JPT — NEW ORDER',{body:'Order '+(x.order_no||x.id)+' received. Tap to open Orders.',tag:'jpt-clean-'+id(x),requireInteraction:true,vibrate:[450,150,450],data:{order_id:id(x),outlet_id:outlet(x)}});const key=id(x);activeNotifications.set(key,n);n.onclose=()=>{if(activeNotifications.get(key)===n)activeNotifications.delete(key)};n.onclick=()=>{window.focus();selectedView='new';render();detail(key);n.close()}}}catch(e){}
  const root=document.getElementById('jptOrdersOpsV1');if(root){const a=document.createElement('div');a.id='jptOeAlert';a.className='jpt-oe-alert';a.innerHTML='<b>🔔 NEW ORDER — '+esc(x.order_no||x.id)+'</b><span>Accept or Reject to stop the alert.</span><br><button>OPEN ORDER</button>';root.prepend(a);a.querySelector('button').onclick=()=>detail(id(x))}
 }
 function openNew(){const x=rows.find(r=>norm(r.status)==='new');if(x)detail(id(x));else{selectedView='new';render()}}
