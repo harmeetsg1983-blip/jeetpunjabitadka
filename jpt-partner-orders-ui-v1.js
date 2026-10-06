@@ -18,7 +18,7 @@ const CENTRAL_RPC='partner_access_is_central_owner';
 const OWNER_OUTLET_CODES=new Set(['JPT-001','SOP-002','NME-004','PFA-003','TOP-005']);
 const STATUS_VIEWS=[['new','NEW'],['preparing','PREPARING'],['ready','READY'],['out_for_delivery','OUT FOR DELIVERY'],['history','COMPLETED']];
 const statusView=s=>{s=status(s);if(s==='accepted'||s==='preparing')return 'preparing';if(s==='completed')return 'delivered';return s};
-let timer=null,channel=null,rowsCache=[],outlets={},selected='preparing',central=false,lastNewest='',loadSeq=0,alertBaselineReady=false,alertedNewIds=new Set();
+let timer=null,channel=null,rowsCache=[],outlets={},selected='preparing',central=false,lastNewest='',loadSeq=0,alertBaselineReady=false,alertedNewIds=new Set(),liveNewIds=new Set(),sessionStartedAt=Date.now();
 const prepDrafts=new Map();
 let pendingNew=new Map();
 const statusLocks=new Map();
@@ -73,7 +73,7 @@ function ensureCentralBell(){
  return host;
 }
 function syncCentralBell(){
- const b=ensureCentralBell(),count=rowsCache.filter(x=>x.__status==='new'&&OWNER_OUTLET_CODES.has(String(x.outlet_id||''))).length;
+ const b=ensureCentralBell(),count=rowsCache.filter(x=>x.__status==='new'&&liveNewIds.has(String(x.id||x.order_no||''))&&OWNER_OUTLET_CODES.has(String(x.outlet_id||''))).length;
  if(!b)return;
  const badge=document.getElementById('jptOpenOrdersBadge');if(badge)badge.textContent=String(count);
  b.classList.toggle('has-orders',count>0);
@@ -98,7 +98,7 @@ function ensureOrderBellBar(){
 }
 function syncOrderBellBar(){
  const bar=ensureOrderBellBar();if(!bar)return;
- const n=rowsCache.filter(x=>x.__status==='new').length;
+ const n=rowsCache.filter(x=>x.__status==='new'&&liveNewIds.has(String(x.id||x.order_no||''))).length;
  const badge=document.getElementById('jptOrderBellCount');if(badge)badge.textContent=String(n);
  bar.style.display=n?'flex':'none';
  const hint=document.getElementById('jptOrderBellHint');if(hint)hint.textContent=n?'Tap the bell to open the complete order':'';
@@ -219,7 +219,7 @@ async function directAction(row,next,extra={}){
  const data=await window.JPTOrderControlBridge.transition(row.id,row.outlet_id,target,extra);
  Object.assign(row,data); row.__status=status(data.status);
  statusLocks.set(String(row.id),{status:row.__status,target_minutes:data.target_minutes,accepted_at:data.accepted_at,deadline_at:data.deadline_at,updatedAt:data.updated_at||new Date().toISOString(),updatedMs:Date.parse(data.updated_at||'')||Date.now(),at:Date.now()});
- if(target!=='new')window.JPTOrderControlBridge.stopAlerts(row.id);
+ if(target!=='new'){liveNewIds.delete(String(row.id));window.JPTOrderControlBridge.stopAlerts(row.id);}
  return data;
 }
 
@@ -284,13 +284,8 @@ async function load(){
     else statusLocks.delete(String(r.id));
   });
   rowsCache=freshRows;
-  const hasNew=rowsCache.some(x=>x.__status==='new'&&OWNER_OUTLET_CODES.has(String(x.outlet_id||'')));
-  if(hasNew) selected='new';
-  else if(selected==='new') selected='preparing';
   const currentNew=rowsCache.filter(x=>x.__status==='new'&&OWNER_OUTLET_CODES.has(String(x.outlet_id||'')));
   currentNew.forEach(x=>pendingNew.set(String(x.id||x.order_no),x));
-  syncCentralBell();
-  syncOrderBellBar();
   /* On the first load after app start/reopen, baseline existing NEW orders
      silently. They must remain visible, but must not be treated as freshly
      created just because the page was refreshed. */
@@ -298,19 +293,22 @@ async function load(){
    currentNew.forEach(x=>alertedNewIds.add(String(x.id||x.order_no)));
    alertBaselineReady=true;
   }else{
-   const freshNew=currentNew.find(x=>!alertedNewIds.has(String(x.id||x.order_no)));
+   const freshNew=currentNew.find(x=>!alertedNewIds.has(String(x.id||x.order_no)) && ((Date.parse(x.created_at||'')||0) >= sessionStartedAt-2000));
    if(freshNew){
     alertedNewIds.add(String(freshNew.id||freshNew.order_no));
+    liveNewIds.add(String(freshNew.id||freshNew.order_no));
     selected='new';
     try{window.showPanel?.('orders')}catch(e){}
     if(typeof window.showOrderAlarm==='function')window.showOrderAlarm(freshNew);
    }
   }
   alertedNewIds.forEach(id=>{if(!currentNew.some(x=>String(x.id||x.order_no)===id))alertedNewIds.delete(id)});
+  liveNewIds.forEach(id=>{if(!currentNew.some(x=>String(x.id||x.order_no)===id))liveNewIds.delete(id)});
   const notice=document.getElementById('ordersNotice');
   if(notice)notice.textContent=(central?'Central':'Selected outlet')+' board • '+rowsCache.length+' latest orders';
   const count=document.getElementById('ordersCount');if(count)count.textContent=String(rowsCache.filter(x=>x.__status===selected).length);
   render();
+  syncCentralBell();
   syncOrderBellBar();
  }catch(e){console.warn('[JPT Central Orders V2]',e);const n=document.getElementById('ordersNotice');if(n)n.innerHTML='<span class="danger">'+esc(e?.message||e)+'</span>'}
 }
@@ -323,7 +321,7 @@ async function bindRealtime(){
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'orders'},p=>{
       const o=p?.new||{};
       if(OWNER_OUTLET_CODES.has(String(o.outlet_id||'')) && String(o.status||'').toLowerCase()==='new'){
-        pendingNew.set(String(o.id||o.order_no),o);alertedNewIds.add(String(o.id||o.order_no));selected='new';try{window.showPanel?.('orders')}catch(e){};
+        pendingNew.set(String(o.id||o.order_no),o);liveNewIds.add(String(o.id||o.order_no));selected='new';try{window.showPanel?.('orders')}catch(e){};
         if(typeof window.showOrderAlarm==='function')window.showOrderAlarm(o);
         setTimeout(()=>{try{openOrderDetail(o.id)}catch(e){}},180);
       }
@@ -331,7 +329,7 @@ async function bindRealtime(){
     })
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders'},p=>{
       const o=p?.new||{};
-      if(OWNER_OUTLET_CODES.has(String(o.outlet_id||'')) && String(o.status||'').toLowerCase()!=='new')pendingNew.delete(String(o.id||o.order_no));
+      if(OWNER_OUTLET_CODES.has(String(o.outlet_id||'')) && String(o.status||'').toLowerCase()!=='new'){pendingNew.delete(String(o.id||o.order_no));liveNewIds.delete(String(o.id||o.order_no));}
       load().catch(()=>{});
     }).subscribe((status,err)=>{
       console.log('[JPT Central Orders V2] realtime status',status,err||'');
@@ -345,7 +343,7 @@ function start(){
  try{window.__JPTDisableLegacyOrderRuntime?.()}catch(e){}
  ensureRoot();load();clearInterval(timer);timer=setInterval(load,15000);
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')load()});
- const sel=document.getElementById('outletSelect');if(sel)sel.addEventListener('change',()=>{lastNewest='';selected='new';load()});
+ const sel=document.getElementById('outletSelect');if(sel)sel.addEventListener('change',()=>{lastNewest='';liveNewIds.clear();alertedNewIds.clear();alertBaselineReady=false;selected='preparing';sessionStartedAt=Date.now();load()});
  bindRealtime();
 }
 
