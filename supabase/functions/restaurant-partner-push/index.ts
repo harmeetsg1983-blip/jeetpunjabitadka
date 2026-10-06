@@ -44,11 +44,7 @@ async function vaultSecrets() {
   if (!dbUrl) return {};
   const sql = postgres(dbUrl, { prepare: false, max: 1 });
   try {
-    const rows = await sql<{name:string; value:string}>\`
-      select name, decrypted_secret as value
-      from vault.decrypted_secrets
-      where name in ('jpt_push_internal_secret','jpt_vapid_subject','jpt_vapid_public_key','jpt_vapid_private_key')
-    \`;
+    const rows = await sql.unsafe<{name:string; value:string}>(`select name, decrypted_secret as value from vault.decrypted_secrets where name in ('jpt_push_internal_secret','jpt_vapid_subject','jpt_vapid_public_key','jpt_vapid_private_key')`);
     vaultCache = Object.fromEntries(rows.map(r => [r.name, r.value]));
     return vaultCache;
   } finally {
