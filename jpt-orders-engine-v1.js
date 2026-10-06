@@ -9,7 +9,7 @@ window.__JPT_CLEAN_ORDERS_ENGINE_V1__=true;
 window.__JPTOrdersV3Active=true;
 window.__JPTDisableLegacyOrderRuntime=()=>true;
 
-const V='orders-engine-v1.0.6';
+const V='orders-engine-v1.0.7';
 const JPT_RESTAURANT_NEW_ORDER_AUDIO='./ringtones/1000449570.mp4';
 const STATES={new:'NEW ORDER',preparing:'PREPARING',accepted:'PREPARING',ready:'READY',out_for_delivery:'OUT FOR DELIVERY',delivered:'HISTORY',completed:'HISTORY',cancelled:'HISTORY'};
 const HISTORY=new Set(['delivered','completed','cancelled']);
@@ -131,6 +131,18 @@ async function read(idv,oc){const r=await window.sb.from('orders').select('*').e
 async function transition(row,next,extra={}){ 
  const idv=id(row),to=norm(next),key=idv+'|'+to;if(busy.has(key))return false;busy.add(key);
  try{
+  const oc=outlet(row);
+  let session=null;
+  try{
+    const sr=await window.sb.auth.getSession();
+    session=sr?.data?.session||null;
+    if(sr?.error)throw sr.error;
+  }catch(e){throw new Error('Partner session check failed: '+(e?.message||e))}
+  if(!session)throw new Error('Partner session expired. Please sign in again.');
+  const access=outlets.find(x=>x.code===oc);
+  if(!central&&(!access||access.access!=='manage')){
+    throw new Error('Order access denied: this outlet is not in MANAGE access for the signed-in partner.');
+  }
   const payload={
     p_order_id:Number(idv),
     p_next_status:to,
@@ -138,10 +150,13 @@ async function transition(row,next,extra={}){
     p_rejection_reason:extra.rejection_reason||null
   };
   const q=await window.sb.rpc('jpt_partner_transition_order',payload);
-  if(q.error)throw q.error;
+  if(q.error){
+    const code=q.error.code?(' ['+q.error.code+']'):'';
+    throw new Error((q.error.message||q.error.details||'Server order transition failed.')+code);
+  }
   if(!q.data)throw new Error('Server did not return the updated order.');
   const v=Array.isArray(q.data)?q.data[0]:q.data;
-  if(!v||norm(v.status)!==to)throw new Error('Server status verification failed.');
+  if(!v||norm(v.status)!==to)throw new Error('Server status verification failed: expected '+to+'.');
   if(alertId===idv)stopAlert(idv);
   return v;
  }finally{busy.delete(key)}
@@ -184,7 +199,7 @@ function realtime(){
 }
 function readPushUrl(){try{const u=new URLSearchParams(location.search);if(u.get('push')!=='order')return false;const oi=u.get('order_id')||null,oo=u.get('outlet_id')||null;if(!oi)return false;pushOrderId=oi;pushOutletId=oo;pushHandled=false;return true}catch(e){return false}}
 async function handlePushUrl(){if(!readPushUrl())return;try{if(window.showPanel)window.showPanel('orders')}catch(e){}selectedView='new';render();setTimeout(()=>detail(pushOrderId),150)}
-async function boot(){if(!document.getElementById('orders')||!window.sb){setTimeout(boot,300);return}if(!mount())return;readPushUrl();window.addEventListener('pageshow',()=>handlePushUrl());window.addEventListener('popstate',()=>handlePushUrl());await load(false);realtime();clearInterval(window.__JPTCleanOrdersRefresh);window.__JPTCleanOrdersRefresh=setInterval(()=>load(false),20000);clearInterval(window.__JPTCleanOrdersCountdown);window.__JPTCleanOrdersCountdown=setInterval(tick,1000)}
+async function boot(){if(!document.getElementById('orders')||!window.sb){setTimeout(boot,300);return}if(!mount())return;readPushUrl();window.addEventListener('pageshow',()=>handlePushUrl());window.addEventListener('popstate',()=>handlePushUrl());await load(false);try{const sr=await window.sb.auth.getSession();const n=document.getElementById('jptOeNotice');if(n&&!sr?.data?.session)n.textContent='Partner session required for order actions.';else if(n)n.textContent=(central?'Central':'Partner')+' Orders • Clean Engine v1.0.6 • Server RPC actions';}catch(e){}realtime();clearInterval(window.__JPTCleanOrdersRefresh);window.__JPTCleanOrdersRefresh=setInterval(()=>load(false),20000);clearInterval(window.__JPTCleanOrdersCountdown);window.__JPTCleanOrdersCountdown=setInterval(tick,1000)}
 window.JPTCleanOrdersEngineV1={version:V,reload:()=>load(true),stopAlert,openOrder:detail,getRows:()=>rows.slice()};
 boot();
 })();
