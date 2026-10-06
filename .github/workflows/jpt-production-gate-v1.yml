@@ -85,9 +85,9 @@ jobs:
             printf '%s' "$offenders"
             exit 1
           fi
-          grep -Fq "from('orders').update" jpt-orders-engine-v1.js
+          grep -Fq "rpc('jpt_partner_transition_order'" jpt-orders-engine-v1.js
           grep -Fq "table:'orders'" jpt-orders-engine-v1.js
-          echo "GREEN: Partner Orders status mutation + realtime ownership is isolated to jpt-orders-engine-v1.js"
+          echo "GREEN: Partner Orders status mutation (server RPC) + realtime ownership is isolated to jpt-orders-engine-v1.js"
 
       - name: Verify clean order alert lifecycle
         shell: bash
@@ -101,7 +101,7 @@ jobs:
           grep -Fq 'alertQueue.shift()' jpt-orders-engine-v1.js
           grep -Fq 'playSavedRingtone()' jpt-orders-engine-v1.js
           grep -Fq 'stopRingtone()' jpt-orders-engine-v1.js
-          grep -Fq 'jpt-orders-engine-v1.js?v=1.0.6' admin.html
+          grep -Fq 'jpt-orders-engine-v1.js?v=1.0.7' admin.html
           echo "GREEN: OS notification handles are retained and closed by the clean Orders Engine"
 
       - name: Verify alert-related JavaScript syntax
