@@ -9,7 +9,7 @@ window.__JPT_CLEAN_ORDERS_ENGINE_V1__=true;
 window.__JPTOrdersV3Active=true;
 window.__JPTDisableLegacyOrderRuntime=()=>true;
 
-const V='orders-engine-v1.0.9';
+const V='orders-engine-v1.0.10';
 const JPT_RESTAURANT_NEW_ORDER_AUDIO='./ringtones/1000449570.mp4';
 const STATES={new:'NEW ORDER',preparing:'PREPARING',accepted:'PREPARING',ready:'READY',out_for_delivery:'OUT FOR DELIVERY',delivered:'HISTORY',completed:'HISTORY',cancelled:'HISTORY'};
 const HISTORY=new Set(['delivered','completed','cancelled']);
@@ -163,8 +163,24 @@ async function transition(row,next,extra={}){
 }
 async function action(idv,a,b){
  if(b)b.disabled=true;const row=rows.find(x=>id(x)===String(idv));if(!row){if(b)b.disabled=false;return}
- try{let v;if(a==='accept'){v=await transition(row,'preparing',{target_minutes:Number(row.target_minutes||30)||30});selectedView='preparing'}else if(a==='reject'){if(!confirm('Reject this customer order?'))return;v=await transition(row,'cancelled',{rejection_reason:'Rejected by restaurant'});selectedView='history'}else if(a==='ready'){if(norm(row.status)==='accepted'){v=await transition(row,'preparing',{target_minutes:Number(row.target_minutes||30)||30});v=await transition(v,'ready')}else{v=await transition(row,'ready')}selectedView='ready';try{const r=await window.sb.rpc('delivery_offer_next',{p_order_id:Number(row.id)});if(r.error)console.warn('[JPT Orders] delivery offer',r.error.message)}catch(e){console.warn('[JPT Orders] delivery offer check',e)}}else{v=await transition(row,a);selectedView=a==='delivered'?'history':view(a)}
- const i=rows.findIndex(x=>id(x)===idv);if(i>=0)rows[i]=v;render();await load(false);toast('Order updated successfully.')}catch(e){toast('Order update failed: '+(e?.message||e))}finally{if(b)b.disabled=false}
+ try{
+  let v;
+  if(a==='accept'){v=await transition(row,'preparing',{target_minutes:Number(row.target_minutes||30)||30});selectedView='preparing'}
+  else if(a==='reject'){if(!confirm('Reject this customer order?'))return;v=await transition(row,'cancelled',{rejection_reason:'Rejected by restaurant'});selectedView='history'}
+  else if(a==='ready'){
+    if(norm(row.status)==='accepted'){v=await transition(row,'preparing',{target_minutes:Number(row.target_minutes||30)||30});v=await transition(v,'ready')}
+    else{v=await transition(row,'ready')}
+    selectedView='ready';
+    try{const r=await window.sb.rpc('delivery_offer_next',{p_order_id:Number(v.id)});if(r.error)console.warn('[JPT Orders] delivery offer',r.error.message)}catch(e){console.warn('[JPT Orders] delivery offer check',e)}
+  }else{v=await transition(row,a);selectedView=a==='delivered'?'history':view(a)}
+  const i=rows.findIndex(x=>id(x)===idv);
+  if(i>=0)rows[i]=v;
+  render();
+  try{await load(false)}catch(e){console.warn('[JPT Orders] post-transition refresh failed safely:',e)}
+  render();
+  toast('Order updated successfully.');
+ }catch(e){toast('Order update failed: '+(e?.message||e))}
+ finally{if(b)b.disabled=false}
 }
 function toast(m){if(typeof window.toast==='function')window.toast(m);else{const n=document.getElementById('jptOeNotice');if(n)n.textContent=m}}
 function stopAlert(i){const key=String(i||'');const n=activeNotifications.get(key);if(n){try{n.close()}catch(e){}activeNotifications.delete(key)}alertQueue=alertQueue.filter(q=>id(q)!==key);if(alertId!==null&&String(alertId)===key){stopRingtone();alertId=null;document.getElementById('jptOeAlert')?.remove();const next=alertQueue.shift();if(next&&norm(next.status)==='new'){showAlert(next)}}}
