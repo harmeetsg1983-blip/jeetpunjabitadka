@@ -210,21 +210,24 @@ function render(){
    b.onclick=async()=>{const row=rowsCache.find(x=>String(x.id)===String(b.dataset.paymentVerify));if(row)await verifyOrderPayment(row,b);};
  });
  root.querySelectorAll('[data-act]').forEach(b=>{
-   const runAction=(ev,fromTouch=false)=>{
+   const runAction=ev=>{
      ev.preventDefault();ev.stopPropagation();
      if(b.dataset.busy==='1')return;
-     if(!fromTouch&&b.dataset.touchHandled==='1')return;
+     const now=Date.now(),last=Number(b.dataset.lastActionMs||0);
+     if(now-last<900)return;
+     b.dataset.lastActionMs=String(now);
      b.dataset.busy='1';
      doAction(b).finally(()=>{b.dataset.busy='0';});
    };
-   b.onclick=ev=>runAction(ev,false);
-   b.ontouchend=ev=>{
-     if(b.dataset.busy==='1')return;
-     b.dataset.touchHandled='1';
-     runAction(ev,true);
-     setTimeout(()=>{b.dataset.touchHandled='0';},700);
-   };
+   if('PointerEvent' in window){
+     b.addEventListener('pointerup',runAction,{passive:false});
+     b.addEventListener('click',ev=>{if(ev.detail===0)runAction(ev);});
+   }else{
+     b.addEventListener('touchend',runAction,{passive:false});
+     b.addEventListener('click',runAction);
+   }
  });
+
  root.querySelectorAll('[data-open-order-btn]').forEach(b=>b.onclick=()=>openOrderDetail(b.dataset.openOrderBtn));
  root.querySelectorAll('.jpt-cob-minutes').forEach(input=>input.oninput=()=>{prepDrafts.set(String(input.dataset.id),Math.max(5,Math.min(120,Number(input.value)||30)));});
  root.querySelectorAll('[data-time]').forEach(b=>{
