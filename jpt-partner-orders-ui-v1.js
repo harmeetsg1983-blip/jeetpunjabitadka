@@ -180,7 +180,21 @@ function render(){
   ${(st==='accepted'||st==='preparing')&&deadlineAt?`<div class="jpt-cob-prep" data-deadline="${esc(deadlineAt)}">PREPARING • <b class="jpt-cob-countdown">--:--</b> remaining</div>`:''}
   <div class="jpt-cob-items">${itemsHtml(x)}</div><div class="jpt-cob-summary"><div class="jpt-cob-line"><span>Item subtotal</span><span>${money(sub)}</span></div>${del?`<div class="jpt-cob-line"><span>Delivery charge</span><span>${money(del)}</span></div>`:''}${disc?`<div class="jpt-cob-line discount"><span>Discount</span><span>−${money(disc)}</span></div>`:''}<div class="jpt-cob-line total"><span>Total</span><span>${money(total)}</span></div></div></div><button type="button" class="jpt-order-open-btn" data-open-order-btn="${esc(x.id||'')}">VIEW FULL ORDER</button></div>${selected==='history'?'<div class="jpt-cob-actions"><span class="jpt-cob-history">'+(st==='cancelled'?'CANCELLED ORDER':'COMPLETED ORDER')+'</span></div>':'<div class="jpt-cob-actions">'+actionHtml(x)+'</div>'}</article>`
  }).join(''):'<div class="jpt-cob-empty">No '+esc(selected.replaceAll('_',' '))+' orders right now.</div>'}</div>`;
- root.querySelectorAll('[data-act]').forEach(b=>b.onclick=(ev)=>{ev.preventDefault();ev.stopPropagation();if(b.dataset.busy==='1')return;return doAction(b)});
+ root.querySelectorAll('[data-act]').forEach(b=>{
+   const runAction=(ev)=>{
+     ev.preventDefault();ev.stopPropagation();
+     if(b.dataset.busy==='1'||b.dataset.touchHandled==='1')return;
+     b.dataset.busy='1';
+     doAction(b).finally(()=>{b.dataset.busy='0';});
+   };
+   b.onclick=runAction;
+   b.ontouchend=(ev)=>{
+     if(b.dataset.busy==='1')return;
+     b.dataset.touchHandled='1';
+     runAction(ev);
+     setTimeout(()=>{b.dataset.touchHandled='0';},700);
+   };
+ });
  root.querySelectorAll('[data-open-order-btn]').forEach(b=>b.onclick=()=>openOrderDetail(b.dataset.openOrderBtn));
  root.querySelectorAll('.jpt-cob-minutes').forEach(input=>input.oninput=()=>{prepDrafts.set(String(input.dataset.id),Math.max(5,Math.min(120,Number(input.value)||30)));});
  root.querySelectorAll('[data-time]').forEach(b=>{
