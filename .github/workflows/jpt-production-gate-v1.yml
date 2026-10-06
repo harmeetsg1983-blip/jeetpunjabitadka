@@ -30,12 +30,10 @@ jobs:
           set -euo pipefail
           grep -Fq '<option value="COD"' index.html
           grep -Fq '<option value="UPI"' index.html
-
           if grep -Eqi 'UPI payment required|Complete payment first|jpt-upi-required' index.html; then
             echo "RED: legacy UPI-only gate found in index.html"
             exit 1
           fi
-
           echo "GREEN: COD + UPI payment choices present"
           echo "GREEN: legacy UPI-only gate absent"
 
@@ -67,6 +65,20 @@ jobs:
           test ! -f jpt-order-control-bridge-v1.js
           test ! -f jpt-partner-order-alert-v4.js
           echo "GREEN: clean partner Orders Engine markers present; legacy order bridges inactive"
+
+      - name: Verify single active order mutation/realtime owner
+        shell: bash
+        run: |
+          set -euo pipefail
+          offenders="$(grep -lE "from\(['\"]orders['\"]\)[[:space:]]*\.update|table:[[:space:]]*['\"]orders['\"]" -- *.js 2>/dev/null | grep -v '^jpt-orders-engine-v1\.js$' || true)"
+          if [ -n "$offenders" ]; then
+            echo "RED: another root JS file contains an active orders update/realtime marker:"
+            printf '%s\n' "$offenders"
+            exit 1
+          fi
+          grep -Fq "from('orders').update" jpt-orders-engine-v1.js
+          grep -Fq "table:'orders'" jpt-orders-engine-v1.js
+          echo "GREEN: Partner Orders status mutation + realtime ownership is isolated to jpt-orders-engine-v1.js"
 
       - name: Verify locked ringtone integrity
         shell: bash
