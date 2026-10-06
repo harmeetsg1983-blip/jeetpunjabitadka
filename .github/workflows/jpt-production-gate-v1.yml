@@ -56,9 +56,15 @@ jobs:
           grep -Fq 'outlet' admin.html
           grep -Fq 'Orders' admin.html
           grep -Fq 'delivery_offer_next' admin.html
-          grep -Fq 'delivery_offer_next' jpt-partner-orders-ui-v1.js
-          grep -Fq 'outlet' jpt-partner-orders-ui-v1.js
-          echo "GREEN: partner outlet/order/delivery-offer markers present"
+          grep -Fq 'Orders' admin.html
+          grep -Fq 'jpt-orders-engine-v1.js' admin.html
+          grep -Fq 'delivery_offer_next' jpt-orders-engine-v1.js
+          if grep -Fq 'jpt-partner-orders-ui-v1.js' admin.html || grep -Fq 'jpt-order-control-bridge-v1.js' admin.html || grep -Fq 'jpt-partner-order-alert-v4.js' admin.html; then
+            echo "RED: legacy order bridge still active in admin.html"
+            exit 1
+          fi
+          test -f jpt-orders-engine-v1.js
+          echo "GREEN: clean partner Orders Engine markers present; legacy order bridges inactive"
 
       - name: Verify locked ringtone integrity
         shell: bash
