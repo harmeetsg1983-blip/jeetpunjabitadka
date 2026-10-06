@@ -112,7 +112,19 @@ jobs:
             node --check "$f" >/dev/null
             echo "GREEN: syntax $f"
           done
-          node --check <(sed 's/<\/script>.*//' delivery-partner-app.html) >/dev/null || true
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, subprocess, tempfile
+          html=Path('delivery-partner-app.html').read_text()
+          scripts=re.findall(r'<script>(.*?)</script>', html, re.S)
+          assert scripts, 'No inline script block found in delivery-partner-app.html'
+          for idx,src in enumerate(scripts,1):
+              with tempfile.NamedTemporaryFile('w',suffix='.js',delete=False) as tmp:
+                  tmp.write(src)
+                  name=tmp.name
+              subprocess.run(['node','--check',name],check=True,stdout=subprocess.DEVNULL)
+          print('GREEN: inline delivery-partner-app.html JavaScript syntax verified')
+          PY
           echo "GREEN: alert-layer JS syntax checks completed"
 
       - name: Verify four-role alert sound policy wiring
