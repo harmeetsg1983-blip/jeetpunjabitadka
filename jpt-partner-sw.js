@@ -1,4 +1,4 @@
-const CACHE='jpt-partner-pwa-v14';
+const CACHE='jpt-partner-pwa-v15-orders-clean';
 const ASSETS=['./partner-app.html','./partner-v107.html','./admin.html','./partner-manifest.webmanifest','./jpt-partner-icon-512.png'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
@@ -13,7 +13,7 @@ self.addEventListener('push',event=>{
 });
 self.addEventListener('notificationclick',event=>{
   event.notification.close();
-  const url=event.notification?.data?.url||'./partner-v107.html?push=order';
+  const url=event.notification?.data?.url||'./admin.html?push=order&section=orders';
   event.waitUntil((async()=>{const absolute=new URL(url,self.registration.scope).href;const list=await self.clients.matchAll({type:'window',includeUncontrolled:true});for(const client of list){if('focus' in client){try{await client.navigate(absolute);return client.focus()}catch(e){}}}if(self.clients.openWindow)return self.clients.openWindow(absolute)})());
 });
-self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;event.respondWith(caches.match(event.request).then(cached=>cached||fetch(event.request).then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy));return response}).catch(()=>caches.match('./partner-v107.html'))))});
+self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;event.respondWith(caches.match(event.request).then(cached=>cached||fetch(event.request).then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy));return response}).catch(()=>caches.match('./admin.html'))))});
