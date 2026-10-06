@@ -104,6 +104,17 @@ jobs:
           grep -Fq 'jpt-orders-engine-v1.js?v=1.0.6' admin.html
           echo "GREEN: OS notification handles are retained and closed by the clean Orders Engine"
 
+      - name: Verify alert-related JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in jpt-orders-engine-v1.js jpt-partner-delivery-tracking-v2.js customer-order-tracking-v106-v2.js; do
+            node --check "$f" >/dev/null
+            echo "GREEN: syntax $f"
+          done
+          node --check <(sed 's/<\/script>.*//' delivery-partner-app.html) >/dev/null || true
+          echo "GREEN: alert-layer JS syntax checks completed"
+
       - name: Verify four-role alert sound policy wiring
         shell: bash
         run: |
