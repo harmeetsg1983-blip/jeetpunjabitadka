@@ -6,6 +6,7 @@
   'use strict';
   const VERSION='delivery-tracking-v2';
   let timer=null, assignmentChannel=null, locationChannel=null, booted=false, lastAccepted=new Set();
+  const JPT_RESTAURANT_ASSIGNMENT_ACCEPTED_AUDIO='./ringtones/1000449572.mp4';
   /* Delivery-partner ORDER ACCEPTED audio belongs to delivery-partner-app.html.
      This admin/partner tracking layer must not play that locked rider-only asset. */
   const $=id=>document.getElementById(id);
@@ -27,6 +28,8 @@
     rejected:{label:'PARTNER REJECTED', cls:'reject'},
     cancelled:{label:'ASSIGNMENT CANCELLED', cls:'reject'}
   };
+
+  function playRestaurantAssignmentAcceptedTone(){try{const a=new Audio(JPT_RESTAURANT_ASSIGNMENT_ACCEPTED_AUDIO);a.preload='auto';a.loop=false;a.volume=1;const p=a.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}}
 
   function injectStyle(){
     if(document.getElementById('jptDeliveryTrackingStyleV2'))return;
@@ -139,7 +142,7 @@
         return;
       }
       const rows=Array.isArray(r.data)?r.data:[];
-      rows.forEach(x=>{const key=String(x.order_id||x.order_no||'');const st=String(x.delivery_status||'').toLowerCase();if(key&&st==='accepted'&&!lastAccepted.has(key)){lastAccepted.add(key);}if(key&&st!=='accepted')lastAccepted.delete(key);});
+      rows.forEach(x=>{const key=String(x.order_id||x.order_no||'');const st=String(x.delivery_status||'').toLowerCase();if(key&&st==='accepted'&&!lastAccepted.has(key)){lastAccepted.add(key);playRestaurantAssignmentAcceptedTone();}if(key&&st!=='accepted')lastAccepted.delete(key);});
       render(rows);
       decorateVisibleCards(rows);
     }catch(e){
