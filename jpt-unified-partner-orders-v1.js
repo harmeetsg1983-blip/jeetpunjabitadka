@@ -19,6 +19,13 @@ let timerHandle=null;
 let selectedQueue='all';
 const outletSelect=document.getElementById('outletSelect');
 
+async function enableBackgroundAlerts(){
+  try{
+    if('Notification' in window && Notification.permission==='default') await Notification.requestPermission();
+  }catch(e){}
+  try{ if(window.AudioContext||window.webkitAudioContext){ const C=window.AudioContext||window.webkitAudioContext; const ctx=new C(); if(ctx.state==='suspended') await ctx.resume(); window.__JPT_AUDIO_CTX__=ctx; } }catch(e){}
+  toast('Order alerts enabled. Keep notifications allowed for background alerts.');
+}
 function outlet(){
   return String(localStorage.getItem('jpt_admin_outlet')||outletSelect?.value||'JPT-001');
 }
@@ -67,6 +74,11 @@ function startRingtone(order){
   }
   audio.loop=true;
   audio.currentTime=0;
+  try{
+    if('Notification' in window && Notification.permission==='granted'){
+      new Notification('NEW JPT ORDER',{body:'Order #'+String(order.order_no||order.id)+' received. Open Partner Dashboard to accept or reject.',tag:'jpt-order-'+id,renotify:true});
+    }
+  }catch(e){}
   const p=audio.play();
   if(p?.catch){
     p.catch(()=>{
@@ -338,6 +350,8 @@ async function boot(){
   if(refresh)refresh.onclick=async()=>{await initialLoad();await subscribe()};
   const alarm=document.getElementById('stopAlarm');
   if(alarm)alarm.onclick=()=>{};
+  const enable=document.getElementById('enableAlarm');
+  if(enable)enable.onclick=enableBackgroundAlerts;
   await initialLoad();
   await subscribe();
   clearInterval(timerHandle);
