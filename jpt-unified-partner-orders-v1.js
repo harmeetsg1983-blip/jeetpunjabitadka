@@ -36,7 +36,7 @@ function managedOutlets(){
   const current=outlet();
   return [...new Set(codes.length?codes:[current])];
 }
-function orderBelongsToActiveOutlet(o){ return String(o?.outlet_id||'')===outlet(); }
+function orderBelongsToManagedOutlet(o){ return managedOutlets().includes(String(o?.outlet_id||'')); }
 function esc(v){
   return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -140,7 +140,7 @@ function actionHtml(o){
 function render(){
   const body=document.getElementById('ordersBody');
   if(!body)return;
-  const all=[...rows.values()].filter(orderBelongsToActiveOutlet).sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
+  const all=[...rows.values()].filter(orderBelongsToManagedOutlet).sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
   const filtered=selectedQueue==='all'?all:all.filter(o=>status(o.status)===selectedQueue);
   body.innerHTML=filtered.map(o=>{
     const st=status(o.status);
@@ -161,6 +161,7 @@ function render(){
     return '<article class="jpt-order-card'+newClass+'" data-order-card="'+esc(o.id)+'">'+
       '<div class="jpt-order-head"><div><div class="jpt-label">ORDER ID</div><div class="jpt-order-id">#'+esc(o.order_no||o.id)+'</div></div>'+
       '<span class="tag jpt-status">'+esc(st.replaceAll('_',' ').toUpperCase())+'</span></div>'+
+      '<div class="muted" style="margin:6px 0;font-weight:800">OUTLET: '+esc(o.outlet_id||'—')+'</div>'+
       '<div class="jpt-customer"><div class="jpt-label">CUSTOMER</div><div class="jpt-customer-name">'+esc(o.customer_name||'Customer')+'</div>'+
       (o.customer_phone?'<div class="muted">'+esc(o.customer_phone)+'</div>':'')+'</div>'+
       '<div class="jpt-items"><div class="jpt-label">ITEMS</div>'+itemHtml+'</div>'+
@@ -195,8 +196,9 @@ function render(){
 function updateCounts(all){
   const c=document.getElementById('ordersCount'); if(c)c.textContent=String(all.length);
 }
-async function read(id){
-  const r=await window.sb.from('orders').select('*').eq('id',id).eq('outlet_id',outlet()).maybeSingle();
+async function read(id,outletId){
+  const code=String(outletId||rows.get(String(id))?.outlet_id||'');
+  const r=await window.sb.from('orders').select('*').eq('id',id).eq('outlet_id',code).maybeSingle();
   if(r.error)throw r.error;
   return r.data;
 }
@@ -228,7 +230,7 @@ async function accept(id){
     toast('Order accepted — '+minutes+' minute preparation timer started.');
     render();
   }catch(e){
-    const fresh=await read(id).catch(()=>null);
+    const fresh=await read(id,o?.outlet_id).catch(()=>null);
     if(fresh)rows.set(String(id),fresh);
     render();
     toast('ACCEPT failed: '+(e.message||e));
@@ -252,7 +254,7 @@ async function reject(id){
     toast('Order rejected.');
     render();
   }catch(e){
-    const fresh=await read(id).catch(()=>null); if(fresh)rows.set(String(id),fresh);
+    const fresh=await read(id,o?.outlet_id).catch(()=>null); if(fresh)rows.set(String(id),fresh);
     render(); toast('REJECT failed: '+(e.message||e));
   }
 }
@@ -273,7 +275,7 @@ async function markReady(id){
     const r=await window.sb.from('orders')
       .update({status:'ready',ready_at:new Date().toISOString(),updated_at:new Date().toISOString()})
       .eq('id',Number(id))
-      .eq('outlet_id',outlet())
+      .eq('outlet_id',String(o.outlet_id||''))
       .in('status',['accepted','preparing'])
       .select('*')
       .maybeSingle();
@@ -284,7 +286,7 @@ async function markReady(id){
     render();
     try{await window.sb.rpc('delivery_offer_next',{p_order_id:Number(id)})}catch(e){}
   }catch(e){
-    const fresh=await read(id).catch(()=>null); if(fresh)rows.set(String(id),fresh);
+    const fresh=await read(id,o?.outlet_id).catch(()=>null); if(fresh)rows.set(String(id),fresh);
     render(); toast('MARK READY failed: '+(e.message||e));
   }
 }
