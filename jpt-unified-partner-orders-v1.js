@@ -306,7 +306,7 @@ async function boot(){
   const refresh=document.getElementById('ordersRefresh');
   if(refresh)refresh.onclick=async()=>{await initialLoad();await subscribe()};
   const alarm=document.getElementById('stopAlarm');
-  if(alarm)alarm.onclick=()=>{ /* Acknowledge is treated as explicit reject/acknowledgement stop. */ stopRingtone(); };
+  if(alarm)alarm.onclick=()=>{};
   await initialLoad();
   await subscribe();
   clearInterval(timerHandle);
