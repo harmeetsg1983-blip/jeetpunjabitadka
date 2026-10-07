@@ -17,8 +17,7 @@ function norm(v){
 function allowed(from,to){
   from=norm(from);to=norm(to);
   if(to==='accepted') return from==='new';
-  if(to==='preparing') return from==='accepted';
-  if(to==='ready') return from==='preparing';
+  if(to==='ready') return from==='accepted' || from==='preparing';
   if(to==='out_for_delivery') return from==='ready';
   if(to==='delivered'||to==='completed') return from==='out_for_delivery';
   if(to==='cancelled') return from==='new';
