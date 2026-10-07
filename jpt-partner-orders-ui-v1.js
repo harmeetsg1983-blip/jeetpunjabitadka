@@ -216,11 +216,43 @@ function render(){
 async function directAction(row,next,extra={}){
  const target=String(next||'').toLowerCase();
  if(!window.JPTOrderControlBridge?.transition)throw new Error('Order control bridge unavailable. Please refresh the dashboard.');
- const data=await window.JPTOrderControlBridge.transition(row.id,row.outlet_id,target,extra);
- Object.assign(row,data); row.__status=status(data.status);
- statusLocks.set(String(row.id),{status:row.__status,target_minutes:data.target_minutes,accepted_at:data.accepted_at,deadline_at:data.deadline_at,updatedAt:data.updated_at||new Date().toISOString(),updatedMs:Date.parse(data.updated_at||'')||Date.now(),at:Date.now()});
- if(target!=='new'){liveNewIds.delete(String(row.id));window.JPTOrderControlBridge.stopAlerts(row.id);}
- return data;
+
+ const previous={
+   status:row.status,
+   __status:row.__status,
+   target_minutes:row.target_minutes,
+   accepted_at:row.accepted_at,
+   deadline_at:row.deadline_at,
+   eta_minutes:row.eta_minutes,
+   updated_at:row.updated_at
+ };
+
+ row.__pendingTransition=true;
+ row.status=target;
+ row.__status=target;
+ if(target==='accepted' && extra?.target_minutes){
+   row.target_minutes=Number(extra.target_minutes);
+   row.accepted_at=new Date().toISOString();
+   row.deadline_at=new Date(Date.now()+Number(extra.target_minutes)*60000).toISOString();
+   row.eta_minutes=Number(extra.target_minutes)+20;
+ }
+ render();
+
+ try{
+   const data=await window.JPTOrderControlBridge.transition(row.id,row.outlet_id,target,extra);
+   Object.assign(row,data);
+   row.__status=status(data.status);
+   row.__pendingTransition=false;
+   statusLocks.set(String(row.id),{status:row.__status,target_minutes:data.target_minutes,accepted_at:data.accepted_at,deadline_at:data.deadline_at,updatedAt:data.updated_at||new Date().toISOString(),updatedMs:Date.parse(data.updated_at||'')||Date.now(),at:Date.now()});
+   if(target!=='new'){liveNewIds.delete(String(row.id));window.JPTOrderControlBridge.stopAlerts(row.id);}
+   return data;
+ }catch(e){
+   Object.assign(row,previous);
+   row.__status=status(previous.__status||previous.status);
+   row.__pendingTransition=false;
+   render();
+   throw e;
+ }
 }
 
 async function doAction(btn){
@@ -232,12 +264,7 @@ async function doAction(btn){
    await directAction(row,'cancelled',{rejection_reason:'Rejected by restaurant'});
   }else if(act==='accept'){
    const m=Math.max(5,Math.min(120,Number(prepDrafts.get(String(row.id))??btn.closest('.jpt-cob-actions')?.querySelector('.jpt-cob-minutes')?.value??row.target_minutes??30)));
-   const now=new Date(),deadline=new Date(now.getTime()+m*60000);
-   await directAction(row,'accepted',{target_minutes:m,accepted_at:now.toISOString(),deadline_at:deadline.toISOString(),eta_minutes:m+20});
-   const verify=await window.sb.from('orders').select('status,target_minutes,accepted_at,deadline_at').eq('id',row.id).eq('outlet_id',row.outlet_id).maybeSingle();
-   if(verify.error)throw verify.error;
-   if(!verify.data || String(verify.data.status).toLowerCase()!=='accepted' || !verify.data.deadline_at)throw new Error('Server did not confirm order acceptance/timer');
-   Object.assign(row,verify.data);
+   await directAction(row,'accepted',{target_minutes:m});
    prepDrafts.delete(String(row.id));
    selected='preparing';
   }else{
