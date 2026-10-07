@@ -48,10 +48,13 @@ async function waitFor(id,outlet,target,attempts,delay){
 }
 async function transition(id,outlet,next,extra){
   if(!window.sb) throw new Error('Order control backend unavailable.');
-  const key=String(id)+'|'+String(outlet)+'|'+norm(next);
+  const orderId=Number(id);
+  if(!Number.isInteger(orderId)||orderId<=0) throw new Error('Invalid order ID.');
+  const key=String(orderId)+'|'+String(outlet)+'|'+norm(next);
   if(busy.has(key)) return busy.get(key);
+
   const run=(async()=>{
-    const current=await read(id,outlet);
+    const current=await read(orderId,outlet);
     const from=norm(current.status),to=norm(next);
 
     if(atOrBeyond(from,to)) return current;
@@ -59,36 +62,30 @@ async function transition(id,outlet,next,extra){
       throw new Error('Invalid order transition: '+from.toUpperCase()+' → '+to.toUpperCase());
     }
 
-    const patch={...(extra||{}),status:to,updated_at:new Date().toISOString()};
-    let q=await window.sb.from('orders').update(patch)
-      .eq('id',id).eq('outlet_id',outlet).eq('status',from);
+    const targetMinutes=Math.max(5,Math.min(120,Number(extra?.target_minutes ?? current.target_minutes ?? 30)||30));
 
-    if(q.error){
-      const recovered=await waitFor(id,outlet,to,8,250);
+    const rpc=await window.sb.rpc('jpt_partner_transition_order',{
+      p_order_id:orderId,
+      p_next_status:to,
+      p_target_minutes:targetMinutes,
+      p_rejection_reason:extra?.rejection_reason ?? null
+    });
+
+    if(rpc.error){
+      console.error('[JPT ORDER TRANSITION]',{orderId,outlet,from,to,error:rpc.error});
+      const recovered=await waitFor(orderId,outlet,to,4,250);
       if(recovered) return recovered;
-      throw q.error;
+      throw new Error(rpc.error.message||rpc.error.details||'Order status update failed.');
     }
 
-    let verified=await waitFor(id,outlet,to,8,250);
+    const row=Array.isArray(rpc.data)?rpc.data[0]:rpc.data;
+    if(!row?.id) throw new Error('Order update returned no server row.');
+
+    const verified=await waitFor(orderId,outlet,to,6,250);
     if(verified) return verified;
-
-    const latest=await read(id,outlet);
-    if(atOrBeyond(latest.status,to)) return latest;
-
-    /* One bounded optimistic-concurrency retry. */
-    if(norm(latest.status)===from && latest.updated_at===current.updated_at){
-      const retry=await window.sb.from('orders').update(patch)
-        .eq('id',id).eq('outlet_id',outlet).eq('updated_at',current.updated_at);
-      if(retry.error){
-        verified=await waitFor(id,outlet,to,6,250);
-        if(verified) return verified;
-        throw retry.error;
-      }
-      verified=await waitFor(id,outlet,to,8,250);
-      if(verified) return verified;
-    }
-    throw new Error('Order status could not be confirmed by the server.');
+    return row;
   })();
+
   busy.set(key,run);
   try{return await run}finally{busy.delete(key)}
 }
