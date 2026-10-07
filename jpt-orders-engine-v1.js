@@ -9,11 +9,11 @@ window.__JPT_CLEAN_ORDERS_ENGINE_V1__=true;
 window.__JPTOrdersV3Active=true;
 window.__JPTDisableLegacyOrderRuntime=()=>true;
 
-const V='orders-engine-v1.0.11';
+const V='orders-engine-v1.0.12';
 const JPT_RESTAURANT_NEW_ORDER_AUDIO='./ringtones/1000449570.mp4';
 const STATES={new:'NEW ORDER',preparing:'PREPARING',accepted:'PREPARING',ready:'READY',out_for_delivery:'OUT FOR DELIVERY',delivered:'HISTORY',completed:'HISTORY',cancelled:'HISTORY'};
 const HISTORY=new Set(['delivered','completed','cancelled']);
-let rows=[],outlets=[],selectedView='new',selectedOutlet='ALL',central=false,channel=null,refreshing=false,queued=false,seenNew=new Set(),baseline=false,alertId=null,pushOrderId=null,pushOutletId=null,pushAction='',pushHandled=false,alertQueue=[];
+let rows=[],outlets=[],selectedView='new',selectedOutlet='ALL',central=false,channel=null,refreshing=false,queued=false,seenNew=new Set(),baseline=false,alertId=null,pushOrderId=null,pushOutletId=null,pushAction='',pushHandled=false,alertQueue=[],loadAttempt=0,pendingAudioAlert=null;
 const activeNotifications=new Map();
 let activeRingtoneAudio=null,activeRingtoneUrl=null;
 async function playSavedRingtone(){
@@ -89,7 +89,7 @@ function mount(){
  <div class="jpt-oe-actions-head"><button id="jptOeRefresh" class="jpt-oe-btn">↻ Refresh</button><button id="jptOeBell" class="jpt-oe-bell">🔔 <span id="jptOeBellCount">0</span></button></div></div>
  <div id="jptOeOutlets" class="jpt-oe-outlets"></div><div id="jptOeTabs" class="jpt-oe-tabs"></div><div id="jptOeList" class="jpt-oe-list"></div><div id="jptOeDetail" class="jpt-oe-detail" hidden></div></div>`;
  style();
- document.getElementById('jptOeRefresh').onclick=()=>load(true);document.getElementById('jptOeBell').onclick=openNew;
+ document.getElementById('jptOeRefresh').onclick=()=>load(true);document.getElementById('jptOeBell').onclick=async()=>{try{if('Notification' in window&&Notification.permission==='default')await Notification.requestPermission()}catch(e){}if(alertId){try{await playSavedRingtone()}catch(e){}}openNew()};
  return true;
 }
 
@@ -113,7 +113,7 @@ function renderTabs(){
 }
 function parseItems(x){let a=x?.items;if(typeof a==='string'){try{a=JSON.parse(a)}catch(e){a=[]}}return Array.isArray(a)?a:[]}
 function items(x){const a=parseItems(x);return a.length?a.map(i=>'<div class="jpt-oe-item"><span>'+esc(i.name||i.item_name||'Item')+' × '+Number(i.qty??i.quantity??1)+'</span><span>'+(i.price!=null?money(Number(i.price)*Number(i.qty??i.quantity??1)):'')+'</span></div>').join(''):'<div class="jpt-oe-item"><span>Order items</span><span>—</span></div>'}
-function deadline(x){if(x.deadline_at)return new Date(x.deadline_at);if(x.accepted_at&&Number(x.target_minutes)>0)return new Date(new Date(x.accepted_at).getTime()+Number(x.target_minutes)*60000);return null}
+function deadline(x){if(x.deadline_at){const d=new Date(x.deadline_at);if(!Number.isNaN(d.getTime()))return d}if(x.accepted_at){const t=Number(x.target_minutes);const mins=Number.isFinite(t)&&t>0?t:30;const d=new Date(new Date(x.accepted_at).getTime()+mins*60000);if(!Number.isNaN(d.getTime()))return d}return null}
 function fmt(ms){const q=Math.floor(Math.abs(ms)/1000),m=Math.floor(q/60),s=q%60;return ms<0?'LATE +'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'):String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')}
 function timer(x){const d=deadline(x);if(!d||!['preparing','accepted'].includes(norm(x.status)))return '';return '<div class="jpt-oe-timer '+(d-Date.now()<0?'late':'')+'" data-d="'+esc(d.toISOString())+'">PREPARATION TIME <b data-c="1">'+fmt(d-Date.now())+'</b></div>'}
 function acts(x){const s=norm(x.status),i=esc(id(x));if(s==='new')return '<button type="button" class="primary" data-a="accept" data-i="'+i+'">ACCEPT</button><button type="button" data-a="reject" data-i="'+i+'">REJECT</button>';if(s==='accepted'||s==='preparing')return '<button type="button" class="ready" data-a="ready" data-i="'+i+'">READY</button>';if(s==='ready')return '<button type="button" class="primary" data-a="out_for_delivery" data-i="'+i+'">OUT FOR DELIVERY</button>';if(s==='out_for_delivery')return '<button type="button" class="ready" data-a="delivered" data-i="'+i+'">DELIVERED</button>';return '<span class="jpt-oe-muted">No further restaurant action.</span>'}
@@ -140,7 +140,8 @@ async function transition(row,next,extra={}){
   }catch(e){throw new Error('Partner session check failed: '+(e?.message||e))}
   if(!session)throw new Error('Partner session expired. Please sign in again.');
   const access=outlets.find(x=>x.code===oc);
-  if(!central&&(!access||access.access!=='manage')){
+  const level=String(access?.access||'').toLowerCase();
+  if(!central&&(!access||!['manage','owner','admin'].includes(level))){
     throw new Error('Order access denied: this outlet is not in MANAGE access for the signed-in partner.');
   }
   const payload={
@@ -171,7 +172,7 @@ async function action(idv,a,b){
     if(norm(row.status)==='accepted'){v=await transition(row,'preparing',{target_minutes:Number(row.target_minutes||30)||30});v=await transition(v,'ready')}
     else{v=await transition(row,'ready')}
     selectedView='ready';
-    try{const r=await window.sb.rpc('delivery_offer_next',{p_order_id:Number(v.id)});if(r.error)console.warn('[JPT Orders] delivery offer',r.error.message)}catch(e){console.warn('[JPT Orders] delivery offer check',e)}
+    try{const r=await window.sb.rpc('delivery_offer_next',{p_order_id:Number(v.id)});if(r.error)console.warn('[JPT Orders] delivery offer',r.error.message);else if(r.data?.status==='offered')toast('READY — delivery partner offer sent.');else if(r.data?.status==='no_online_rider')toast('READY — no online delivery partner available.');}catch(e){console.warn('[JPT Orders] delivery offer check',e)}
   }else{v=await transition(row,a);selectedView=a==='delivered'?'history':view(a)}
   const i=rows.findIndex(x=>id(x)===idv);
   if(i>=0)rows[i]=v;
@@ -186,11 +187,11 @@ function toast(m){if(typeof window.toast==='function')window.toast(m);else{const
 function stopAlert(i){const key=String(i||'');const n=activeNotifications.get(key);if(n){try{n.close()}catch(e){}activeNotifications.delete(key)}alertQueue=alertQueue.filter(q=>id(q)!==key);if(alertId!==null&&String(alertId)===key){stopRingtone();alertId=null;document.getElementById('jptOeAlert')?.remove();const next=alertQueue.shift();if(next&&norm(next.status)==='new'){showAlert(next)}}}
 function showAlert(x){
  const aid=id(x);if(!aid)return;if(alertId&&alertId!==aid){if(!alertQueue.some(q=>id(q)===aid))alertQueue.push(x);return}if(alertId===aid)return;alertId=aid;try{navigator.vibrate?.([450,150,450,150,700])}catch(e){}
- playSavedRingtone();
+ playSavedRingtone().then(ok=>{if(!ok)pendingAudioAlert=aid}).catch(()=>{pendingAudioAlert=aid});
  try{if('Notification' in window&&Notification.permission==='granted'){const n=new Notification('JPT — NEW ORDER',{body:'Order '+(x.order_no||x.id)+' received. Tap to open Orders.',tag:'jpt-clean-'+id(x),requireInteraction:true,vibrate:[450,150,450],data:{order_id:id(x),outlet_id:outlet(x)}});const key=id(x);activeNotifications.set(key,n);n.onclose=()=>{if(activeNotifications.get(key)===n)activeNotifications.delete(key)};n.onclick=()=>{window.focus();selectedView='new';render();detail(key);n.close()}}}catch(e){}
  const root=document.getElementById('jptOrdersOpsV1');if(root){const a=document.createElement('div');a.id='jptOeAlert';a.className='jpt-oe-alert';a.innerHTML='<b>🔔 NEW ORDER — '+esc(x.order_no||x.id)+'</b><span>Accept or Reject to stop the alert.</span><br><button>OPEN ORDER</button>';root.prepend(a);a.querySelector('button').onclick=()=>detail(id(x))}
 }
-function openNew(){const x=rows.find(r=>norm(r.status)==='new');if(x)detail(id(x));else{selectedView='new';render()}}
+function openNew(){const x=rows.find(r=>norm(r.status)==='new');if(x){if(pendingAudioAlert===id(x)){pendingAudioAlert=null;playSavedRingtone().catch(()=>{})}detail(id(x))}else{selectedView='new';render()}}
 function detail(i){
  const x=rows.find(r=>id(r)===String(i));if(!x)return;const h=document.getElementById('jptOeDetail');if(!h)return;const total=Number(x.total??x.total_amount??0);
  h.hidden=false;h.innerHTML='<div class="jpt-oe-box"><div style="display:flex;justify-content:space-between"><div><b>#'+esc(x.order_no||x.id)+'</b><div class="jpt-oe-outlet">'+esc(outletName(outlet(x)))+'</div></div><button id="jptOeClose" class="jpt-oe-close">✕</button></div><div style="margin-top:12px;color:#bbb;font-size:12px">Customer: '+esc(x.customer_name||'Customer')+'<br>Phone: '+esc(x.customer_phone||x.phone||'—')+'<br>Address: '+esc(x.customer_address||x.address||'—')+'<br>Payment: '+esc(x.payment||'—')+'<br>Total: <b style="color:#fff">'+money(total)+'</b></div><div class="jpt-oe-items">'+items(x)+'</div><div class="jpt-oe-detail-actions">'+acts(x)+'</div></div>';
@@ -201,14 +202,20 @@ async function load(manual){
  try{
   await loadOutlets();if(pushOutletId&&outlets.some(o=>o.code===pushOutletId))selectedOutlet=pushOutletId;let q=window.sb.from('orders').select('id,customer_name,customer_phone,customer_address,items,subtotal,discount,delivery_charge,total,total_amount,status,eta_minutes,notes,created_at,updated_at,order_no,order_id,payment,outlet_id,target_minutes,accepted_at,deadline_at,rejection_reason,preparing_at,ready_at,out_for_delivery_at,delivered_at').order('created_at',{ascending:false}).limit(150);
   if(selectedOutlet!=='ALL')q=q.eq('outlet_id',selectedOutlet);const r=await q;if(r.error)throw r.error;
-  const fresh=(r.data||[]).map(x=>({...x,status:norm(x.status)})).filter(x=>outlets.some(o=>o.code===outlet(x))).sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
-  const freshNew=new Set(fresh.filter(x=>norm(x.status)==='new').map(id));
+  const fresh=(r.data||[]).map(x=>({...x,status:norm(x.status)})).filter(x=>id(x)&&outlet(x)&&outlets.some(o=>o.code===outlet(x))).sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
+  loadAttempt=0;const freshNew=new Set(fresh.filter(x=>norm(x.status)==='new').map(id));
   alertQueue=alertQueue.filter(x=>freshNew.has(id(x)));
   const active=alertId&&fresh.find(x=>id(x)===String(alertId));if(alertId&&(!active||norm(active.status)!=='new'))stopAlert(alertId);
   if(baseline){for(const x of fresh){if(norm(x.status)==='new'&&!seenNew.has(id(x))){seenNew.add(id(x));selectedView='new';showAlert(x)}}}else freshNew.forEach(x=>seenNew.add(x));
   for(const old of [...seenNew])if(!freshNew.has(old))seenNew.delete(old);baseline=true;rows=fresh;render();if(pushOrderId&&!pushHandled){pushHandled=true;selectedView='new';render();setTimeout(()=>detail(pushOrderId),0)}
   const n=document.getElementById('jptOeNotice');if(n)n.textContent=(central?'Central':'Partner')+' Orders • '+rows.length+' latest records';if(manual)toast('Orders refreshed.');
- }catch(e){toast('Orders load failed: '+(e?.message||e))}finally{refreshing=false;if(queued){queued=false;load(false)}}
+ }catch(e){
+  console.warn('[JPT Orders] load failed',e);
+  if(loadAttempt<1){loadAttempt++;refreshing=false;setTimeout(()=>load(false),900);return}
+  loadAttempt=0;
+  const n=document.getElementById('jptOeNotice');if(n)n.textContent='Orders connection retrying — existing orders preserved.';
+  if(!rows.length){const h=document.getElementById('jptOeList');if(h)h.innerHTML='<div class="jpt-oe-empty">Orders could not be loaded yet.<br><button class="jpt-oe-btn" style="margin-top:10px" onclick="window.JPTCleanOrdersEngineV1?.reload?.()">↻ Retry Orders</button></div>';}
+}finally{refreshing=false;if(queued){queued=false;load(false)}}
 }
 function realtime(){
  try{if(channel)window.sb.removeChannel(channel);channel=window.sb.channel('jpt-clean-orders-'+Date.now()).on('postgres_changes',{event:'INSERT',schema:'public',table:'orders'},p=>{const x=p?.new;if(!x||!outlets.some(o=>o.code===String(x.outlet_id)))return;const row={...x,status:norm(x.status)};rows=[row,...rows.filter(r=>id(r)!==id(row))];render();if(norm(row.status)==='new'&&!seenNew.has(id(row))){seenNew.add(id(row));selectedView='new';render();showAlert(row)}}).on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders'},p=>{const x=p?.new;if(!x||!outlets.some(o=>o.code===String(x.outlet_id)))return;rows=rows.map(r=>id(r)===id(x)?{...x,status:norm(x.status)}:r);if(norm(x.status)!=='new')stopAlert(id(x));render()}).subscribe((st)=>{if(st==='CHANNEL_ERROR'||st==='TIMED_OUT'||st==='CLOSED')setTimeout(()=>load(false),1200)})}catch(e){console.warn('[JPT Orders] realtime unavailable',e)}
@@ -229,7 +236,7 @@ function installMountGuard(){
  obs.observe(p,{childList:true});
  window.__JPTOrdersMountObserverV1=obs;
 }
-async function boot(){if(!document.getElementById('orders')||!window.sb){setTimeout(boot,300);return}if(!mount())return;installMountGuard();readPushUrl();window.addEventListener('pageshow',()=>handlePushUrl());window.addEventListener('popstate',()=>handlePushUrl());await load(false);try{const sr=await window.sb.auth.getSession();const n=document.getElementById('jptOeNotice');if(n&&!sr?.data?.session)n.textContent='Partner session required for order actions.';else if(n)n.textContent=(central?'Central':'Partner')+' Orders • Clean Engine v1.0.11 • Server RPC actions';}catch(e){}realtime();clearInterval(window.__JPTCleanOrdersRefresh);window.__JPTCleanOrdersRefresh=setInterval(()=>load(false),20000);clearInterval(window.__JPTCleanOrdersCountdown);window.__JPTCleanOrdersCountdown=setInterval(tick,1000)}
+async function boot(){if(!document.getElementById('orders')||!window.sb){setTimeout(boot,300);return}if(!mount())return;installMountGuard();readPushUrl();window.addEventListener('pageshow',()=>handlePushUrl());window.addEventListener('popstate',()=>handlePushUrl());await load(false);try{const sr=await window.sb.auth.getSession();const n=document.getElementById('jptOeNotice');if(n&&!sr?.data?.session)n.textContent='Partner session required for order actions.';else if(n)n.textContent=(central?'Central':'Partner')+' Orders • Clean Engine v1.0.12 • Server RPC actions';}catch(e){}realtime();clearInterval(window.__JPTCleanOrdersRefresh);window.__JPTCleanOrdersRefresh=setInterval(()=>load(false),20000);clearInterval(window.__JPTCleanOrdersCountdown);window.__JPTCleanOrdersCountdown=setInterval(tick,1000)}
 window.JPTCleanOrdersEngineV1={version:V,reload:()=>load(true),stopAlert,openOrder:detail,getRows:()=>rows.slice()};
 boot();
 })();
