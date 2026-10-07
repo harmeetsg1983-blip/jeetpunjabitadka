@@ -200,7 +200,7 @@ function render(){
  root.querySelectorAll('.jpt-cob-minutes').forEach(input=>input.oninput=()=>{prepDrafts.set(String(input.dataset.id),Math.max(15,Math.min(40,Number(input.value)||15)));});
  root.querySelectorAll('[data-time]').forEach(b=>{
    const input=b.parentElement.querySelector('.jpt-cob-minutes'); if(!input)return;
-   let v=Number(input.value)||30; v=Math.max(5,Math.min(120,v+(b.dataset.time==='plus'?5:-5))); input.value=String(v); prepDrafts.set(String(b.dataset.id),v);
+   let v=Number(input.value)||15; v=Math.max(15,Math.min(40,v+(b.dataset.time==='plus'?5:-5))); input.value=String(v); prepDrafts.set(String(b.dataset.id),v);
  });
  if(window.__jptCountdownTimer)clearInterval(window.__jptCountdownTimer);
  const tickCountdowns=()=>{
