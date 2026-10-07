@@ -61,7 +61,7 @@ async function transition(id,outlet,next,extra){
       throw new Error('Invalid order transition: '+from.toUpperCase()+' → '+to.toUpperCase());
     }
 
-    const targetMinutes=Math.max(5,Math.min(120,Number(extra?.target_minutes ?? current.target_minutes ?? 30)||30));
+    const targetMinutes=Math.max(15,Math.min(40,Number(extra?.target_minutes ?? current.target_minutes ?? 15)||15));
 
     const rpc=await window.sb.rpc('jpt_partner_transition_order',{
       p_order_id:orderId,
