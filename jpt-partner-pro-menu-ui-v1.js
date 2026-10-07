@@ -20,6 +20,20 @@ function go(panel){
   closeSide();
 }
 
+function addSmartBackButtons(){
+  document.querySelectorAll('.panel').forEach(panel=>{
+    if(panel.id==='home'||panel.querySelector('.jpt-smart-back')) return;
+    const card=panel.querySelector('.card');
+    if(!card)return;
+    const back=document.createElement('button');
+    back.type='button';
+    back.className='jpt-smart-back';
+    back.textContent='← Back to Dashboard';
+    back.onclick=()=>go('home');
+    card.insertBefore(back,card.firstChild);
+  });
+}
+
 function ensureHeader(){
   const header=document.querySelector('.top');
   if(!header) return;
@@ -92,7 +106,36 @@ function renderMenuPro(){
   }).join('')||'<div class="jpt-menu-empty">No menu items match this search/filter.</div>';
 
   list.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>window.editItem?.(b.dataset.edit));
-  list.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=async()=>{await window.toggleItem?.(b.dataset.toggle);renderMenuPro()});
+  list.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=async()=>{
+    if(b.dataset.busy==='1') return;
+    const id=b.dataset.toggle;
+    const item=menuItems.find(x=>String(x.id)===String(id));
+    if(!item||!window.sb||!activeOutlet)return;
+    const next=item.available===false;
+    const old=item.available;
+    b.dataset.busy='1'; b.disabled=true; b.textContent='SAVING...';
+    item.available=next;
+    b.textContent=next?'ON':'OFF';
+    b.classList.toggle('is-on',next); b.classList.toggle('is-off',!next);
+    const {data,error}=await window.sb.from('menu_items')
+      .update({available:next,updated_at:new Date().toISOString()})
+      .eq('id',item.id)
+      .eq('outlet_id',activeOutlet)
+      .select('id,available')
+      .maybeSingle();
+    if(error||!data){
+      item.available=old;
+      b.textContent=old===false?'OFF':'ON';
+      b.classList.toggle('is-on',old!==false); b.classList.toggle('is-off',old===false);
+      if(typeof window.toast==='function')window.toast('Item status update failed');
+      else alert('Item status update failed: '+(error?.message||'Server did not confirm the update.'));
+    }else{
+      item.available=Boolean(data.available);
+      if(typeof window.toast==='function')window.toast(item.available?'Item turned ON':'Item turned OFF');
+      else alert(item.available?'Item turned ON':'Item turned OFF');
+    }
+    b.dataset.busy='0'; b.disabled=false;
+  });
   list.querySelectorAll('[data-price]').forEach(b=>b.onclick=async()=>{
     const item=menuItems.find(x=>String(x.id)===String(b.dataset.price)); if(!item)return;
     const value=prompt('Update price for '+item.name,String(Number(item.price||0)));
@@ -161,7 +204,7 @@ function patchMenuLoader(){
 }
 
 function init(){
-  ensureHeader();ensureSide();setupMenu();patchMenuLoader();
+  ensureHeader();ensureSide();setupMenu();patchMenuLoader();addSmartBackButtons();
   setTimeout(()=>{setupMenu();window.__JPTRefreshMenuPro?.()},700);
   setTimeout(()=>{setupMenu();window.__JPTRefreshMenuPro?.()},1800);
 }
