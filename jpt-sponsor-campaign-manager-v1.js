@@ -45,6 +45,7 @@ css();const root=document.createElement('div');root.id='jptSponsorMgr';root.inne
 </div>`;document.body.appendChild(root);
 document.getElementById('jptSMClose').onclick=close;document.getElementById('jptSMNew').onclick=reset;
 document.getElementById('jptSMTarget').onchange=()=>{const el=document.getElementById('jptSMOutlet');if(el)el.disabled=document.getElementById('jptSMTarget').value!=='selected';};
+document.getElementById('jptSMOutlet').disabled=true;
 document.getElementById('jptSMFile').onchange=previewFile;
 ['jptSMZoomOut','jptSMZoomIn','jptSMLeft','jptSMRight','jptSMUp','jptSMDown'].forEach(id=>document.getElementById(id).onclick=()=>{if(id==='jptSMZoomOut')crop.zoom=Math.max(1,crop.zoom-.1);if(id==='jptSMZoomIn')crop.zoom=Math.min(2.5,crop.zoom+.1);if(id==='jptSMLeft')crop.x=Math.max(0,crop.x-5);if(id==='jptSMRight')crop.x=Math.min(100,crop.x+5);if(id==='jptSMUp')crop.y=Math.max(0,crop.y-5);if(id==='jptSMDown')crop.y=Math.min(100,crop.y+5);paintPreview()});
 document.getElementById('jptSMSave').onclick=save};
