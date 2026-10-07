@@ -124,6 +124,66 @@ button,input,select,textarea{font:inherit}.app{min-height:100vh;background:#0707
 .jpt-order-card [data-ready],.jpt-order-card [data-delivery]{background:#d8ae42 !important;color:#111 !important}
 .jpt-order-card [data-delivered]{background:#12301d !important;color:#8ff0ac !important;border-color:#2d8a4c !important}
 </style>
+<style id="jpt-zomato-dual-bar-shell">
+/* JPT Partner Dashboard — dual-bar navigation shell.
+   Zomato-inspired interaction pattern; original JPT visual system preserved. */
+:root{--jpt-gold:#d8ae42;--jpt-bg:#070707;--jpt-surface:#111;--jpt-line:#2b2b2b}
+body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+.shell{padding-bottom:120px!important}
+#orders .card{overflow:visible}
+#orders .rowactions:first-child{margin-bottom:8px}
+#orderQueueBar.jpt-status-tabs{
+ position:sticky;top:0;z-index:18;
+ display:flex!important;align-items:center;gap:7px;
+ width:calc(100% + 24px);margin:0 -12px 12px!important;
+ padding:10px 12px;
+ overflow-x:auto;overflow-y:hidden;scrollbar-width:none;
+ background:rgba(7,7,7,.97);
+ border-top:1px solid #242424;border-bottom:1px solid #2e2e2e;
+ backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+}
+#orderQueueBar::-webkit-scrollbar{display:none}
+.jpt-status-tab{
+ flex:0 0 auto!important;min-height:40px!important;
+ padding:9px 14px!important;border:1px solid #3a3a3a!important;
+ border-radius:999px!important;background:#151515!important;
+ color:#aaa!important;font-size:11px!important;font-weight:950!important;
+ letter-spacing:.35px;white-space:nowrap;cursor:pointer;
+}
+.jpt-status-tab:hover{border-color:#777!important;color:#fff!important}
+.jpt-status-tab.is-active,.jpt-status-tab.gold{
+ background:var(--jpt-gold)!important;border-color:var(--jpt-gold)!important;
+ color:#111!important;box-shadow:0 4px 14px #d8ae4233;
+}
+.jpt-bottom-nav{
+ position:fixed;left:0;right:0;bottom:0;z-index:90;
+ display:grid;grid-template-columns:repeat(5,1fr);
+ min-height:68px;padding:7px 6px calc(7px + env(safe-area-inset-bottom));
+ background:rgba(10,10,10,.98);
+ border-top:1px solid #343434;
+ box-shadow:0 -10px 30px #000b;
+ backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+}
+.jpt-bottom-item{
+ appearance:none;border:0;background:transparent;color:#888;
+ display:flex;flex-direction:column;align-items:center;justify-content:center;
+ gap:3px;min-width:0;cursor:pointer;padding:5px 2px;
+}
+.jpt-bottom-item b{font-size:10px;font-weight:900;letter-spacing:.2px}
+.jpt-nav-icon{width:28px;height:28px;display:grid;place-items:center;border-radius:9px;font-size:18px;line-height:1}
+.jpt-bottom-item.is-active{color:var(--jpt-gold)}
+.jpt-bottom-item.is-active .jpt-nav-icon{background:#2a210e;color:var(--jpt-gold);box-shadow:inset 0 0 0 1px #5b4718}
+#ordersNotice{margin-top:0}
+@media(min-width:761px){
+ .jpt-bottom-nav{max-width:760px;left:50%;right:auto;transform:translateX(-50%);width:min(760px,100%)}
+ #orderQueueBar.jpt-status-tabs{top:0}
+}
+@media(max-width:760px){
+ .jpt-bottom-nav{min-height:70px}
+ #orderQueueBar.jpt-status-tabs{width:calc(100% + 20px);margin-left:-10px!important;margin-right:-10px!important;padding-left:10px;padding-right:10px}
+ .shell{padding-bottom:128px!important}
+}
+</style>
 </head>
 <body>
 <div class="app">
@@ -179,7 +239,16 @@ button,input,select,textarea{font:inherit}.app{min-height:100vh;background:#0707
 </section>
 
 <section id="orders" class="panel">
- <div class="card"><div class="rowactions"><button class="btn" id="ordersRefresh">↻ Refresh Orders</button><button class="btn gold" id="enableAlarm">🔔 Order Alarm Active</button></div><div id="ordersNotice" class="notice">Loading…</div><div id="orderQueueBar" class="rowactions" style="gap:6px;flex-wrap:wrap;margin:8px 0"><button type="button" class="btn gold orderQueueBtn" data-queue="all">ALL</button><button type="button" class="btn orderQueueBtn" data-queue="new">NEW</button><button type="button" class="btn orderQueueBtn" data-queue="accepted">ACCEPTED</button><button type="button" class="btn orderQueueBtn" data-queue="preparing">PREPARING</button><button type="button" class="btn orderQueueBtn" data-queue="ready">READY</button><button type="button" class="btn orderQueueBtn" data-queue="out_for_delivery">OUT FOR DELIVERY</button><button type="button" class="btn orderQueueBtn" data-queue="delivered">DELIVERED</button><button type="button" class="btn orderQueueBtn" data-queue="cancelled">CANCELLED</button></div><div id="orderAlarm" class="notice" style="display:none;border-color:#d8ae42;background:#211706"><b>🔔 NEW ORDER</b><div id="orderAlarmText" class="muted" style="color:#fff;margin-top:4px"></div><button class="btn gold" id="stopAlarm" style="margin-top:8px">Acknowledge</button></div><div class="jpt-orders-vertical" id="ordersTableWrap"><div id="ordersBody" class="jpt-orders-list"></div></div></div>
+ <div class="card"><div class="rowactions"><button class="btn" id="ordersRefresh">↻ Refresh Orders</button><button class="btn gold" id="enableAlarm">🔔 Order Alarm Active</button></div><div id="ordersNotice" class="notice">Loading…</div><div id="orderQueueBar" class="jpt-status-tabs" role="tablist" aria-label="Order status filters">
+ <button type="button" class="jpt-status-tab is-active orderQueueBtn" data-queue="all" role="tab">ALL</button>
+ <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="new" role="tab">NEW</button>
+ <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="accepted" role="tab">ACCEPTED</button>
+ <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="preparing" role="tab">PREPARING</button>
+ <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="ready" role="tab">READY</button>
+ <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="out_for_delivery" role="tab">OUT FOR DELIVERY</button>
+ <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="delivered" role="tab">DELIVERED</button>
+ <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="cancelled" role="tab">CANCELLED</button>
+</div><div id="orderAlarm" class="notice" style="display:none;border-color:#d8ae42;background:#211706"><b>🔔 NEW ORDER</b><div id="orderAlarmText" class="muted" style="color:#fff;margin-top:4px"></div><button class="btn gold" id="stopAlarm" style="margin-top:8px">Acknowledge</button></div><div class="jpt-orders-vertical" id="ordersTableWrap"><div id="ordersBody" class="jpt-orders-list"></div></div></div>
 </section>
 
 <section id="menu" class="panel">
@@ -227,6 +296,14 @@ button,input,select,textarea{font:inherit}.app{min-height:100vh;background:#0707
 <section id="reports" class="panel"><div class="card"><h3>Reports</h3><div class="notice">Outlet-scoped operational report from the same live order rows.</div><div class="grid"><div class="card"><div class="metric" id="repNew">—</div><div class="muted">New</div></div><div class="card"><div class="metric" id="repActive">—</div><div class="muted">In progress</div></div><div class="card"><div class="metric" id="repDone">—</div><div class="muted">Completed</div></div><div class="card"><div class="metric" id="repCancelled">—</div><div class="muted">Cancelled</div></div></div><div id="reportsNotice" class="notice">Loading report…</div></div></section>
 <section id="settings" class="panel"><div class="card"><h3>Settings</h3><p class="muted">Outlet settings are read from Supabase. Destructive schema changes are intentionally not performed by this dashboard.</p></div></section>
 </main>
+
+<nav id="jptBottomNav" class="jpt-bottom-nav" aria-label="Partner navigation">
+ <button type="button" class="jpt-bottom-item" data-bottom-panel="home"><span class="jpt-nav-icon">⌂</span><b>Hub</b></button>
+ <button type="button" class="jpt-bottom-item is-active" data-bottom-panel="orders"><span class="jpt-nav-icon">▣</span><b>Orders</b></button>
+ <button type="button" class="jpt-bottom-item" data-bottom-panel="menu"><span class="jpt-nav-icon">☷</span><b>Menu</b></button>
+ <button type="button" class="jpt-bottom-item" data-bottom-panel="offers"><span class="jpt-nav-icon">%</span><b>Offers</b></button>
+ <button type="button" class="jpt-bottom-item" data-bottom-panel="settings"><span class="jpt-nav-icon">⋯</span><b>More</b></button>
+</nav>
 </div>
 
 <div id="modal" class="modal"><div class="modalbox"><div class="modalhead"><h3 id="modalTitle">Edit</h3><button class="btn" onclick="closeModal()">✕</button></div><div id="modalBody"></div></div></div>
@@ -1083,6 +1160,7 @@ try{if("serviceWorker" in navigator){navigator.serviceWorker.register("./jpt-par
 </script>
 
 <script src="./jpt-unified-partner-orders-v1.js?v=20261007-5"></script>
+<script src="./jpt-partner-dual-bar-nav-v1.js?v=20261007-1"></script>
 <script src="./jpt-partner-timing-manager-v1.js?v=1"></script>
 <script src="./jpt-settings-command-center-v2.js?v=3"></script>
 <script src="./jpt-partner-delivery-tracking-v2.js?v=2"></script>
