@@ -5,7 +5,7 @@
 */
 (function(){
 'use strict';
-if(window.JPTOrderControlBridge?.version==='1.0.0') return;
+
 
 const RANK={new:0,accepted:1,preparing:2,ready:3,out_for_delivery:4,delivered:5,completed:5,cancelled:99};
 const busy=new Map();
@@ -90,7 +90,7 @@ async function transition(id,outlet,next,extra){
 }
 
 window.JPTOrderControlBridge={
-  version:'1.0.0',
+  version:'1.1.0-3step',
   statuses:['new','accepted','preparing','ready','out_for_delivery','delivered','completed','cancelled'],
   canTransition:allowed,
   transition,
