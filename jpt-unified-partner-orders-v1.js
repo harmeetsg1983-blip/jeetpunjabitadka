@@ -85,6 +85,19 @@ function remaining(deadline){
   const s=Math.floor(ms/1000);
   return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
 }
+if(!document.getElementById('jptUnifiedPartnerOrderStyle')){
+  const st=document.createElement('style');st.id='jptUnifiedPartnerOrderStyle';
+  st.textContent='.jpt-ready-countdown{display:inline-flex;align-items:center;justify-content:center;min-width:150px;margin:4px 0;padding:12px 16px;border-radius:12px;background:#111;color:#f4d77a;font-size:18px;font-weight:900;letter-spacing:.2px;box-shadow:0 3px 10px #0002}.jpt-rider-box{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px;padding:8px;border:1px solid #eee;border-radius:10px;background:#fff}.jpt-rider-box .btn{display:inline-flex;text-decoration:none;align-items:center;justify-content:center}';
+  document.head.appendChild(st);
+}
+function riderInfo(o){
+  const name=o?.rider_name||o?.delivery_partner_name||o?.delivery_executive_name||o?.rider?.name||o?.delivery_partner?.name||'';
+  const phone=o?.rider_phone||o?.delivery_partner_phone||o?.delivery_executive_phone||o?.rider?.phone||o?.delivery_partner?.phone||'';
+  if(!name&&!phone)return '';
+  const safePhone=String(phone||'').replace(/[^0-9+]/g,'');
+  return '<div class="jpt-rider-box"><div><b>Rider</b><div class="muted">'+esc(name||'Assigned rider')+'</div></div>'+
+    (safePhone?'<a class="btn green" href="tel:'+esc(safePhone)+'">CALL</a>':'')+'</div>';
+}
 function actionHtml(o){
   const st=status(o.status),id=esc(o.id);
   if(st==='new'){
@@ -114,6 +127,9 @@ function render(){
     const target=Math.max(15,Math.min(40,Number(o.target_minutes||o.__draftMinutes||15)));
     const deadline=o.deadline_at||o.__localDeadline;
     const timer=st==='accepted'||st==='preparing'?remaining(deadline):'—';
+    const timerButton=(st==='accepted'||st==='preparing')?
+      '<div class="jpt-ready-countdown" data-timer="'+esc(o.id)+'">Order Ready ('+timer+')</div>':'';
+    const rider=riderInfo(o);
     const itemText=items(o).map(i=>String(i.name||i.item_name||'Item')+' ×'+Number(i.qty??i.quantity??1)).join(', ');
     const newClass=st==='new'&&o.__liveNew?' style="outline:2px solid #f0c94a"':'';
     return '<tr'+newClass+'>'+
@@ -122,7 +138,7 @@ function render(){
       '<td><span class="tag">'+esc(st.replaceAll('_',' ').toUpperCase())+'</span></td>'+
       '<td>'+money(o.total??o.grand_total??0)+'</td>'+
       '<td>'+esc(o.created_at?new Date(o.created_at).toLocaleString('en-IN'):'—')+'</td>'+
-      '<td><span class="tag" data-timer="'+esc(o.id)+'">'+timer+'</span></td>'+
+      '<td>'+timerButton+rider+'</td>'+
       '<td>'+actionHtml(o)+'</td></tr>';
   }).join('')||'<tr><td colspan="7">No orders in this queue.</td></tr>';
 
@@ -292,7 +308,7 @@ function updateTimers(){
     const o=rows.get(String(el.dataset.timer));if(!o)return;
     const st=status(o.status);
     if(st!=='accepted'&&st!=='preparing')return;
-    el.textContent=remaining(o.deadline_at||o.__localDeadline);
+    el.textContent='Order Ready ('+remaining(o.deadline_at||o.__localDeadline)+')';
   });
 }
 function bindQueue(){
