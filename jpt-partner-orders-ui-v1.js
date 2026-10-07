@@ -217,7 +217,7 @@ function render(){
 async function directAction(row,next,extra={}){
  const target=String(next||'').toLowerCase();
  // Kill the active NEW-order alert before any status transition is attempted.
- if(target!=='new'){
+ if(target==='accepted'||target==='cancelled'){
    try{window.JPTPartnerOrderAlertV4?.stop?.(true)}catch(e){}
    try{window.stopOrderAlarm?.(row.id)}catch(e){}
    try{window.JPTOrderControlBridge?.stopAlerts?.(row.id)}catch(e){}
@@ -253,7 +253,7 @@ async function directAction(row,next,extra={}){
    row.__pendingTransition=false;
    pendingTransitions.delete(String(row.id));
    statusLocks.set(String(row.id),{status:row.__status,target_minutes:data.target_minutes,accepted_at:data.accepted_at,deadline_at:data.deadline_at,updatedAt:data.updated_at||new Date().toISOString(),updatedMs:Date.parse(data.updated_at||'')||Date.now(),at:Date.now()});
-   if(target!=='new'){liveNewIds.delete(String(row.id));window.JPTOrderControlBridge.stopAlerts(row.id);}
+   if(target==='accepted'||target==='cancelled'){liveNewIds.delete(String(row.id));window.JPTOrderControlBridge.stopAlerts(row.id);}
    return data;
  }catch(e){
    Object.assign(row,previous);
