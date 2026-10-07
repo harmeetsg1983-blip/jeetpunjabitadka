@@ -20,12 +20,48 @@ let selectedQueue='all';
 let managedSignature='';
 const outletSelect=document.getElementById('outletSelect');
 
+async function primeOrderAudio(){
+  try{
+    if(!audio){
+      audio=new Audio('./ringtones/1000449570.mp4');
+      audio.preload='auto';
+      audio.loop=true;
+      audio.playsInline=true;
+      audio.volume=1;
+    }
+    audio.muted=true;
+    audio.currentTime=0;
+    const p=audio.play();
+    if(p?.then) await p.catch(()=>{});
+    try{audio.pause();audio.currentTime=0;}catch(e){}
+    audio.muted=false;
+    if(window.AudioContext||window.webkitAudioContext){
+      const C=window.AudioContext||window.webkitAudioContext;
+      const ctx=window.__JPT_AUDIO_CTX__||new C();
+      window.__JPT_AUDIO_CTX__=ctx;
+      if(ctx.state==='suspended') await ctx.resume();
+    }
+    window.__JPT_ORDER_AUDIO_PRIMED__=true;
+    return true;
+  }catch(e){
+    window.__JPT_ORDER_AUDIO_PRIMED__=false;
+    return false;
+  }
+}
 async function enableBackgroundAlerts(){
   try{
     if('Notification' in window && Notification.permission==='default') await Notification.requestPermission();
   }catch(e){}
-  try{ if(window.AudioContext||window.webkitAudioContext){ const C=window.AudioContext||window.webkitAudioContext; const ctx=new C(); if(ctx.state==='suspended') await ctx.resume(); window.__JPT_AUDIO_CTX__=ctx; } }catch(e){}
-  toast('Order alerts enabled. Keep notifications allowed for background alerts.');
+  const primed=await primeOrderAudio();
+  toast(primed
+    ? 'Order sound enabled. New orders will ring automatically while this dashboard is open.'
+    : 'Order sound could not be enabled. Check phone media volume and browser sound permission.');
+}
+function bindOrderAudioGesture(){
+  if(window.__JPT_ORDER_AUDIO_GESTURE_BOUND__) return;
+  window.__JPT_ORDER_AUDIO_GESTURE_BOUND__=true;
+  const prime=()=>{ if(!window.__JPT_ORDER_AUDIO_PRIMED__) primeOrderAudio().catch(()=>{}); };
+  ['pointerdown','touchstart','click'].forEach(ev=>document.addEventListener(ev,prime,{passive:true,capture:true}));
 }
 function outlet(){
   return String(localStorage.getItem('jpt_admin_outlet')||outletSelect?.value||'JPT-001');
@@ -81,7 +117,9 @@ function startRingtone(order){
     audio.playsInline=true;
     audio.volume=1;
   }
+  audio.muted=false;
   audio.loop=true;
+  try{audio.load()}catch(e){}
   audio.currentTime=0;
   try{
     if('Notification' in window && Notification.permission==='granted'){
@@ -356,6 +394,7 @@ function bindQueue(){
 async function boot(){
   if(!window.sb){setTimeout(boot,500);return;}
   bindQueue();
+  bindOrderAudioGesture();
   const refresh=document.getElementById('ordersRefresh');
   if(refresh)refresh.onclick=async()=>{await initialLoad();await subscribe()};
   if(outletSelect)outletSelect.addEventListener('change',async()=>{
