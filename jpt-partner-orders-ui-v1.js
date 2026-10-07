@@ -138,7 +138,7 @@ async function openOrderDetail(id){
  '<div class="jpt-order-detail-card"><div style="font-size:12px;color:#aaa">ORDER ITEMS</div><div class="jpt-order-detail-items">'+parseItems(row).map(i=>{const q=Number(i.qty??i.quantity??1),p=Number(i.price??i.unit_price??0);return '<div class="jpt-order-detail-item"><div><b>'+esc(i.name||i.item_name||'Item')+'</b><div style="color:#aaa;margin-top:3px">Qty × '+q+'</div></div><strong>'+money(p*q)+'</strong></div>'}).join('')+'</div><div style="margin-top:12px;color:#bbb">Item subtotal <span style="float:right">'+money(sub)+'</span></div>'+(del?'<div style="margin-top:6px;color:#bbb">Delivery <span style="float:right">'+money(del)+'</span></div>':'')+(disc?'<div style="margin-top:6px;color:#7bd99a">Discount <span style="float:right">−'+money(disc)+'</span></div>':'')+'<div class="jpt-order-detail-total"><span>Total</span><span>'+money(total)+'</span></div><div style="margin-top:8px;color:#aaa;font-size:11px">Payment • '+esc(payment)+'</div></div>'+
  '<div class="jpt-order-detail-card"><div style="font-size:12px;color:#aaa">RESTAURANT ACTION</div><div class="jpt-order-detail-actions">'+detailActionHtml(row)+'</div></div>';
  body.querySelectorAll('[data-act]').forEach(b=>b.onclick=async()=>{await doAction(b);if(m.classList.contains('show')){const updated=rowsCache.find(x=>String(x.id)===String(id));if(updated&&updated.__status!=='new')m.classList.remove('show');}});
- body.querySelectorAll('[data-time]').forEach(b=>b.onclick=()=>{const input=b.parentElement.querySelector('.jpt-cob-minutes');if(!input)return;let v=Number(input.value)||15;v=Math.max(15,Math.min(40,v+(b.dataset.time==='plus'?5:-5)));input.value=String(v);prepDrafts.set(String(id),v);});
+ body.querySelectorAll('[data-time]').forEach(b=>b.onclick=()=>{const input=b.parentElement.querySelector('.jpt-cob-minutes');if(!input)return;let v=Number(input.value)||15;v=Math.max(15,Math.min(40,v+(b.dataset.time==='plus'?1:-1)));input.value=String(v);prepDrafts.set(String(id),v);});
  body.querySelectorAll('.jpt-cob-minutes').forEach(input=>input.oninput=()=>{const v=Math.max(15,Math.min(40,Number(input.value)||15));input.value=String(v);prepDrafts.set(String(id),v);});
  m.classList.add('show');
 }
@@ -160,7 +160,7 @@ function ensureRoot(){
 
 function actionHtml(x){
  const id=esc(x.id||''),st=x.__status;
- if(st==='new')return `<div class="jpt-cob-timepick" aria-label="Preparation time"><button type="button" data-time="minus" data-id="${id}" aria-label="Decrease preparation time">−</button><input class="jpt-cob-minutes" data-id="${id}" type="number" min="15" max="40" step="5" value="${Number(prepDrafts.get(String(x.id))??x.target_minutes??15)}"><button type="button" data-time="plus" data-id="${id}" aria-label="Increase preparation time">+</button><span class="jpt-cob-muted">min</span></div><div class="jpt-cob-decision"><button type="button" class="primary" data-act="accept" data-id="${id}">ACCEPT</button><button type="button" data-act="reject" data-id="${id}">REJECT</button></div>`;
+ if(st==='new')return `<div class="jpt-cob-timepick" aria-label="Preparation time"><button type="button" data-time="minus" data-id="${id}" aria-label="Decrease preparation time">−</button><input class="jpt-cob-minutes" data-id="${id}" type="number" min="15" max="40" step="1" value="${Number(prepDrafts.get(String(x.id))??x.target_minutes??15)}"><button type="button" data-time="plus" data-id="${id}" aria-label="Increase preparation time">+</button><span class="jpt-cob-muted">min</span></div><div class="jpt-cob-decision"><button type="button" class="primary" data-act="accept" data-id="${id}">ACCEPT</button><button type="button" data-act="reject" data-id="${id}">REJECT</button></div>`;
  if(st==='accepted')return `<button class="primary" data-act="ready" data-id="${id}">MARK READY</button>`;
  if(st==='preparing')return `<button class="primary" data-act="ready" data-id="${id}">MARK READY</button>`;
  if(st==='ready')return '<span class="jpt-cob-history">READY • DELIVERY OFFER IS CHECKED AUTOMATICALLY</span>';
@@ -200,7 +200,7 @@ function render(){
  root.querySelectorAll('.jpt-cob-minutes').forEach(input=>input.oninput=()=>{prepDrafts.set(String(input.dataset.id),Math.max(15,Math.min(40,Number(input.value)||15)));});
  root.querySelectorAll('[data-time]').forEach(b=>{
    const input=b.parentElement.querySelector('.jpt-cob-minutes'); if(!input)return;
-   let v=Number(input.value)||15; v=Math.max(15,Math.min(40,v+(b.dataset.time==='plus'?5:-5))); input.value=String(v); prepDrafts.set(String(b.dataset.id),v);
+   let v=Number(input.value)||15; v=Math.max(15,Math.min(40,v+(b.dataset.time==='plus'?1:-1))); input.value=String(v); prepDrafts.set(String(b.dataset.id),v);
  });
  if(window.__jptCountdownTimer)clearInterval(window.__jptCountdownTimer);
  const tickCountdowns=()=>{
@@ -353,7 +353,7 @@ async function bindRealtime(){
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'orders'},p=>{
       const o=p?.new||{};
       if(OWNER_OUTLET_CODES.has(String(o.outlet_id||'')) && String(o.status||'').toLowerCase()==='new'){
-        pendingNew.set(String(o.id||o.order_no),o);liveNewIds.add(String(o.id||o.order_no));selected='new';try{window.showPanel?.('orders')}catch(e){};
+        pendingNew.set(String(o.id||o.order_no),o);liveNewIds.add(String(o.id||o.order_no));selected='new';try{window.showPanel?.('orders')}catch(e){};try{window.JPTPartnerOrderAlertV4?.ring?.(o)}catch(e){};
         if(typeof window.showOrderAlarm==='function')window.showOrderAlarm(o);
         setTimeout(()=>{try{openOrderDetail(o.id)}catch(e){}},180);
       }
