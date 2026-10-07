@@ -80,15 +80,36 @@ async function categoryDrawer(categories){
        const active=row.is_active!==false;
        const toggle=document.createElement('button');toggle.textContent=active?'ON':'OFF';toggle.style.cssText='width:auto;margin:0;text-align:center;padding:10px 12px;color:'+(active?'#8ff0b0':'#ffaaaa')+';border-color:'+(active?'#295d3c':'#703030');
        toggle.onclick=async()=>{
+         if(toggle.dataset.busy==='1')return;
+         toggle.dataset.busy='1';
+         const next=!active;
+         const previousText=toggle.textContent;
          toggle.disabled=true;
-         const r=await sb().from('categories').update({is_active:!active,updated_at:new Date().toISOString()}).eq('id',row.id).eq('outlet_id',outletId);
-         if(r.error){if(typeof window.toast==='function')window.toast('Category update failed: '+r.error.message);toggle.disabled=false;return}
-         const verify=await sb().from('categories').select('id,is_active').eq('id',row.id).eq('outlet_id',outletId).maybeSingle();
-         if(verify.error||!verify.data||Boolean(verify.data.is_active)!==!active){if(typeof window.toast==='function')window.toast('Category state change could not be verified');toggle.disabled=false;return}
-         if(typeof window.toast==='function')window.toast(active?'Category deactivated':'Category activated');
-         await render();
-         await categoryDrawer(categories);
-         d.remove();
+         toggle.textContent='SAVING…';
+         /* Optimistic local UI state: category changes immediately, then server confirmation decides whether it stays. */
+         row.is_active=next;
+         toggle.textContent=next?'ON':'OFF';
+         toggle.style.color=next?'#8ff0b0':'#ffaaaa';
+         toggle.style.borderColor=next?'#295d3c':'#703030';
+         try{
+           const r=await sb().from('categories').update({is_active:next,updated_at:new Date().toISOString()}).eq('id',row.id).eq('outlet_id',outletId).select('id,is_active').maybeSingle();
+           if(r.error)throw r.error;
+           if(!r.data)throw new Error('No category was updated for this outlet');
+           if(Boolean(r.data.is_active)!==next)throw new Error('Category state change could not be verified');
+           row.is_active=Boolean(r.data.is_active);
+           if(typeof window.toast==='function')window.toast(next?'Category activated':'Category deactivated');
+           await render();
+           d.remove();
+           await categoryDrawer(categories);
+         }catch(e){
+           row.is_active=!next;
+           toggle.textContent=previousText;
+           toggle.style.color=next?'#ffaaaa':'#8ff0b0';
+           toggle.style.borderColor=next?'#703030':'#295d3c';
+           if(typeof window.toast==='function')window.toast('Category update failed: '+(e.message||e));
+           toggle.disabled=false;
+           toggle.dataset.busy='0';
+         }
        };
        wrap.appendChild(toggle);
      }
