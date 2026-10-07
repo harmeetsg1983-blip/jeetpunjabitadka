@@ -139,7 +139,7 @@ async function openOrderDetail(id){
  '<div class="jpt-order-detail-card"><div style="font-size:12px;color:#aaa">RESTAURANT ACTION</div><div class="jpt-order-detail-actions">'+detailActionHtml(row)+'</div></div>';
  body.querySelectorAll('[data-act]').forEach(b=>b.onclick=async()=>{await doAction(b);if(m.classList.contains('show')){const updated=rowsCache.find(x=>String(x.id)===String(id));if(updated&&updated.__status!=='new')m.classList.remove('show');}});
  body.querySelectorAll('[data-time]').forEach(b=>b.onclick=()=>{const input=b.parentElement.querySelector('.jpt-cob-minutes');if(!input)return;let v=Number(input.value)||30;v=Math.max(5,Math.min(120,v+(b.dataset.time==='plus'?5:-5)));input.value=String(v);prepDrafts.set(String(id),v);});
- body.querySelectorAll('.jpt-cob-minutes').forEach(input=>input.oninput=()=>{const v=Math.max(5,Math.min(120,Number(input.value)||30));input.value=String(v);prepDrafts.set(String(id),v);});
+ body.querySelectorAll('.jpt-cob-minutes').forEach(input=>input.oninput=()=>{const v=Math.max(15,Math.min(40,Number(input.value)||15));input.value=String(v);prepDrafts.set(String(id),v);});
  m.classList.add('show');
 }
 
@@ -197,7 +197,7 @@ function render(){
    };
  });
  root.querySelectorAll('[data-open-order-btn]').forEach(b=>b.onclick=()=>openOrderDetail(b.dataset.openOrderBtn));
- root.querySelectorAll('.jpt-cob-minutes').forEach(input=>input.oninput=()=>{prepDrafts.set(String(input.dataset.id),Math.max(5,Math.min(120,Number(input.value)||30)));});
+ root.querySelectorAll('.jpt-cob-minutes').forEach(input=>input.oninput=()=>{prepDrafts.set(String(input.dataset.id),Math.max(15,Math.min(40,Number(input.value)||15)));});
  root.querySelectorAll('[data-time]').forEach(b=>{
    const input=b.parentElement.querySelector('.jpt-cob-minutes'); if(!input)return;
    let v=Number(input.value)||30; v=Math.max(5,Math.min(120,v+(b.dataset.time==='plus'?5:-5))); input.value=String(v); prepDrafts.set(String(b.dataset.id),v);
@@ -215,6 +215,12 @@ function render(){
 }
 async function directAction(row,next,extra={}){
  const target=String(next||'').toLowerCase();
+ // Kill the active NEW-order alert before any status transition is attempted.
+ if(target!=='new'){
+   try{window.JPTPartnerOrderAlertV4?.stop?.(true)}catch(e){}
+   try{window.stopOrderAlarm?.(row.id)}catch(e){}
+   try{window.JPTOrderControlBridge?.stopAlerts?.(row.id)}catch(e){}
+ }
  if(!window.JPTOrderControlBridge?.transition)throw new Error('Order control bridge unavailable. Please refresh the dashboard.');
 
  const previous={
@@ -263,7 +269,7 @@ async function doAction(btn){
    if(!confirm('Reject this customer order?'))return;
    await directAction(row,'cancelled',{rejection_reason:'Rejected by restaurant'});
   }else if(act==='accept'){
-   const m=Math.max(5,Math.min(120,Number(prepDrafts.get(String(row.id))??btn.closest('.jpt-cob-actions')?.querySelector('.jpt-cob-minutes')?.value??row.target_minutes??30)));
+   const m=Math.max(15,Math.min(40,Number(prepDrafts.get(String(row.id))??btn.closest('.jpt-cob-actions')?.querySelector('.jpt-cob-minutes')?.value??row.target_minutes??15)));
    await directAction(row,'accepted',{target_minutes:m});
    prepDrafts.delete(String(row.id));
    selected='preparing';
