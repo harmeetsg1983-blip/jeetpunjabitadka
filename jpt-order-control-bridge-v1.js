@@ -63,6 +63,41 @@ async function transition(id,outlet,next,extra){
 
     const targetMinutes=Math.max(15,Math.min(40,Number(extra?.target_minutes ?? current.target_minutes ?? 15)||15));
 
+    /*
+     * READY is intentionally a direct, conditional Supabase UPDATE.
+     * The server row is re-read first, and the UPDATE is guarded by the
+     * exact accepted/preparing state so a stale client cannot advance
+     * an unrelated order. This removes the second transition validator
+     * that was producing the Invalid order transition error.
+     */
+    if(to==='ready'){
+      const readyUpdate=await window.sb.from('orders')
+        .update({
+          status:'ready',
+          ready_at:current.ready_at || new Date().toISOString(),
+          updated_at:new Date().toISOString()
+        })
+        .eq('id',orderId)
+        .eq('outlet_id',outlet)
+        .in('status',['accepted','preparing'])
+        .select('id,outlet_id,status,target_minutes,accepted_at,deadline_at,eta_minutes,ready_at,updated_at')
+        .maybeSingle();
+
+      if(readyUpdate.error){
+        console.error('[JPT MARK READY]',{orderId,outlet,from,to,error:readyUpdate.error});
+        const recovered=await waitFor(orderId,outlet,'ready',4,250);
+        if(recovered) return recovered;
+        throw new Error(readyUpdate.error.message||readyUpdate.error.details||'Order update failed.');
+      }
+
+      if(readyUpdate.data?.id) return readyUpdate.data;
+
+      const afterReady=await read(orderId,outlet);
+      if(norm(afterReady.status)==='ready') return afterReady;
+
+      throw new Error('Order could not be marked READY because its server state changed.');
+    }
+
     const rpc=await window.sb.rpc('jpt_partner_transition_order',{
       p_order_id:orderId,
       p_next_status:to,
@@ -90,7 +125,7 @@ async function transition(id,outlet,next,extra){
 }
 
 window.JPTOrderControlBridge={
-  version:'1.2.0-integrated',
+  version:'1.3.0-ready-direct-update',
   statuses:['new','accepted','preparing','ready','out_for_delivery','delivered','completed','cancelled'],
   canTransition:allowed,
   transition,
