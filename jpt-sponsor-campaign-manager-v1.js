@@ -37,7 +37,7 @@ css();const root=document.createElement('div');root.id='jptSponsorMgr';root.inne
 <div class="jptSMField"><label>End</label><input id="jptSMEnd" type="datetime-local"></div>
 <div class="jptSMField"><label>Sort order</label><input id="jptSMSort" type="number" value="0"></div>
 </div>
-<div class="jptSMField"><label>Selected outlet code (only when Target = Selected)</label><input id="jptSMOutlet" placeholder="JPT-001"></div>
+<div class="jptSMField"><label>Selected outlet (only when Target = Selected)</label><select id="jptSMOutlet"><option value="">Loading outlets…</option></select></div>
 <div class="jptSMField"><label>Image/video preview</label><div id="jptSMPreview" class="jptSMPreview"><div style="height:100%;display:grid;place-items:center;color:#777">Choose media</div></div></div>
 <div class="jptSMBtns"><button class="jptSMBtn" id="jptSMZoomOut">Zoom −</button><button class="jptSMBtn" id="jptSMZoomIn">Zoom +</button><button class="jptSMBtn" id="jptSMLeft">←</button><button class="jptSMBtn" id="jptSMRight">→</button><button class="jptSMBtn" id="jptSMUp">↑</button><button class="jptSMBtn" id="jptSMDown">↓</button></div>
 <div class="jptSMBtns" style="margin-top:10px"><button class="jptSMBtn gold" id="jptSMSave">Save sponsor</button><button class="jptSMBtn" id="jptSMNew">New sponsor</button></div>
@@ -47,7 +47,8 @@ document.getElementById('jptSMClose').onclick=close;document.getElementById('jpt
 document.getElementById('jptSMFile').onchange=previewFile;
 ['jptSMZoomOut','jptSMZoomIn','jptSMLeft','jptSMRight','jptSMUp','jptSMDown'].forEach(id=>document.getElementById(id).onclick=()=>{if(id==='jptSMZoomOut')crop.zoom=Math.max(1,crop.zoom-.1);if(id==='jptSMZoomIn')crop.zoom=Math.min(2.5,crop.zoom+.1);if(id==='jptSMLeft')crop.x=Math.max(0,crop.x-5);if(id==='jptSMRight')crop.x=Math.min(100,crop.x+5);if(id==='jptSMUp')crop.y=Math.max(0,crop.y-5);if(id==='jptSMDown')crop.y=Math.min(100,crop.y+5);paintPreview()});
 document.getElementById('jptSMSave').onclick=save};
-function open(){ui();document.getElementById('jptSponsorMgr').classList.add('open');load()}
+async function loadOutlets(){const c=db();const el=document.getElementById('jptSMOutlet');if(!c||!el)return;const r=await c.from('outlets').select('name,code').order('name');if(r.error){el.innerHTML='<option value="">Outlet list unavailable</option>';return}el.innerHTML='<option value="">Select outlet</option>'+(r.data||[]).map(o=>'<option value="'+esc(o.code)+'">'+esc(o.name)+' ('+esc(o.code)+')</option>').join('')}
+function open(){ui();document.getElementById('jptSponsorMgr').classList.add('open');loadOutlets();load()}
 function close(){document.getElementById('jptSponsorMgr')?.classList.remove('open')}
 function reset(){if(mediaUrl&&mediaUrl.startsWith('blob:'))try{URL.revokeObjectURL(mediaUrl)}catch(_){}
 editId=null;mediaUrl='';mediaType='image';crop={x:50,y:50,zoom:1};['jptSMName','jptSMTitle','jptSMClick','jptSMStart','jptSMEnd','jptSMOutlet'].forEach(id=>document.getElementById(id).value='');document.getElementById('jptSMSort').value='0';document.getElementById('jptSMFile').value='';paintPreview()}
