@@ -17,6 +17,7 @@ let activeRingtoneOrderId=null;
 let audioGeneration=0;
 let timerHandle=null;
 let selectedQueue='all';
+let managedSignature='';
 const outletSelect=document.getElementById('outletSelect');
 
 async function enableBackgroundAlerts(){
@@ -366,6 +367,26 @@ async function boot(){
   if(enable)enable.onclick=enableBackgroundAlerts;
   await initialLoad();
   await subscribe();
+  managedSignature=managedOutlets().join('|');
+  clearInterval(window.__JPTManagedOutletSync);
+  window.__JPTManagedOutletSync=setInterval(async()=>{
+    const sig=managedOutlets().join('|');
+    const current=outlet();
+    if(sig!==managedSignature){
+      managedSignature=sig;
+      await initialLoad();
+      await subscribe();
+    }else if(!rows.size && window.JPTPartnerAccess?.getOutlets?.()?.length){
+      await initialLoad();
+      await subscribe();
+    }
+    const select=document.getElementById('outletSelect');
+    if(select && select.value!==current){
+      localStorage.setItem('jpt_admin_outlet',select.value);
+      await initialLoad();
+      await subscribe();
+    }
+  },1500);
   clearInterval(timerHandle);
   timerHandle=setInterval(updateTimers,1000);
 }
