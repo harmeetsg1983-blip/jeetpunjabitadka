@@ -17,6 +17,54 @@ button,input,select,textarea{font:inherit}.app{min-height:100vh;background:#0707
 .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.card{background:#111;border:1px solid #292929;border-radius:14px;padding:14px}.metric{font-size:25px;font-weight:950;color:#d8ae42}.muted{color:#999;font-size:12px}.tabs{display:flex;gap:7px;overflow:auto;margin:12px 0}.tabs button{white-space:nowrap}.panel{display:none}.panel.active{display:block}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.tablewrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:680px}.table th,.table td{padding:9px;border-bottom:1px solid #292929;text-align:left;font-size:12px}.table th{color:#d8ae42}.tag{display:inline-block;border:1px solid #444;border-radius:99px;padding:4px 8px;font-size:10px}.itemrow{display:flex;gap:10px;align-items:center;border-bottom:1px solid #252525;padding:10px 0}.thumb{width:58px;height:58px;border-radius:10px;background:#1a1a1a;object-fit:cover}.grow{flex:1;min-width:0}.rowactions{display:flex;gap:6px;flex-wrap:wrap}.field{margin:9px 0}.field label{display:block;font-size:11px;color:#aaa;margin-bottom:4px}.area{width:100%;min-height:70px}.input,.select{width:100%}.offerbox{border:1px solid #604d1c;border-radius:14px;padding:14px;background:#171207}.price{font-size:22px;font-weight:950;color:#d8ae42}.old{text-decoration:line-through;color:#777;margin-right:8px}.notice{padding:10px;border-radius:10px;background:#151515;border:1px solid #333;font-size:12px;margin:8px 0}.danger{color:#ff9292}.success{color:#79e39b}.modal{display:none;position:fixed;inset:0;background:#000b;z-index:100;padding:4vh 12px}.modal.show{display:grid;place-items:center}.modalbox{width:min(620px,100%);max-height:92vh;overflow:auto;background:#121212;border:1px solid #3a3a3a;border-radius:18px;padding:16px}.modalhead{display:flex;justify-content:space-between;align-items:center}.order-actions{display:flex;gap:5px;flex-wrap:wrap}.order-actions .btn{padding:7px 8px;font-size:11px}.alarmPulse{animation:alarmPulse .8s infinite alternate}@keyframes alarmPulse{from{box-shadow:0 0 0 rgba(216,174,66,0)}to{box-shadow:0 0 18px rgba(216,174,66,.5)}}
 .toast{position:fixed;left:50%;bottom:75px;transform:translateX(-50%);background:#d8ae42;color:#111;padding:10px 14px;border-radius:99px;font-weight:900;z-index:200;display:none}
 @media(max-width:760px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.two{grid-template-columns:1fr}.hero h1{font-size:20px}.shell{padding:10px 10px 90px}}
+
+/* JPT — PROFESSIONAL VERTICAL ORDER CARD LAYOUT
+   Keeps existing order JS/database/actions intact. No horizontal order scrolling. */
+.orders-panel,.orders-panel *{max-width:100%}
+#orders .tablewrap{width:100%;overflow-x:hidden;overflow-y:visible}
+#orders .table{width:100%;min-width:0;border-collapse:separate;border-spacing:0 12px;display:block}
+#orders .table thead{display:none}
+#orders .table tbody{display:block;width:100%}
+#orders .table tbody tr{display:block;width:100%;background:#111;border:1px solid #303030;border-radius:18px;padding:15px;margin:0 0 12px;box-shadow:0 8px 24px #0008;overflow:hidden}
+#orders .table tbody tr[style]{outline:2px solid #d8ae42!important;outline-offset:-2px}
+#orders .table tbody td{display:block;width:100%;border:0;border-bottom:1px solid #252525;padding:10px 0;font-size:14px;text-align:left;overflow-wrap:anywhere;word-break:break-word}
+#orders .table tbody td:last-child{border-bottom:0;padding-bottom:0}
+#orders .table tbody td:nth-child(1){font-size:20px;font-weight:950;color:#fff;padding-top:2px}
+#orders .table tbody td:nth-child(1) b{color:#d8ae42;font-size:21px}
+#orders .table tbody td:nth-child(1) .muted{font-size:14px;color:#ddd;font-weight:650;line-height:1.55;margin-top:6px}
+#orders .table tbody td:nth-child(2){font-size:16px;font-weight:850;color:#fff}
+#orders .table tbody td:nth-child(2)::before{content:'CUSTOMER';display:block;font-size:9px;letter-spacing:1px;color:#999;font-weight:900;margin-bottom:4px}
+#orders .table tbody td:nth-child(2) .muted{font-size:12px;margin-top:3px}
+#orders .table tbody td:nth-child(3)::before{content:'STATUS';display:block;font-size:9px;letter-spacing:1px;color:#999;font-weight:900;margin-bottom:5px}
+#orders .table tbody td:nth-child(3) .tag{font-size:11px;font-weight:900;padding:6px 10px}
+#orders .table tbody td:nth-child(4)::before{content:'ORDER VALUE';display:block;font-size:9px;letter-spacing:1px;color:#999;font-weight:900;margin-bottom:4px}
+#orders .table tbody td:nth-child(4){font-size:18px;font-weight:900;color:#d8ae42}
+#orders .table tbody td:nth-child(5)::before{content:'ORDER TIME';display:block;font-size:9px;letter-spacing:1px;color:#999;font-weight:900;margin-bottom:4px}
+#orders .table tbody td:nth-child(5){font-size:12px;color:#bbb}
+#orders .table tbody td:nth-child(6)::before{content:'PREPARATION';display:block;font-size:9px;letter-spacing:1px;color:#999;font-weight:900;margin-bottom:6px}
+#orders .table tbody td:nth-child(6){padding:12px 0}
+#orders .table tbody td:nth-child(6) .jpt-ready-countdown{width:100%;min-width:0;min-height:52px;margin:0;font-size:20px;border-radius:14px}
+#orders .table tbody td:nth-child(6) .jpt-rider-box{width:100%;margin-top:8px;padding:10px 11px;background:#171717;border-color:#333}
+#orders .table tbody td:nth-child(7)::before{content:'ACTIONS';display:block;font-size:9px;letter-spacing:1px;color:#999;font-weight:900;margin-bottom:7px}
+#orders .table tbody td:nth-child(7) .jpt-unified-actions{display:flex;flex-direction:column;gap:8px;width:100%}
+#orders .table tbody td:nth-child(7) .jpt-unified-actions .btn{width:100%;min-height:46px;font-size:14px;font-weight:950}
+#orders .table tbody td:nth-child(7)>button.btn{display:flex;width:100%;min-height:48px;align-items:center;justify-content:center;font-size:14px;font-weight:950;margin:0 0 8px}
+#orders .table tbody td:nth-child(7)>button.btn:last-child{margin-bottom:0}
+#orders .table tbody td:nth-child(6) .jpt-rider-box .btn{min-height:40px;padding:9px 14px;white-space:nowrap}
+#orders .table tbody tr>td:first-child{border-top-left-radius:14px;border-top-right-radius:14px}
+#orders .table tbody tr>td:last-child{border-bottom-left-radius:14px;border-bottom-right-radius:14px}
+#orders .table tbody tr>td[colspan]{text-align:center;color:#aaa;border:0;padding:28px 10px}
+#orderQueueBar{overflow-x:hidden!important;width:100%}
+#orderQueueBar .orderQueueBtn{white-space:normal;max-width:100%;font-weight:850}
+@media(max-width:760px){
+ #orders .card{padding:11px}
+ #orders .table tbody tr{padding:14px;border-radius:16px}
+ #orders .table tbody td:nth-child(1){font-size:18px}
+ #orders .table tbody td:nth-child(1) b{font-size:20px}
+ #orders .table tbody td:nth-child(1) .muted{font-size:13px}
+ #orders .table tbody td:nth-child(2){font-size:15px}
+ #orders .table tbody td:nth-child(6) .jpt-ready-countdown{font-size:19px}
+}
 </style>
 </head>
 <body>
