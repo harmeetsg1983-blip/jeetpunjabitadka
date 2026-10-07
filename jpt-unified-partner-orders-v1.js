@@ -126,11 +126,16 @@ function startRingtone(order){
   audio.playsInline=true;
   audio.muted=false;
 
-  /* If a native bridge exposes startAlarm in a future/native build,
-     use it here; current web builds safely no-op because the method
-     is optional. The existing stopAlarm path remains authoritative. */
+  /* Dashboard-open: HTML audio is the primary sound.
+     Background/hidden WebView: hand off to the native foreground alarm. */
   try{
-    window.AndroidOrderAlarm?.startAlarm?.(id,String(order.outlet_id||''));
+    if(document.visibilityState!=='visible'){
+      window.AndroidOrderAlarm?.startAlarm?.(
+        id,
+        String(order.outlet_id||''),
+        String(order.order_no||id)
+      );
+    }
   }catch(e){}
 
   try{
