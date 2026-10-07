@@ -115,7 +115,7 @@ function ensureOrderDetailModal(){
 function detailActionHtml(x){
  const id=esc(x.id||''),st=x.__status;
  if(st==='new')return actionHtml(x);
- if(st==='accepted')return '<button type="button" class="primary" data-act="preparing" data-id="'+id+'">START PREPARING</button>';
+ if(st==='accepted')return '<button type="button" class="primary" data-act="ready" data-id="'+id+'">MARK READY</button>';
  if(st==='preparing')return '<button type="button" class="primary" data-act="ready" data-id="'+id+'">MARK READY</button>';
  if(st==='ready')return '<span class="jpt-cob-history">READY • DELIVERY OFFER IS CHECKED AUTOMATICALLY</span>';
  if(st==='out_for_delivery')return '<span class="jpt-cob-history">OUT FOR DELIVERY • DELIVERY FLOW ACTIVE</span>';
@@ -269,8 +269,7 @@ async function doAction(btn){
    selected='preparing';
   }else{
    await directAction(row,act);
-   if(act==='preparing')selected='preparing';
-   else if(act==='ready')selected='ready';
+   if(act==='ready')selected='ready';
    else if(act==='out_for_delivery')selected='out_for_delivery';
    else if(act==='completed')selected='history';
    if(act==='ready'){
