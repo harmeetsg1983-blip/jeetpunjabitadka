@@ -92,13 +92,16 @@ function toast(msg){
   if(n)n.textContent=String(msg||'');
 }
 function stopRingtone(){
-  try{window.AndroidOrderAlarm?.stopAlarm?.(activeRingtoneOrderId||'')}catch(e){}
+  const id=activeRingtoneOrderId||'';
+  try{window.AndroidOrderAlarm?.stopAlarm?.(id)}catch(e){}
   /* ONLY ACCEPT/REJECT call this function. */
   audioGeneration++;
   activeRingtoneOrderId=null;
   if(audio){
-    try{audio.pause()}catch(e){}
-    try{audio.currentTime=0}catch(e){}
+    try{
+      audio.pause();
+      audio.currentTime=0;
+    }catch(e){}
   }
 }
 function startRingtone(order){
@@ -117,24 +120,49 @@ function startRingtone(order){
     audio.playsInline=true;
     audio.volume=1;
   }
-  audio.muted=false;
+
+  /* Keep ONE reusable audio owner. Never create a second ringtone system. */
   audio.loop=true;
-  try{audio.load()}catch(e){}
-  audio.currentTime=0;
+  audio.playsInline=true;
+  audio.muted=false;
+
+  /* If a native bridge exposes startAlarm in a future/native build,
+     use it here; current web builds safely no-op because the method
+     is optional. The existing stopAlarm path remains authoritative. */
+  try{
+    window.AndroidOrderAlarm?.startAlarm?.(id,String(order.outlet_id||''));
+  }catch(e){}
+
+  try{
+    audio.pause();
+    audio.currentTime=0;
+    audio.load();
+    const playResult=audio.play();
+
+    if(playResult?.catch){
+      playResult.catch(()=>{
+        if(generation===audioGeneration){
+          const msg=document.getElementById('ordersNotice');
+          if(msg)msg.textContent='NEW ORDER received — browser audio could not start. Use the native alarm/notification path or tap the dashboard.';
+        }
+      });
+    }
+  }catch(e){
+    if(generation===audioGeneration){
+      const msg=document.getElementById('ordersNotice');
+      if(msg)msg.textContent='NEW ORDER received — ringtone playback failed: '+(e?.message||e);
+    }
+  }
+
   try{
     if('Notification' in window && Notification.permission==='granted'){
-      new Notification('NEW JPT ORDER',{body:'Order #'+String(order.order_no||order.id)+' received. Open Partner Dashboard to accept or reject.',tag:'jpt-order-'+id,renotify:true});
+      new Notification('NEW JPT ORDER',{
+        body:'Order #'+String(order.order_no||order.id)+' received. Open Partner Dashboard to accept or reject.',
+        tag:'jpt-order-'+id,
+        renotify:true
+      });
     }
   }catch(e){}
-  const p=audio.play();
-  if(p?.catch){
-    p.catch(()=>{
-      if(generation===audioGeneration){
-        const msg=document.getElementById('ordersNotice');
-        if(msg)msg.textContent='NEW ORDER received — tap ACCEPT/REJECT to acknowledge. Browser audio permission may be required.';
-      }
-    });
-  }
 }
 function localDeadline(minutes){
   return new Date(Date.now()+Number(minutes)*60000).toISOString();
