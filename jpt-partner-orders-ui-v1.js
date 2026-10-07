@@ -280,7 +280,7 @@ async function doAction(btn){
     }catch(e){if(typeof window.toast==='function')window.toast('Delivery assignment check failed: '+(e?.message||e));}
    }
   }
-  if(typeof window.toast==='function')window.toast(act==='accept'?'Order accepted • timer started':act==='reject'?'Order rejected':act==='preparing'?'Order is PREPARING':act==='ready'?'Order marked READY':act==='out_for_delivery'?'Order moved to OUT FOR DELIVERY':'Order marked DELIVERED');
+  if(typeof window.toast==='function')window.toast(act==='accept'?'Order accepted • timer started':act==='reject'?'Order rejected':act==='ready'?'Order marked READY':act==='out_for_delivery'?'Order moved to OUT FOR DELIVERY':'Order marked DELIVERED');
   render();
   try{await load()}catch(refreshError){
    console.warn('[JPT Central Orders V2] post-action refresh delayed',refreshError);
