@@ -56,6 +56,18 @@ class MainActivity : ComponentActivity() {
 
     inner class OrderBridge {
         @JavascriptInterface
+        fun startAlarm(orderId: String?, outletId: String?, orderNo: String?) {
+            val id = orderId.orEmpty()
+            if (id.isBlank()) return
+            OrderAlarmService.start(
+                this@MainActivity,
+                id,
+                outletId.orEmpty(),
+                orderNo.orEmpty().ifBlank { id }
+            )
+        }
+
+        @JavascriptInterface
         fun stopAlarm(orderId: String?) {
             OrderAlarmService.stop(this@MainActivity, orderId)
         }
