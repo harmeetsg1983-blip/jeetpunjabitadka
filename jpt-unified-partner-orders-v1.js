@@ -29,6 +29,13 @@ async function enableBackgroundAlerts(){
 function outlet(){
   return String(localStorage.getItem('jpt_admin_outlet')||outletSelect?.value||'JPT-001');
 }
+function managedOutlets(){
+  const list=window.JPTPartnerAccess?.getOutlets?.()||window.JPT_PARTNER_OUTLETS||[];
+  const codes=list.map(x=>String(x?.outlet_id||x?.code||x?.id||'')).filter(Boolean);
+  const current=outlet();
+  return [...new Set(codes.length?codes:[current])];
+}
+function orderBelongsToActiveOutlet(o){ return String(o?.outlet_id||'')===outlet(); }
 function esc(v){
   return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -115,11 +122,11 @@ function actionHtml(o){
   if(st==='new'){
     const m=Math.max(15,Math.min(40,Number(o.__draftMinutes||o.target_minutes||15)));
     return '<div class="jpt-unified-actions" data-id="'+id+'">'+
-      '<button class="btn" data-minus="'+id+'">−</button>'+
-      '<b class="jpt-unified-minutes">'+m+' min</b>'+
-      '<button class="btn" data-plus="'+id+'">+</button>'+
-      '<button class="btn gold" data-accept="'+id+'">ACCEPT</button>'+
-      '<button class="btn red" data-reject="'+id+'">REJECT</button></div>';
+      '<button type="button" class="btn" data-minus="'+id+'" aria-label="Decrease preparation time">LESS 1 MIN</button>'+
+      '<b class="jpt-unified-minutes" aria-label="Preparation time">'+m+' MIN</b>'+
+      '<button type="button" class="btn" data-plus="'+id+'" aria-label="Increase preparation time">ADD 1 MIN</button>'+
+      '<button type="button" class="btn gold" data-accept="'+id+'">ACCEPT ORDER</button>'+
+      '<button type="button" class="btn red" data-reject="'+id+'">REJECT ORDER</button></div>';
   }
   if(st==='accepted'||st==='preparing')
     return '<button class="btn gold" data-ready="'+id+'">MARK READY</button>';
@@ -132,7 +139,7 @@ function actionHtml(o){
 function render(){
   const body=document.getElementById('ordersBody');
   if(!body)return;
-  const all=[...rows.values()].sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
+  const all=[...rows.values()].filter(orderBelongsToActiveOutlet).sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
   const filtered=selectedQueue==='all'?all:all.filter(o=>status(o.status)===selectedQueue);
   body.innerHTML=filtered.map(o=>{
     const st=status(o.status);
@@ -293,7 +300,10 @@ async function transition(id,next){
   }catch(e){toast('Order update failed: '+(e.message||e));}
 }
 async function initialLoad(){
-  const r=await window.sb.from('orders').select('*').eq('outlet_id',outlet()).order('created_at',{ascending:false}).limit(100);
+  const codes=managedOutlets();
+  const r=codes.length===1
+    ? await window.sb.from('orders').select('*').eq('outlet_id',codes[0]).order('created_at',{ascending:false}).limit(100)
+    : await window.sb.from('orders').select('*').in('outlet_id',codes).order('created_at',{ascending:false}).limit(500);
   if(r.error){toast('Orders load failed: '+r.error.message);return;}
   rows.clear();
   (r.data||[]).forEach(o=>rows.set(String(o.id),o));
@@ -301,34 +311,30 @@ async function initialLoad(){
 }
 async function subscribe(){
   if(channel)try{await window.sb.removeChannel(channel)}catch(e){}
-  const code=outlet();
-  channel=window.sb.channel('jpt-unified-orders-'+code+'-'+Date.now())
-    .on('postgres_changes',{
-      event:'INSERT',schema:'public',table:'orders',
-      filter:'outlet_id=eq.'+code
-    },payload=>{
+  const codes=managedOutlets();
+  channel=window.sb.channel('jpt-unified-orders-all-managed-'+Date.now());
+  codes.forEach(code=>{
+    channel.on('postgres_changes',{event:'INSERT',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
       const o=payload?.new;
-      if(!o || String(o.outlet_id)!==code)return;
+      if(!o || !codes.includes(String(o.outlet_id)))return;
       rows.set(String(o.id),Object.assign({},o,{__liveNew:true}));
       render();
       if(status(o.status)==='new')startRingtone(o);
-    })
-    .on('postgres_changes',{
-      event:'UPDATE',schema:'public',table:'orders',
-      filter:'outlet_id=eq.'+code
-    },payload=>{
+    });
+    channel.on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
       const o=payload?.new;
-      if(!o)return;
+      if(!o || !codes.includes(String(o.outlet_id)))return;
       const old=rows.get(String(o.id))||{};
       rows.set(String(o.id),Object.assign({},old,o));
       render();
-    })
-    .subscribe((s,e)=>{
-      const n=document.getElementById('ordersNotice');
-      if(s==='SUBSCRIBED')n&&(n.textContent='LIVE • Supabase Realtime connected for '+code);
-      if(s==='CHANNEL_ERROR'||s==='TIMED_OUT')n&&(n.textContent='Realtime reconnecting…');
-      if(e)console.warn('[JPT Unified Orders]',s,e);
     });
+  });
+  channel.subscribe((s,e)=>{
+    const n=document.getElementById('ordersNotice');
+    if(s==='SUBSCRIBED')n&&(n.textContent='LIVE • Supabase Realtime connected for '+codes.join(', '));
+    if(s==='CHANNEL_ERROR'||s==='TIMED_OUT')n&&(n.textContent='Realtime reconnecting…');
+    if(e)console.warn('[JPT Unified Orders]',s,e);
+  });
 }
 function updateTimers(){
   document.querySelectorAll('[data-timer]').forEach(el=>{
@@ -348,6 +354,12 @@ async function boot(){
   bindQueue();
   const refresh=document.getElementById('ordersRefresh');
   if(refresh)refresh.onclick=async()=>{await initialLoad();await subscribe()};
+  if(outletSelect)outletSelect.addEventListener('change',async()=>{
+    const code=String(outletSelect.value||'');
+    if(code)localStorage.setItem('jpt_admin_outlet',code);
+    await initialLoad();
+    await subscribe();
+  });
   const alarm=document.getElementById('stopAlarm');
   if(alarm)alarm.onclick=()=>{};
   const enable=document.getElementById('enableAlarm');
