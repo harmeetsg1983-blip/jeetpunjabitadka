@@ -339,20 +339,23 @@ async function reject(id){
     render(); toast('REJECT failed: '+(e.message||e));
   }
 }
+const markReadyInFlight=new Set();
 async function markReady(id){
-  const o=rows.get(String(id)); if(!o)return;
-  const current=status(o.status);
-  if(current!=='accepted'&&current!=='preparing'){
-    const fresh=await read(id).catch(()=>null);
-    if(fresh)Object.assign(o,fresh);
-  }
-  const now=status(o.status);
-  if(now!=='accepted'&&now!=='preparing'){
-    toast('MARK READY blocked: server order is '+now.toUpperCase()+'.');
-    render(); return;
-  }
-
+  const key=String(id);
+  if(markReadyInFlight.has(key))return;
+  const o=rows.get(key); if(!o)return;
+  markReadyInFlight.add(key);
   try{
+    const fresh=await read(id,o.outlet_id).catch(()=>null);
+    if(fresh)Object.assign(o,fresh);
+    const now=status(o.status);
+    if(now==='ready'){
+      rows.set(key,o); render(); return;
+    }
+    if(now!=='accepted'&&now!=='preparing'){
+      toast('MARK READY blocked: server order is '+now.toUpperCase()+'.');
+      render(); return;
+    }
     const r=await window.sb.from('orders')
       .update({status:'ready',ready_at:new Date().toISOString(),updated_at:new Date().toISOString()})
       .eq('id',Number(id))
@@ -361,14 +364,22 @@ async function markReady(id){
       .select('*')
       .maybeSingle();
     if(r.error)throw r.error;
-    if(!r.data)throw new Error('Order state changed before MARK READY.');
-    rows.set(String(id),r.data);
+    if(!r.data){
+      const verify=await read(id,o.outlet_id).catch(()=>null);
+      if(verify && status(verify.status)==='ready'){
+        rows.set(key,verify); render(); return;
+      }
+      throw new Error('Order state changed before MARK READY.');
+    }
+    rows.set(key,r.data);
     toast('Order marked READY.');
     render();
     try{await window.sb.rpc('delivery_offer_next',{p_order_id:Number(id)})}catch(e){}
   }catch(e){
-    const fresh=await read(id,o?.outlet_id).catch(()=>null); if(fresh)rows.set(String(id),fresh);
+    const fresh=await read(id,o?.outlet_id).catch(()=>null); if(fresh)rows.set(key,fresh);
     render(); toast('MARK READY failed: '+(e.message||e));
+  }finally{
+    markReadyInFlight.delete(key);
   }
 }
 async function transition(id,next){
