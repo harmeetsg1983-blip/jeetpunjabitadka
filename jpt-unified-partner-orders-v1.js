@@ -128,19 +128,28 @@ function render(){
     const deadline=o.deadline_at||o.__localDeadline;
     const timer=st==='accepted'||st==='preparing'?remaining(deadline):'—';
     const timerButton=(st==='accepted'||st==='preparing')?
-      '<div class="jpt-ready-countdown" data-timer="'+esc(o.id)+'">Order Ready ('+timer+')</div>':'';
+      '<div class="jpt-ready-countdown" data-timer="'+esc(o.id)+'">ORDER READY ('+timer+')</div>':'';
     const rider=riderInfo(o);
-    const itemText=items(o).map(i=>String(i.name||i.item_name||'Item')+' ×'+Number(i.qty??i.quantity??1)).join(', ');
-    const newClass=st==='new'&&o.__liveNew?' style="outline:2px solid #f0c94a"':'';
-    return '<tr'+newClass+'>'+
-      '<td><b>#'+esc(o.order_no||o.id)+'</b><div class="muted">'+esc(itemText)+'</div></td>'+
-      '<td>'+esc(o.customer_name||'Customer')+'<div class="muted">'+esc(o.customer_phone||'')+'</div></td>'+
-      '<td><span class="tag">'+esc(st.replaceAll('_',' ').toUpperCase())+'</span></td>'+
-      '<td>'+money(o.total??o.grand_total??0)+'</td>'+
-      '<td>'+esc(o.created_at?new Date(o.created_at).toLocaleString('en-IN'):'—')+'</td>'+
-      '<td>'+timerButton+rider+'</td>'+
-      '<td>'+actionHtml(o)+'</td></tr>';
-  }).join('')||'<tr><td colspan="7">No orders in this queue.</td></tr>';
+    const its=items(o);
+    const newClass=st==='new'&&o.__liveNew?' jpt-new-order':'';
+    const itemHtml=its.length?its.map(i=>
+      '<div class="jpt-item-line"><span>'+esc(i.name||i.item_name||'Item')+'</span><b>× '+Number(i.qty??i.quantity??1)+'</b></div>'
+    ).join(''):'<div class="muted">No item details available</div>';
+    const action=actionHtml(o)
+      .replace(/>\s*<\/button>/g,'>ACTION</button>')
+      .replace(/>\s*<\/b>/g,'>TIME</b>');
+    return '<article class="jpt-order-card'+newClass+'" data-order-card="'+esc(o.id)+'">'+
+      '<div class="jpt-order-head"><div><div class="jpt-label">ORDER ID</div><div class="jpt-order-id">#'+esc(o.order_no||o.id)+'</div></div>'+
+      '<span class="tag jpt-status">'+esc(st.replaceAll('_',' ').toUpperCase())+'</span></div>'+
+      '<div class="jpt-customer"><div class="jpt-label">CUSTOMER</div><div class="jpt-customer-name">'+esc(o.customer_name||'Customer')+'</div>'+
+      (o.customer_phone?'<div class="muted">'+esc(o.customer_phone)+'</div>':'')+'</div>'+
+      '<div class="jpt-items"><div class="jpt-label">ITEMS</div>'+itemHtml+'</div>'+
+      '<div class="jpt-order-meta"><div><span class="jpt-label">ORDER VALUE</span><b>'+money(o.total??o.grand_total??0)+'</b></div>'+
+      '<div><span class="jpt-label">ORDER TIME</span><span>'+esc(o.created_at?new Date(o.created_at).toLocaleString('en-IN'):'—')+'</span></div></div>'+
+      '<div class="jpt-prep">'+timerButton+rider+'</div>'+
+      '<div class="jpt-actions"><div class="jpt-label">ACTIONS</div>'+action+'</div>'+
+      '</article>';
+  }).join('')||'<div class="jpt-no-orders">No orders in this queue.</div>';
 
   document.querySelectorAll('[data-minus]').forEach(b=>b.onclick=()=>{
     const o=rows.get(String(b.dataset.minus)); if(!o)return;
@@ -150,6 +159,12 @@ function render(){
     const o=rows.get(String(b.dataset.plus)); if(!o)return;
     o.__draftMinutes=Math.min(40,Number(o.__draftMinutes||o.target_minutes||15)+1); render();
   });
+  document.querySelectorAll('[data-accept]').forEach(b=>b.textContent='ACCEPT ORDER');
+  document.querySelectorAll('[data-reject]').forEach(b=>b.textContent='REJECT ORDER');
+  document.querySelectorAll('[data-ready]').forEach(b=>b.textContent='ORDER READY');
+  document.querySelectorAll('[data-delivery]').forEach(b=>b.textContent='OUT FOR DELIVERY');
+  document.querySelectorAll('[data-delivered]').forEach(b=>b.textContent='MARK DELIVERED');
+  document.querySelectorAll('.jpt-rider-box .btn').forEach(b=>b.textContent='CALL RIDER');
   document.querySelectorAll('[data-accept]').forEach(b=>b.onclick=()=>accept(b.dataset.accept));
   document.querySelectorAll('[data-reject]').forEach(b=>b.onclick=()=>reject(b.dataset.reject));
   document.querySelectorAll('[data-ready]').forEach(b=>b.onclick=()=>markReady(b.dataset.ready));
