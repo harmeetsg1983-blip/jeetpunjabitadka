@@ -93,6 +93,37 @@ button,input,select,textarea{font:inherit}.app{min-height:100vh;background:#0707
 .jpt-no-orders{text-align:center;padding:35px 15px;border:1px dashed #444;border-radius:16px;color:#aaa;font-size:15px}
 @media(max-width:760px){.jpt-order-card{padding:14px;border-radius:17px}.jpt-order-id{font-size:23px}.jpt-customer-name{font-size:18px}.jpt-item-line{font-size:16px}.jpt-order-meta{grid-template-columns:1fr}.jpt-ready-countdown{font-size:19px!important}}
 </style>
+
+<style id="jpt-unified-order-button-label-fix">
+/* JPT unified order-card action labels: always visible, bold and readable. */
+.jpt-order-card .jpt-actions button,
+.jpt-order-card .jpt-unified-actions button,
+.jpt-order-card .jpt-unified-actions .btn,
+.jpt-order-card .jpt-rider-box .btn{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  min-height:50px !important;
+  width:100% !important;
+  padding:12px 14px !important;
+  font-size:15px !important;
+  line-height:1.15 !important;
+  font-weight:1000 !important;
+  letter-spacing:.2px !important;
+  color:#fff !important;
+  text-indent:0 !important;
+  opacity:1 !important;
+  visibility:visible !important;
+  white-space:normal !important;
+  -webkit-text-fill-color:currentColor !important;
+}
+.jpt-order-card .jpt-unified-actions{display:flex;flex-direction:column;gap:8px;width:100%}
+.jpt-order-card .jpt-unified-minutes{display:flex;align-items:center;justify-content:center;min-height:44px;font-size:17px;font-weight:1000;color:#d8ae42}
+.jpt-order-card [data-accept]{background:#d8ae42 !important;color:#111 !important}
+.jpt-order-card [data-reject]{background:#2a1111 !important;color:#ff9a9a !important;border-color:#8d3535 !important}
+.jpt-order-card [data-ready],.jpt-order-card [data-delivery]{background:#d8ae42 !important;color:#111 !important}
+.jpt-order-card [data-delivered]{background:#12301d !important;color:#8ff0ac !important;border-color:#2d8a4c !important}
+</style>
 </head>
 <body>
 <div class="app">
@@ -1051,7 +1082,7 @@ checkSession();
 try{if("serviceWorker" in navigator){navigator.serviceWorker.register("./jpt-partner-sw.js?v=18",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});}}catch(e){}
 </script>
 
-<script src="./jpt-unified-partner-orders-v1.js?v=20261007-4"></script>
+<script src="./jpt-unified-partner-orders-v1.js?v=20261007-5"></script>
 <script src="./jpt-partner-timing-manager-v1.js?v=1"></script>
 <script src="./jpt-settings-command-center-v2.js?v=3"></script>
 <script src="./jpt-partner-delivery-tracking-v2.js?v=2"></script>
