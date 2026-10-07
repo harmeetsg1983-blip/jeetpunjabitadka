@@ -65,6 +65,33 @@ button,input,select,textarea{font:inherit}.app{min-height:100vh;background:#0707
  #orders .table tbody td:nth-child(2){font-size:15px}
  #orders .table tbody td:nth-child(6) .jpt-ready-countdown{font-size:19px}
 }
+
+/* JPT — FINAL MOBILE ORDER CARD SYSTEM */
+#ordersTableWrap{width:100%;overflow:visible!important}
+#ordersBody.jpt-orders-list{display:flex;flex-direction:column;gap:14px;width:100%;min-width:0}
+.jpt-order-card{width:100%;min-width:0;background:#101010;border:1px solid #343434;border-radius:20px;padding:16px;color:#fff;box-shadow:0 10px 28px #0009;overflow:hidden}
+.jpt-order-card.jpt-new-order{border-color:#d8ae42;box-shadow:0 0 0 2px #d8ae4240,0 10px 28px #0009}
+.jpt-order-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding-bottom:13px;border-bottom:1px solid #292929}
+.jpt-label{font-size:10px;letter-spacing:1.1px;font-weight:950;color:#999;margin-bottom:5px}
+.jpt-order-id{font-size:25px;line-height:1.1;font-weight:1000;color:#d8ae42;overflow-wrap:anywhere}
+.jpt-status{font-size:11px!important;font-weight:950!important;padding:7px 10px!important;white-space:normal;text-align:center}
+.jpt-customer,.jpt-items{padding:13px 0;border-bottom:1px solid #292929}
+.jpt-customer-name{font-size:20px;font-weight:950;line-height:1.2;overflow-wrap:anywhere}
+.jpt-item-line{display:flex;justify-content:space-between;gap:12px;padding:7px 0;font-size:17px;font-weight:750;line-height:1.3}
+.jpt-item-line span{min-width:0;overflow-wrap:anywhere}.jpt-item-line b{color:#d8ae42;white-space:nowrap}
+.jpt-order-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:13px 0;border-bottom:1px solid #292929}
+.jpt-order-meta>div{display:flex;flex-direction:column;gap:4px;min-width:0;font-size:13px;color:#ddd;overflow-wrap:anywhere}
+.jpt-order-meta b{font-size:19px;color:#d8ae42}
+.jpt-prep{padding:13px 0 5px}
+.jpt-ready-countdown{width:100%!important;min-width:0!important;min-height:56px!important;margin:0!important;font-size:20px!important;font-weight:1000!important}
+.jpt-rider-box{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px;margin-top:9px;background:#171717;border:1px solid #383838;border-radius:13px}
+.jpt-rider-box>div{min-width:0}.jpt-rider-box .muted{font-size:14px;color:#fff;font-weight:800;overflow-wrap:anywhere}
+.jpt-rider-box .btn{min-height:44px;padding:10px 15px;white-space:nowrap;text-decoration:none;font-weight:1000}
+.jpt-actions{padding-top:12px}.jpt-actions .jpt-label{margin-bottom:8px}
+.jpt-actions .jpt-unified-actions{display:flex!important;flex-direction:column!important;gap:9px!important;width:100%!important}
+.jpt-actions .btn{width:100%!important;min-height:50px!important;padding:12px!important;font-size:15px!important;font-weight:1000!important;white-space:normal!important}
+.jpt-no-orders{text-align:center;padding:35px 15px;border:1px dashed #444;border-radius:16px;color:#aaa;font-size:15px}
+@media(max-width:760px){.jpt-order-card{padding:14px;border-radius:17px}.jpt-order-id{font-size:23px}.jpt-customer-name{font-size:18px}.jpt-item-line{font-size:16px}.jpt-order-meta{grid-template-columns:1fr}.jpt-ready-countdown{font-size:19px!important}}
 </style>
 </head>
 <body>
@@ -121,7 +148,7 @@ button,input,select,textarea{font:inherit}.app{min-height:100vh;background:#0707
 </section>
 
 <section id="orders" class="panel">
- <div class="card"><div class="rowactions"><button class="btn" id="ordersRefresh">↻ Refresh Orders</button><button class="btn gold" id="enableAlarm">🔔 Order Alarm Active</button></div><div id="ordersNotice" class="notice">Loading…</div><div id="orderQueueBar" class="rowactions" style="gap:6px;flex-wrap:wrap;margin:8px 0"><button type="button" class="btn gold orderQueueBtn" data-queue="all">ALL</button><button type="button" class="btn orderQueueBtn" data-queue="new">NEW</button><button type="button" class="btn orderQueueBtn" data-queue="accepted">ACCEPTED</button><button type="button" class="btn orderQueueBtn" data-queue="preparing">PREPARING</button><button type="button" class="btn orderQueueBtn" data-queue="ready">READY</button><button type="button" class="btn orderQueueBtn" data-queue="out_for_delivery">OUT FOR DELIVERY</button><button type="button" class="btn orderQueueBtn" data-queue="delivered">DELIVERED</button><button type="button" class="btn orderQueueBtn" data-queue="cancelled">CANCELLED</button></div><div id="orderAlarm" class="notice" style="display:none;border-color:#d8ae42;background:#211706"><b>🔔 NEW ORDER</b><div id="orderAlarmText" class="muted" style="color:#fff;margin-top:4px"></div><button class="btn gold" id="stopAlarm" style="margin-top:8px">Acknowledge</button></div><div class="tablewrap" id="ordersTableWrap"><table class="table"><thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Total</th><th>Time</th><th>Timer</th><th>Actions</th></tr></thead><tbody id="ordersBody"></tbody></table></div></div>
+ <div class="card"><div class="rowactions"><button class="btn" id="ordersRefresh">↻ Refresh Orders</button><button class="btn gold" id="enableAlarm">🔔 Order Alarm Active</button></div><div id="ordersNotice" class="notice">Loading…</div><div id="orderQueueBar" class="rowactions" style="gap:6px;flex-wrap:wrap;margin:8px 0"><button type="button" class="btn gold orderQueueBtn" data-queue="all">ALL</button><button type="button" class="btn orderQueueBtn" data-queue="new">NEW</button><button type="button" class="btn orderQueueBtn" data-queue="accepted">ACCEPTED</button><button type="button" class="btn orderQueueBtn" data-queue="preparing">PREPARING</button><button type="button" class="btn orderQueueBtn" data-queue="ready">READY</button><button type="button" class="btn orderQueueBtn" data-queue="out_for_delivery">OUT FOR DELIVERY</button><button type="button" class="btn orderQueueBtn" data-queue="delivered">DELIVERED</button><button type="button" class="btn orderQueueBtn" data-queue="cancelled">CANCELLED</button></div><div id="orderAlarm" class="notice" style="display:none;border-color:#d8ae42;background:#211706"><b>🔔 NEW ORDER</b><div id="orderAlarmText" class="muted" style="color:#fff;margin-top:4px"></div><button class="btn gold" id="stopAlarm" style="margin-top:8px">Acknowledge</button></div><div class="jpt-orders-vertical" id="ordersTableWrap"><div id="ordersBody" class="jpt-orders-list"></div></div></div>
 </section>
 
 <section id="menu" class="panel">
