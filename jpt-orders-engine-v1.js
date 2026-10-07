@@ -9,7 +9,7 @@ window.__JPT_CLEAN_ORDERS_ENGINE_V1__=true;
 window.__JPTOrdersV3Active=true;
 window.__JPTDisableLegacyOrderRuntime=()=>true;
 
-const V='orders-engine-v1.0.10';
+const V='orders-engine-v1.0.11';
 const JPT_RESTAURANT_NEW_ORDER_AUDIO='./ringtones/1000449570.mp4';
 const STATES={new:'NEW ORDER',preparing:'PREPARING',accepted:'PREPARING',ready:'READY',out_for_delivery:'OUT FOR DELIVERY',delivered:'HISTORY',completed:'HISTORY',cancelled:'HISTORY'};
 const HISTORY=new Set(['delivered','completed','cancelled']);
@@ -215,7 +215,21 @@ function realtime(){
 }
 function readPushUrl(){try{const u=new URLSearchParams(location.search);if(u.get('push')!=='order')return false;const oi=u.get('order_id')||null,oo=u.get('outlet_id')||null,aa=u.get('action')||'';if(!oi)return false;pushOrderId=oi;pushOutletId=oo;pushAction=(aa==='accept'||aa==='reject')?aa:'';pushHandled=false;return true}catch(e){return false}}
 async function handlePushUrl(){if(!readPushUrl())return;try{if(window.showPanel)window.showPanel('orders')}catch(e){}selectedView='new';render();setTimeout(async()=>{if(pushAction&&pushOrderId&&!pushHandled){pushHandled=true;await action(pushOrderId,pushAction,null);return}detail(pushOrderId)},150)}
-async function boot(){if(!document.getElementById('orders')||!window.sb){setTimeout(boot,300);return}if(!mount())return;readPushUrl();window.addEventListener('pageshow',()=>handlePushUrl());window.addEventListener('popstate',()=>handlePushUrl());await load(false);try{const sr=await window.sb.auth.getSession();const n=document.getElementById('jptOeNotice');if(n&&!sr?.data?.session)n.textContent='Partner session required for order actions.';else if(n)n.textContent=(central?'Central':'Partner')+' Orders • Clean Engine v1.0.9 • Server RPC actions';}catch(e){}realtime();clearInterval(window.__JPTCleanOrdersRefresh);window.__JPTCleanOrdersRefresh=setInterval(()=>load(false),20000);clearInterval(window.__JPTCleanOrdersCountdown);window.__JPTCleanOrdersCountdown=setInterval(tick,1000)}
+function installMountGuard(){
+ const p=document.getElementById('orders');if(!p||window.__JPTOrdersMountGuardV1)return;
+ window.__JPTOrdersMountGuardV1=true;
+ const obs=new MutationObserver(()=>{
+  if(window.__JPTOrdersRemounting)return;
+  if(!document.getElementById('jptOrdersOpsV1')){
+   window.__JPTOrdersRemounting=true;
+   try{mount();render()}catch(e){console.warn('[JPT Orders] clean mount guard failed',e)}
+   window.__JPTOrdersRemounting=false;
+  }
+ });
+ obs.observe(p,{childList:true});
+ window.__JPTOrdersMountObserverV1=obs;
+}
+async function boot(){if(!document.getElementById('orders')||!window.sb){setTimeout(boot,300);return}if(!mount())return;installMountGuard();readPushUrl();window.addEventListener('pageshow',()=>handlePushUrl());window.addEventListener('popstate',()=>handlePushUrl());await load(false);try{const sr=await window.sb.auth.getSession();const n=document.getElementById('jptOeNotice');if(n&&!sr?.data?.session)n.textContent='Partner session required for order actions.';else if(n)n.textContent=(central?'Central':'Partner')+' Orders • Clean Engine v1.0.11 • Server RPC actions';}catch(e){}realtime();clearInterval(window.__JPTCleanOrdersRefresh);window.__JPTCleanOrdersRefresh=setInterval(()=>load(false),20000);clearInterval(window.__JPTCleanOrdersCountdown);window.__JPTCleanOrdersCountdown=setInterval(tick,1000)}
 window.JPTCleanOrdersEngineV1={version:V,reload:()=>load(true),stopAlert,openOrder:detail,getRows:()=>rows.slice()};
 boot();
 })();
