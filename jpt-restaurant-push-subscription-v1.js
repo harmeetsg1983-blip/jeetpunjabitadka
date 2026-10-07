@@ -16,15 +16,19 @@ function base64ToUint8Array(base64){
   const raw=atob((base64+pad).replace(/-/g,'+').replace(/_/g,'/'));
   return Uint8Array.from(raw,c=>c.charCodeAt(0));
 }
-function getOutlet(){
-  return String(window.activeOutlet||window.JPT_ACTIVE_OUTLET||localStorage.getItem('jpt_admin_outlet')||'').trim();
+function getOutlets(){
+  const list=window.JPTPartnerAccess?.getOutlets?.()||window.JPT_PARTNER_OUTLETS||[];
+  const codes=list.map(x=>String(x?.outlet_id||x?.code||x?.id||'').trim()).filter(Boolean);
+  const current=String(window.activeOutlet||window.JPT_ACTIVE_OUTLET||localStorage.getItem('jpt_admin_outlet')||'').trim();
+  return [...new Set(codes.length?codes:(current?[current]:[]))];
 }
+function getOutlet(){return getOutlets()[0]||'';}
 async function enable(){
   try{
     if(!('serviceWorker' in navigator)||!('PushManager' in window)) return {ok:false,reason:'push_unsupported'};
     if(!window.sb) return {ok:false,reason:'supabase_not_ready'};
-    const outlet=getOutlet();
-    if(!outlet) return {ok:false,reason:'outlet_missing'};
+    const outlets=getOutlets();
+    if(!outlets.length) return {ok:false,reason:'outlet_missing'};
     const session=await window.sb.auth.getSession();
     if(!session.data?.session) return {ok:false,reason:'session_missing'};
     if(Notification.permission==='default'){
@@ -42,15 +46,19 @@ async function enable(){
         applicationServerKey:base64ToUint8Array(key)
       });
     }
-    const r=await window.sb.rpc('restaurant_partner_register_push_subscription',{
-      p_outlet_id:outlet,
-      p_subscription:subscription.toJSON(),
-      p_platform:/Android/i.test(navigator.userAgent)?'android':'web',
-      p_app_version:'partner-v107-push-v2'
-    });
-    if(r.error) throw r.error;
+    const failures=[];
+    for(const outlet of outlets){
+      const r=await window.sb.rpc('restaurant_partner_register_push_subscription',{
+        p_outlet_id:outlet,
+        p_subscription:subscription.toJSON(),
+        p_platform:/Android/i.test(navigator.userAgent)?'android':'web',
+        p_app_version:'partner-v107-push-v3-global'
+      });
+      if(r.error) failures.push(outlet+': '+r.error.message);
+    }
+    if(failures.length===outlets.length) throw new Error(failures.join(' | '));
     localStorage.setItem('jpt_restaurant_push_enabled','1');
-    return {ok:true,endpoint:subscription.endpoint,outlet_id:outlet};
+    return {ok:true,endpoint:subscription.endpoint,outlet_ids:outlets,failures};
   }catch(e){
     console.warn('[JPT Restaurant Push] subscription:',e.message||e);
     return {ok:false,reason:e.message||'subscription_failed'};
@@ -60,5 +68,5 @@ async function boot(){
   if(Notification.permission!=='granted') return {ok:false,reason:'permission_not_granted'};
   return enable();
 }
-window.JPTRestaurantPushSubscription={enable,boot,getOutlet};
+window.JPTRestaurantPushSubscription={enable,boot,getOutlet,getOutlets};
 })();
