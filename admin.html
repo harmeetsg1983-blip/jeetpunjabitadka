@@ -569,130 +569,6 @@ function renderOrderSummaries(rows){
   $('reportsNotice').textContent='Operational counts are for the selected outlet only and use the current order status values.';
 }
 
-let orderChannel=null;
-window.__JPTDisableLegacyOrderRuntime=async function(){
-  try{if(orderChannel){await sb.removeChannel(orderChannel);orderChannel=null;}}catch(e){}
-};
-let jptNewOrderAudio=null;
-const JPT_NEW_ORDER_AUDIO='./ringtones/1000449570.mp4';
-function ensureNewOrderAudio(){
-  if(!jptNewOrderAudio){
-    jptNewOrderAudio=new Audio(JPT_NEW_ORDER_AUDIO);
-    jptNewOrderAudio.preload='auto';
-    jptNewOrderAudio.loop=true;
-  }
-  return jptNewOrderAudio;
-}
-function primeNewOrderAudio(){
-  try{
-    const a=ensureNewOrderAudio();
-    a.muted=true;
-    const p=a.play();
-    if(p&&p.then)p.then(()=>{a.pause();a.currentTime=0;a.muted=false}).catch(()=>{a.muted=false});
-  }catch(e){}
-}
-const jptAlarmedOrders=new Set();
-function orderItemsText(x){
-  const a=Array.isArray(x.items)?x.items:[];
-  return a.map(i=>`${i.name||i.item_name||'Item'} × ${Number(i.qty??i.quantity??1)}`).join(', ');
-}
-function showOrderAlarm(order){
-  const alarmKey=String(order?.id||order?.order_no||'');
-  if(!alarmKey)return;
-  // Single-owner guard: never start a second alarm for an order that is
-  // already acknowledged or is already active in this page instance.
-  if(jptAlarmedOrders.has(alarmKey))return;
-  if(String(order?.status||'').toLowerCase()!=='new')return;
-  jptAlarmedOrders.add(alarmKey);
-  $('orderAlarmText').textContent='New order '+(order?.order_no||'')+' received for '+(currentOutletRow?.name||activeOutlet)+'.';
-  $('orderAlarm').style.display='block';$('orderAlarm').classList.add('alarmPulse');
-  try{navigator.vibrate?.([300,120,300]);}catch(e){}
-  try{if('Notification' in window && Notification.permission==='granted') new Notification('JPT — NEW ORDER',{body:$('orderAlarmText').textContent});}catch(e){}
-  try{const a=ensureNewOrderAudio();a.loop=true;a.muted=false;const p=a.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}
-}
-function stopOrderAlarm(orderId){
-  $('orderAlarm').style.display='none';
-  $('orderAlarm').classList.remove('alarmPulse');
-  try{navigator.vibrate?.(0)}catch(e){}
-  try{if(jptNewOrderAudio){jptNewOrderAudio.pause();jptNewOrderAudio.currentTime=0}}catch(e){}
-  if(orderId!==undefined&&orderId!==null)jptAlarmedOrders.delete(String(orderId));
-}
-async function enableOrderAlarm(){
-  try{primeNewOrderAudio();}catch(e){}
-  try{if('Notification' in window && Notification.permission==='default') await Notification.requestPermission();}catch(e){}
-  localStorage.setItem('jpt_v107_alarm_enabled','1');toast('Order alert is enabled; use the saved notification ringtone in Sound Settings');
-}
-$('enableAlarm').onclick=enableOrderAlarm;$('stopAlarm').onclick=stopOrderAlarm;
-const jptOrderActionBusy=new Set();
-async function orderAction(id,status,extra={}){
-  if(window.JPTOrderControlBridge?.transition){
-    try{
-      const row=await window.JPTOrderControlBridge.transition(id,activeOutlet,status,extra);
-      if(String(status).toLowerCase()!=='new')window.JPTOrderControlBridge.stopAlerts(id);
-      await loadOrders(); return !!row;
-    }catch(e){toast('Order update failed: '+(e.message||e));return false}
-  }
-  const key=String(id||'')+'|'+String(status||''); if(jptOrderActionBusy.has(key))return false; jptOrderActionBusy.add(key);
-  try{const patch={status,updated_at:new Date().toISOString(),...extra};const r=await sb.from('orders').update(patch).eq('id',id).eq('outlet_id',activeOutlet).select('id,status,target_minutes,accepted_at,deadline_at,updated_at').maybeSingle();if(r.error){toast('Order update failed: '+r.error.message);return false}if(!r.data){toast('Order update was not confirmed by the server. Please retry.');return false}if(String(status).toLowerCase()!=='new'){stopOrderAlarm(id);try{window.JPTPartnerOrderAlertV4?.stop?.(true)}catch(e){}}await loadOrders();return true}finally{jptOrderActionBusy.delete(key)}
-}
-async function acceptOrder(id,minutes){
-  const n=Number(minutes);
-  const m=Number.isFinite(n)?Math.max(5,Math.min(60,Math.round(n/5)*5)):15;
-  const now=new Date(),deadline=new Date(now.getTime()+m*60000);
-  return orderAction(id,'accepted',{target_minutes:m,accepted_at:now.toISOString(),deadline_at:deadline.toISOString(),eta_minutes:m+20});
-}
-let activeOrderQueue='all',ordersLoadBusy=false,ordersLoadQueued=false;
-function normalizeOrderStatus(v){const s=String(v||'new').toLowerCase();if(s==='completed')return 'delivered';if(s==='canceled')return 'cancelled';return s}
-function setOrderQueue(q){activeOrderQueue=q||'all';document.querySelectorAll('.orderQueueBtn').forEach(b=>b.classList.toggle('gold',b.dataset.queue===activeOrderQueue));loadOrders().catch(()=>{})}
-document.querySelectorAll('.orderQueueBtn').forEach(b=>b.onclick=()=>setOrderQueue(b.dataset.queue));
-async function loadOrders(){
-  if(window.__JPTOrdersV3Active)return true;
-  if(ordersLoadBusy){ordersLoadQueued=true;return}
-  ordersLoadBusy=true;
-  const pageY=window.scrollY,wrap=document.getElementById('ordersTableWrap'),wrapY=wrap?.scrollTop||0;
-  try{
-    const r=await sb.from('orders').select('*').eq('outlet_id',activeOutlet).order('created_at',{ascending:false}).limit(100);
-    if(r.error){$('ordersNotice').innerHTML='<span class="danger">'+esc(r.error.message)+'</span>';return}
-    const rows=r.data||[],filtered=activeOrderQueue==='all'?rows:rows.filter(x=>normalizeOrderStatus(x.status)===activeOrderQueue);
-    rows.forEach(x=>{if(String(x.status||'').toLowerCase()!=='new')jptAlarmedOrders.delete(String(x.id||x.order_no||''));});
-    renderOrderSummaries(rows);$('ordersCount').textContent=filtered.length;$('ordersNotice').textContent='Showing '+filtered.length+' '+(activeOrderQueue==='all'?'outlet-scoped':activeOrderQueue.toUpperCase())+' orders';
-    $('ordersBody').innerHTML=filtered.map(x=>{
-      const order=x.order_no||x.order_number||x.id||'—',customer=x.customer_name||x.name||x.customer_phone||'Customer',status=normalizeOrderStatus(x.status),total=x.total??x.grand_total??x.amount??'—',time=x.created_at?new Date(x.created_at).toLocaleString('en-IN'):'—',rawTarget=Number(x.target_minutes),target=Number.isFinite(rawTarget)?Math.max(5,Math.min(60,Math.round(rawTarget/5)*5)):15,deadline=x.deadline_at||(x.created_at?new Date(new Date(x.created_at).getTime()+target*60000).toISOString():''),left=deadline?Math.max(0,new Date(deadline).getTime()-Date.now()):0,secs=Math.floor(left/1000),mm=Math.floor(secs/60),ss=secs%60;
-      let actions='';
-      if(status==='new') actions=`<div class="order-actions" data-stepper="${esc(x.id||'')}">
-        <button type="button" class="btn prepMinus" data-order-id="${esc(x.id||'')}" aria-label="Decrease preparation time">−</button>
-        <span class="tag prepValue" data-minutes="${target}" style="min-width:58px;text-align:center">${target} min</span>
-        <button type="button" class="btn prepPlus" data-order-id="${esc(x.id||'')}" aria-label="Increase preparation time">+</button>
-        <button class="btn gold acceptBtn" data-order-id="${esc(x.id||'')}">ACCEPT</button>
-        <button class="btn red rejectBtn" data-order-id="${esc(x.id||'')}">REJECT</button></div>`;
-      else if(status==='accepted') actions='<div class="order-actions"><button class="btn gold prepBtn" data-order-id="'+esc(x.id||'')+'">START PREPARING</button></div>';
-      else if(status==='preparing') actions='<div class="order-actions"><button class="btn green readyBtn" data-order-id="'+esc(x.id||'')+'">READY</button></div>';
-      else if(status==='ready') actions='<div class="order-actions"><button class="btn gold outBtn" data-order-id="'+esc(x.id||'')+'">OUT FOR DELIVERY</button></div>';
-      else if(status==='out_for_delivery') actions='<div class="order-actions"><button class="btn green completeBtn" data-order-id="'+esc(x.id||'')+'">DELIVERED</button></div>';
-      return `<tr><td><b>${esc(order)}</b><div class="muted">${esc(orderItemsText(x))}</div></td><td>${esc(customer)}<div class="muted">${esc(x.customer_phone||x.phone||'')}</div></td><td><span class="tag">${esc(status.toUpperCase())}</span></td><td>${typeof total==='number'?money(total):esc(total)}</td><td>${esc(time)}</td><td><span class="tag countdown" data-deadline="${esc(deadline)}">${left?String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0'):(status==='preparing'?'TIME OVER':'—')}</span></td><td>${actions}</td></tr>`;
-    }).join('')||'<tr><td colspan="7">No orders in this queue.</td></tr>';
-    document.querySelectorAll('.prepMinus').forEach(b=>b.onclick=()=>{const v=b.closest('[data-stepper]')?.querySelector('.prepValue');if(!v)return;const n=Math.max(5,Number(v.dataset.minutes||15)-5);v.dataset.minutes=String(n);v.textContent=n+' min'});
-    document.querySelectorAll('.prepPlus').forEach(b=>b.onclick=()=>{const v=b.closest('[data-stepper]')?.querySelector('.prepValue');if(!v)return;const n=Math.min(60,Number(v.dataset.minutes||15)+5);v.dataset.minutes=String(n);v.textContent=n+' min'});
-    document.querySelectorAll('.acceptBtn').forEach(b=>b.onclick=async()=>{if(b.dataset.busy==='1')return;b.dataset.busy='1';b.disabled=true;const v=b.closest('[data-stepper]')?.querySelector('.prepValue');const ok=await acceptOrder(b.dataset.orderId,Number(v?.dataset.minutes||15));if(ok)toast('Order accepted');else b.disabled=false;b.dataset.busy='0'});
-    document.querySelectorAll('.rejectBtn').forEach(b=>b.onclick=async()=>{if(b.dataset.busy==='1')return;if(confirm('Reject this customer order?')){b.dataset.busy='1';b.disabled=true;const ok=await orderAction(b.dataset.orderId,'cancelled',{rejection_reason:'Rejected by restaurant'});if(ok)toast('Order rejected');else b.disabled=false;b.dataset.busy='0'}});
-    document.querySelectorAll('.prepBtn').forEach(b=>b.onclick=async()=>{if(b.dataset.busy==='1')return;b.dataset.busy='1';b.disabled=true;const ok=await orderAction(b.dataset.orderId,'preparing');if(ok)toast('Order is PREPARING');else b.disabled=false;b.dataset.busy='0'});
-    document.querySelectorAll('.readyBtn').forEach(b=>b.onclick=async()=>{if(b.dataset.busy==='1')return;b.dataset.busy='1';b.disabled=true;const ok=await orderAction(b.dataset.orderId,'ready');if(ok){toast('Order marked READY');try{const rr=await sb.rpc('delivery_offer_next',{p_order_id:Number(b.dataset.orderId)});if(rr.error)toast('Delivery assignment: '+rr.error.message);else if(rr.data?.status==='offered')toast('Delivery partner offer sent');else if(rr.data?.status==='no_online_rider')toast('READY — no online delivery partner available');}catch(e){toast('Delivery assignment check failed');}}else b.disabled=false;b.dataset.busy='0'});
-    document.querySelectorAll('.outBtn').forEach(b=>b.onclick=async()=>{if(b.dataset.busy==='1')return;b.dataset.busy='1';b.disabled=true;const ok=await orderAction(b.dataset.orderId,'out_for_delivery');if(ok)toast('Order moved to OUT FOR DELIVERY');else b.disabled=false;b.dataset.busy='0'});
-    document.querySelectorAll('.completeBtn').forEach(b=>b.onclick=async()=>{if(b.dataset.busy==='1')return;b.dataset.busy='1';b.disabled=true;const ok=await orderAction(b.dataset.orderId,'delivered');if(ok)toast('Order marked DELIVERED');else b.disabled=false;b.dataset.busy='0'});
-    document.querySelectorAll('.orderStatus').forEach(sel=>sel.onchange=async()=>{await orderAction(sel.dataset.orderId,sel.value)});
-    const newest=rows[0];if(newest){const stamp=String(newest.created_at||'')+'|'+String(newest.id||'');if(lastOrderStamp&&stamp!==lastOrderStamp&&normalizeOrderStatus(newest.status)==='new')showOrderAlarm(newest);lastOrderStamp=stamp;localStorage.setItem('jpt_v107_last_order_'+activeOutlet,stamp)}
-  }finally{
-    requestAnimationFrame(()=>{window.scrollTo(0,pageY);const w=document.getElementById('ordersTableWrap');if(w)w.scrollTop=wrapY});
-    ordersLoadBusy=false;if(ordersLoadQueued){ordersLoadQueued=false;loadOrders().catch(()=>{})}
-  }
-}
-async function bindOrderRealtime(){
-  if(window.__JPTOrdersV3Active)return;
-  try{if(orderChannel) await sb.removeChannel(orderChannel);orderChannel=sb.channel('jpt-v107-orders-'+activeOutlet+'-'+Date.now()).on('postgres_changes',{event:'INSERT',schema:'public',table:'orders',filter:'outlet_id=eq.'+activeOutlet},p=>{if(window.JPTLiveBridge?.receive&&p?.new){window.JPTLiveBridge.receive({event_id:'order.created:'+String(p.new.id),event_type:'order.created',entity_type:'order',entity_id:p.new.id,outlet_id:p.new.outlet_id,audience:'partner',occurred_at:p.new.created_at,payload:p.new},'supabase-realtime')}if(p?.new?.status==='new'){showOrderAlarm(p.new)}loadOrders().catch(()=>{})}).on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders',filter:'outlet_id=eq.'+activeOutlet},p=>{if(window.JPTLiveBridge?.receive&&p?.new){window.JPTLiveBridge.receive({event_id:'order.updated:'+String(p.new.id)+':'+String(p.new.updated_at||Date.now()),event_type:'order.updated',entity_type:'order',entity_id:p.new.id,outlet_id:p.new.outlet_id,audience:'partner',occurred_at:p.new.updated_at,payload:p.new},'supabase-realtime')}loadOrders().catch(()=>{})}).subscribe();}catch(e){console.warn('Order realtime unavailable',e)}
-}
-$('ordersRefresh').onclick=loadOrders;
-document.querySelectorAll('.orderQueueBtn').forEach(b=>b.classList.toggle('gold',b.dataset.queue==='all'));
-
 $('scratchSetup').onclick=configureScratchSlabs;
 
 
@@ -704,8 +580,7 @@ async function reloadAll(){
     await loadAccess();
     localStorage.setItem('jpt_admin_outlet',activeOutlet);
     await loadOutlet();
-    await bindOrderRealtime();
-    await Promise.all([loadMenu(),loadCategories(),loadOffers(),loadCampaigns(),loadOrders(),loadImages()]);
+    await Promise.all([loadMenu(),loadCategories(),loadOffers(),loadCampaigns(),loadImages()]);
     loadTodayExisting();
   }catch(e){console.error(e);toast('Dashboard load error: '+(e.message||e))}
 }
@@ -713,7 +588,6 @@ $('outletSelect').onchange=async function(){activeOutlet=this.value;localStorage
 $('reloadBtn').onclick=reloadAll;
 
 
-setInterval(()=>{ if(document.visibilityState!=='hidden') loadOrders().catch(()=>{}); },15000);
 </script>
  <style>
 #jptAuthGate{
@@ -935,16 +809,17 @@ checkSession();
 <script src="./jpt-partner-final-touch-v12.js?v=13"></script>
 <script src="./JPT_Delivery_Partner_Admin_Approval_Bridge_V2.js?v=107"></script>
 <script>
-try{if("serviceWorker" in navigator){navigator.serviceWorker.register("./jpt-partner-sw.js?v=12").catch(()=>{});}}catch(e){}
+try{if("serviceWorker" in navigator){navigator.serviceWorker.register("./jpt-partner-sw.js?v=17-admin-start").catch(()=>{});}}catch(e){}
 </script>
-<script src="./jpt-order-control-bridge-v1.js?v=1"></script>
-<script src="./jpt-partner-orders-ui-v1.js?v=orderflow-stale-new-fix-20261006-1"></script>
+
+
 <script src="./jpt-partner-timing-manager-v1.js?v=1"></script>
 <script src="./jpt-settings-command-center-v2.js?v=3"></script>
 <script src="./jpt-partner-delivery-tracking-v2.js?v=2"></script>
 <script src="./jpt-partner-notification-center-v1.js?v=2-permission-fix"></script>
+<script src="./jpt-orders-engine-v1.js?v=1.0.12"></script>
 <script src="./jpt-restaurant-push-subscription-v1.js?v=3"></script>
-<script src="./jpt-partner-order-alert-v4.js?v=4.10-cached-ring-repeat-fix-20261006"></script>
+
 <script src="./jpt-central-media-lab-v5.js?v=5"></script>
 <script src="./jpt-partner-workspace-v1.js?v=1"></script>
 <script src="./jpt-private-live-consumer-v1.js?v=1"></script>
