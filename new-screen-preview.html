@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JPT — Delivery Tracking Isolated Preview</title>
+<link rel="stylesheet" href="./new-screen-styles.css">
+<style>
+body{margin:0;background:#0d0d0d;font-family:system-ui,sans-serif}
+.toolbar{position:sticky;top:0;z-index:5;background:#171717;color:#fff;padding:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.toolbar button{border:1px solid #d9aa45;background:#111;color:#f2bf55;border-radius:10px;padding:9px 12px;font-weight:700}
+.toolbar span{font-size:11px;opacity:.7}
+#preview{max-width:760px;margin:auto}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button id="unassigned">Unassigned</button>
+  <button id="assigned">Assigned + GPS</button>
+  <span>ISOLATED PREVIEW — no production files, realtime, audio or writes</span>
+</div>
+<div id="preview"></div>
+<script>
+(function(){
+  window.__JPTOrdersRuntime={rows:[{
+    id:6408996,order_no:"JPT-6408996",outlet_id:"JPT-001",
+    delivery_partner_assigned:false
+  }]};
+  window.JPT_PARTNER_OUTLETS=[{outlet_id:"JPT-001",outlet_name:"Jeet Punjabi Tadka"}];
+})();
+</script>
+<script src="./new-screen-bridge.js"></script>
+<script src="./new-screen-ui.js"></script>
+<script>
+const row=()=>window.__JPTOrdersRuntime.rows[0];
+async function render(){await window.JPTNewScreenUI.mount("#preview",{orderId:row().id});}
+document.getElementById("unassigned").onclick=()=>{Object.assign(row(),{delivery_partner_assigned:false,delivery_partner:null});render();};
+document.getElementById("assigned").onclick=()=>{Object.assign(row(),{
+  delivery_partner_assigned:true,
+  delivery_partner:{name:"Assigned Delivery Partner",phone:"+91 90000 00000",vehicle:"Delivery Partner",latitude:17.9104,longitude:77.5199,locationLabel:"Real assigned GPS coordinates"}
+});render();};
+render();
+})();
+</script>
+</body>
+</html>
