@@ -12,7 +12,7 @@ const busy=new Map();
 
 function norm(v){
   const s=String(v||'new').toLowerCase().trim().replace(/\s+/g,'_');
-  return s==='canceled'?'cancelled':s;
+  return s==='canceled'?'cancelled':s==='received'?'new':s;
 }
 function allowed(from,to){
   from=norm(from);to=norm(to);
@@ -90,7 +90,7 @@ async function transition(id,outlet,next,extra){
 }
 
 window.JPTOrderControlBridge={
-  version:'1.1.0-3step',
+  version:'1.2.0-integrated',
   statuses:['new','accepted','preparing','ready','out_for_delivery','delivered','completed','cancelled'],
   canTransition:allowed,
   transition,
