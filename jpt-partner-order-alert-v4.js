@@ -4,9 +4,9 @@
 */
 (function(){
   'use strict';
-  if(window.JPTPartnerOrderAlertV4)return;
+  
 
-  const DB='jptPartnerAlertDB', STORE='settings', KEY='jpt_v4_active_order', PREFS_KEY='notificationPrefs', RING_KEY='ringtone', RING_MS=9000, PROD_RINGTONES_URL='./ringtones/1000449570.mp4';
+  const DB='jptPartnerAlertDB', STORE='settings', KEY='jpt_v4_active_order', PREFS_KEY='notificationPrefs', RING_KEY='ringtone', PROD_RINGTONES_URL='./ringtones/1000449570.mp4';
   let audio=null, objectUrl=null, cachedRingUrl=null, cachedRingBlob=null, ringTimer=null, activeId=null, generation=0, armed=false, ringInFlight=new Map(), audioCtx=null, toneTimer=null;
 
   function stopTone(){
@@ -261,11 +261,10 @@
       attention(o);
       if(isNewActive) await notifyNewOrder(o);
       const g=generation;
-      await play();
-      if(g!==generation || activeId!==id)return;
+      const playing=await play();
+      if(g!==generation || activeId!==id)return playing;
       try{navigator.vibrate?.([450,150,450,150,700])}catch(e){}
-      clearTimeout(ringTimer);
-      ringTimer=setTimeout(()=>{if(activeId===id && g===generation)ring(o)},RING_MS);
+      return playing;
     })();
     ringInFlight.set(id,task);
     try{return await task}finally{ringInFlight.delete(id)}
@@ -309,7 +308,7 @@
     }catch(e){}
   }
 
-  window.JPTPartnerOrderAlertV4={version:'4.8-exact-asset-fallback-ringtone',arm,ring,stop:hardStop,active:()=>activeId,getPrefs,resumeAudioFromGesture,preloadSavedRingtone};
+  window.JPTPartnerOrderAlertV4={version:'4.9-persistent-loop',arm,ring,stop:hardStop,active:()=>activeId,getPrefs,resumeAudioFromGesture,preloadSavedRingtone};
   window.addEventListener('jpt:notification-settings',()=>{preloadSavedRingtone().then(()=>{if(activeId!==null)arm()})});
 
   preloadSavedRingtone();
