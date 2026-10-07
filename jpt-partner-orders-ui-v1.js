@@ -22,6 +22,7 @@ let timer=null,channel=null,rowsCache=[],outlets={},selected='preparing',central
 const prepDrafts=new Map();
 let pendingNew=new Map();
 const statusLocks=new Map();
+const pendingTransitions=new Map();
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
@@ -234,6 +235,7 @@ async function directAction(row,next,extra={}){
  };
 
  row.__pendingTransition=true;
+ pendingTransitions.set(String(row.id),{status:target,target_minutes:extra?.target_minutes,at:Date.now()});
  row.status=target;
  row.__status=target;
  if(target==='accepted' && extra?.target_minutes){
@@ -249,6 +251,7 @@ async function directAction(row,next,extra={}){
    Object.assign(row,data);
    row.__status=status(data.status);
    row.__pendingTransition=false;
+   pendingTransitions.delete(String(row.id));
    statusLocks.set(String(row.id),{status:row.__status,target_minutes:data.target_minutes,accepted_at:data.accepted_at,deadline_at:data.deadline_at,updatedAt:data.updated_at||new Date().toISOString(),updatedMs:Date.parse(data.updated_at||'')||Date.now(),at:Date.now()});
    if(target!=='new'){liveNewIds.delete(String(row.id));window.JPTOrderControlBridge.stopAlerts(row.id);}
    return data;
@@ -256,6 +259,7 @@ async function directAction(row,next,extra={}){
    Object.assign(row,previous);
    row.__status=status(previous.__status||previous.status);
    row.__pendingTransition=false;
+   pendingTransitions.delete(String(row.id));
    render();
    throw e;
  }
@@ -308,6 +312,12 @@ async function load(){
   if(seq!==loadSeq)return;
   const nowMs=Date.now();
   freshRows.forEach(r=>{
+    const pending=pendingTransitions.get(String(r.id));
+    if(pending && Date.now()-pending.at<30000){
+      r.status=pending.status;r.__status=pending.status;
+      if(pending.target_minutes!=null)r.target_minutes=pending.target_minutes;
+      return;
+    }
     const lock=statusLocks.get(String(r.id));
     if(!lock)return;
     if(nowMs-lock.at>120000){statusLocks.delete(String(r.id));return;}
@@ -379,6 +389,6 @@ function start(){
  bindRealtime();
 }
 
-window.JPTPartnerOrdersUI={version:'v3',reload:load,render,openOrderDetail};
+window.JPTPartnerOrdersUI={version:'v3-integrated',reload:load,render,openOrderDetail};
 let n=0;const boot=setInterval(()=>{n++;if(document.getElementById('orders')&&window.sb){clearInterval(boot);start()}if(n>60)clearInterval(boot)},250);
 })();
