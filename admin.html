@@ -625,6 +625,12 @@ async function enableOrderAlarm(){
 $('enableAlarm').onclick=enableOrderAlarm;$('stopAlarm').onclick=stopOrderAlarm;
 const jptOrderActionBusy=new Set();
 async function orderAction(id,status,extra={}){
+  // Stop the active NEW-order alert before any ACCEPT/REJECT/status action.
+  if(String(status).toLowerCase()!=='new'){
+    try{window.JPTPartnerOrderAlertV4?.stop?.(true)}catch(e){}
+    try{window.stopOrderAlarm?.(id)}catch(e){}
+    try{window.JPTOrderControlBridge?.stopAlerts?.(id)}catch(e){}
+  }
   if(window.JPTOrderControlBridge?.transition){
     try{
       const row=await window.JPTOrderControlBridge.transition(id,activeOutlet,status,extra);
@@ -637,7 +643,7 @@ async function orderAction(id,status,extra={}){
 }
 async function acceptOrder(id,minutes){
   const n=Number(minutes);
-  const m=Number.isFinite(n)?Math.max(5,Math.min(60,Math.round(n/5)*5)):15;
+  const m=Number.isFinite(n)?Math.max(15,Math.min(40,Math.round(n/5)*5)):15;
   return orderAction(id,'accepted',{target_minutes:m});
 }
 let activeOrderQueue='all',ordersLoadBusy=false,ordersLoadQueued=false;
@@ -656,7 +662,7 @@ async function loadOrders(){
     rows.forEach(x=>{if(String(x.status||'').toLowerCase()!=='new')jptAlarmedOrders.delete(String(x.id||x.order_no||''));});
     renderOrderSummaries(rows);$('ordersCount').textContent=filtered.length;$('ordersNotice').textContent='Showing '+filtered.length+' '+(activeOrderQueue==='all'?'outlet-scoped':activeOrderQueue.toUpperCase())+' orders';
     $('ordersBody').innerHTML=filtered.map(x=>{
-      const order=x.order_no||x.order_number||x.id||'—',customer=x.customer_name||x.name||x.customer_phone||'Customer',status=normalizeOrderStatus(x.status),total=x.total??x.grand_total??x.amount??'—',time=x.created_at?new Date(x.created_at).toLocaleString('en-IN'):'—',rawTarget=Number(x.target_minutes),target=Number.isFinite(rawTarget)?Math.max(5,Math.min(60,Math.round(rawTarget/5)*5)):15,deadline=x.deadline_at||(x.created_at?new Date(new Date(x.created_at).getTime()+target*60000).toISOString():''),left=deadline?Math.max(0,new Date(deadline).getTime()-Date.now()):0,secs=Math.floor(left/1000),mm=Math.floor(secs/60),ss=secs%60;
+      const order=x.order_no||x.order_number||x.id||'—',customer=x.customer_name||x.name||x.customer_phone||'Customer',status=normalizeOrderStatus(x.status),total=x.total??x.grand_total??x.amount??'—',time=x.created_at?new Date(x.created_at).toLocaleString('en-IN'):'—',rawTarget=Number(x.target_minutes),target=Number.isFinite(rawTarget)?Math.max(15,Math.min(40,Math.round(rawTarget/5)*5)):15,deadline=x.deadline_at||(x.created_at?new Date(new Date(x.created_at).getTime()+target*60000).toISOString():''),left=deadline?Math.max(0,new Date(deadline).getTime()-Date.now()):0,secs=Math.floor(left/1000),mm=Math.floor(secs/60),ss=secs%60;
       let actions='';
       if(status==='new') actions=`<div class="order-actions" data-stepper="${esc(x.id||'')}">
         <button type="button" class="btn prepMinus" data-order-id="${esc(x.id||'')}" aria-label="Decrease preparation time">−</button>
@@ -670,8 +676,8 @@ async function loadOrders(){
       else if(status==='out_for_delivery') actions='<div class="order-actions"><button class="btn green completeBtn" data-order-id="'+esc(x.id||'')+'">DELIVERED</button></div>';
       return `<tr><td><b>${esc(order)}</b><div class="muted">${esc(orderItemsText(x))}</div></td><td>${esc(customer)}<div class="muted">${esc(x.customer_phone||x.phone||'')}</div></td><td><span class="tag">${esc(status.toUpperCase())}</span></td><td>${typeof total==='number'?money(total):esc(total)}</td><td>${esc(time)}</td><td><span class="tag countdown" data-deadline="${esc(deadline)}">${left?String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0'):(status==='preparing'?'TIME OVER':'—')}</span></td><td>${actions}</td></tr>`;
     }).join('')||'<tr><td colspan="7">No orders in this queue.</td></tr>';
-    document.querySelectorAll('.prepMinus').forEach(b=>b.onclick=()=>{const v=b.closest('[data-stepper]')?.querySelector('.prepValue');if(!v)return;const n=Math.max(5,Number(v.dataset.minutes||15)-5);v.dataset.minutes=String(n);v.textContent=n+' min'});
-    document.querySelectorAll('.prepPlus').forEach(b=>b.onclick=()=>{const v=b.closest('[data-stepper]')?.querySelector('.prepValue');if(!v)return;const n=Math.min(60,Number(v.dataset.minutes||15)+5);v.dataset.minutes=String(n);v.textContent=n+' min'});
+    document.querySelectorAll('.prepMinus').forEach(b=>b.onclick=()=>{const v=b.closest('[data-stepper]')?.querySelector('.prepValue');if(!v)return;const n=Math.max(15,Number(v.dataset.minutes||15)-5);v.dataset.minutes=String(n);v.textContent=n+' min'});
+    document.querySelectorAll('.prepPlus').forEach(b=>b.onclick=()=>{const v=b.closest('[data-stepper]')?.querySelector('.prepValue');if(!v)return;const n=Math.min(40,Number(v.dataset.minutes||15)+5);v.dataset.minutes=String(n);v.textContent=n+' min'});
     document.querySelectorAll('.acceptBtn').forEach(b=>b.onclick=async()=>{if(b.dataset.busy==='1')return;b.dataset.busy='1';b.disabled=true;const v=b.closest('[data-stepper]')?.querySelector('.prepValue');const ok=await acceptOrder(b.dataset.orderId,Number(v?.dataset.minutes||15));if(ok)toast('Order accepted');else b.disabled=false;b.dataset.busy='0'});
     document.querySelectorAll('.rejectBtn').forEach(b=>b.onclick=async()=>{if(b.dataset.busy==='1')return;if(confirm('Reject this customer order?')){b.dataset.busy='1';b.disabled=true;const ok=await orderAction(b.dataset.orderId,'cancelled',{rejection_reason:'Rejected by restaurant'});if(ok)toast('Order rejected');else b.disabled=false;b.dataset.busy='0'}});
     document.querySelectorAll('.prepBtn').forEach(b=>b.onclick=async()=>{if(b.dataset.busy==='1')return;b.dataset.busy='1';b.disabled=true;const ok=await orderAction(b.dataset.orderId,'ready');if(ok)toast('Order marked READY');else b.disabled=false;b.dataset.busy='0'});
