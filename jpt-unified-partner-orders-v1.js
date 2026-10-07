@@ -404,32 +404,39 @@ async function initialLoad(){
   (r.data||[]).forEach(o=>rows.set(String(o.id),o));
   render();
 }
+let channels=[];
 async function subscribe(){
-  if(channel)try{await window.sb.removeChannel(channel)}catch(e){}
+  for(const ch of channels){try{await window.sb.removeChannel(ch)}catch(e){}}
+  channels=[];
+  channel=null;
   const codes=managedOutlets();
-  channel=window.sb.channel('jpt-unified-orders-all-managed-'+Date.now());
-  codes.forEach(code=>{
-    channel.on('postgres_changes',{event:'INSERT',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
+  if(!codes.length)return;
+  const liveCodes=[...new Set(codes.map(String).filter(Boolean))];
+  for(const code of liveCodes){
+    const ch=window.sb.channel('jpt-unified-orders-'+code+'-'+Date.now());
+    ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
       const o=payload?.new;
-      if(!o || !codes.includes(String(o.outlet_id)))return;
+      if(!o || String(o.outlet_id)!==code || !liveCodes.includes(String(o.outlet_id)))return;
       rows.set(String(o.id),Object.assign({},o,{__liveNew:true}));
       render();
       if(status(o.status)==='new')startRingtone(o);
     });
-    channel.on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
+    ch.on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
       const o=payload?.new;
-      if(!o || !codes.includes(String(o.outlet_id)))return;
+      if(!o || String(o.outlet_id)!==code || !liveCodes.includes(String(o.outlet_id)))return;
       const old=rows.get(String(o.id))||{};
       rows.set(String(o.id),Object.assign({},old,o));
       render();
     });
-  });
-  channel.subscribe((s,e)=>{
-    const n=document.getElementById('ordersNotice');
-    if(s==='SUBSCRIBED')n&&(n.textContent='LIVE • Supabase Realtime connected for '+codes.join(', '));
-    if(s==='CHANNEL_ERROR'||s==='TIMED_OUT')n&&(n.textContent='Realtime reconnecting…');
-    if(e)console.warn('[JPT Unified Orders]',s,e);
-  });
+    ch.subscribe((s,e)=>{
+      const n=document.getElementById('ordersNotice');
+      if(s==='SUBSCRIBED')n&&(n.textContent='LIVE • Supabase Realtime connected • '+code);
+      if(s==='CHANNEL_ERROR'||s==='TIMED_OUT')n&&(n.textContent='Realtime reconnecting • '+code+'…');
+      if(e)console.warn('[JPT Unified Orders '+code+']',s,e);
+    });
+    channels.push(ch);
+  }
+  channel=channels[0]||null;
 }
 function updateTimers(){
   document.querySelectorAll('[data-timer]').forEach(el=>{
