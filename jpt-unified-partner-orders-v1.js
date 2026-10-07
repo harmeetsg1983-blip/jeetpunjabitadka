@@ -104,6 +104,40 @@ function stopRingtone(){
     }catch(e){}
   }
 }
+async function handleNewIncomingOrder(orderData){
+  console.log("New order received in background/open state:", orderData?.id);
+  if(document.visibilityState==='visible'){
+    startRingtone(orderData);
+  }else{
+    triggerNativeBackgroundAlarm(orderData);
+  }
+}
+function triggerNativeBackgroundAlarm(orderData){
+  try{
+    if(window.AndroidOrderAlarm && typeof window.AndroidOrderAlarm.startAlarm==='function'){
+      window.AndroidOrderAlarm.startAlarm(
+        String(orderData?.id||''),
+        String(orderData?.outlet_id||''),
+        String(orderData?.order_no||orderData?.id||'')
+      );
+      return;
+    }
+  }catch(e){}
+  try{
+    if('Notification' in window && Notification.permission==='granted'){
+      new Notification('NEW JPT ORDER',{
+        body:'Order #'+String(orderData?.order_no||orderData?.id||'')+' received.',
+        tag:'jpt-order-'+String(orderData?.id||''),
+        renotify:true
+      });
+    }
+  }catch(e){}
+}
+function stopAllAlarmsCompletely(){
+  stopRingtone();
+  try{window.AndroidOrderAlarm?.stopAlarm?.('')}catch(e){}
+}
+
 function startRingtone(order){
   const id=String(order?.id||'');
   if(!id || status(order?.status)!=='new') return;
@@ -126,17 +160,7 @@ function startRingtone(order){
   audio.playsInline=true;
   audio.muted=false;
 
-  /* Dashboard-open: HTML audio is the primary sound.
-     Background/hidden WebView: hand off to the native foreground alarm. */
-  try{
-    if(document.visibilityState!=='visible'){
-      window.AndroidOrderAlarm?.startAlarm?.(
-        id,
-        String(order.outlet_id||''),
-        String(order.order_no||id)
-      );
-    }
-  }catch(e){}
+  /* Open-dashboard ringtone remains owned by this function. Background handoff is handled by handleNewIncomingOrder(). */
 
   try{
     audio.pause();
@@ -394,7 +418,7 @@ async function subscribe(){
       if(!o || !codes.includes(String(o.outlet_id)))return;
       rows.set(String(o.id),Object.assign({},o,{__liveNew:true}));
       render();
-      if(status(o.status)==='new')startRingtone(o);
+      if(status(o.status)==='new')handleNewIncomingOrder(o);
     });
     channel.on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
       const o=payload?.new;
