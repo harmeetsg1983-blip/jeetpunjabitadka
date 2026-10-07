@@ -140,7 +140,6 @@
       }
     }
     if(!url){armed=playFallbackTone();return armed;}
-    stopAudio();
     try{
       objectUrl=url;
       const a=new Audio(url); audio=a;
@@ -230,12 +229,12 @@
   }
 
   async function verifyActiveOrder(){
-    try{
-      if(activeId===null || !window.sb)return;
-      const r=await window.sb.from('orders').select('id,status').eq('id',activeId).maybeSingle();
-      if(r.error)return;
-      if(!r.data || String(r.data.status||'').toLowerCase()!=='new') hardStop(true);
-    }catch(e){}
+    /*
+     * Deliberately read-only. The ringtone is NEVER stopped by polling,
+     * refreshes, or realtime UPDATE events. Only an explicit partner
+     * acknowledgement (ACCEPT/REJECT) calls hardStop().
+     */
+    return activeId!==null;
   }
 
   async function ring(o){
@@ -261,7 +260,7 @@
 
       const prefs=await getPrefs(); if(prefs.orderNotifications===false)return;
       const isNewActive=activeId!==id;
-      if(isNewActive){hardStop(false);activeId=id;persist(o);}
+      if(activeId===null){activeId=id;persist(o);}
       attention(o);
       if(isNewActive) await notifyNewOrder(o);
       const g=generation;
@@ -312,12 +311,12 @@
     }catch(e){}
   }
 
-  window.JPTPartnerOrderAlertV4={version:'5.0-integrated-race-safe',arm,ring,stop:hardStop,active:()=>activeId,getPrefs,resumeAudioFromGesture,preloadSavedRingtone};
+  window.JPTPartnerOrderAlertV4={version:'5.1-click-stop-only',arm,ring,stop:hardStop,active:()=>activeId,getPrefs,resumeAudioFromGesture,preloadSavedRingtone};
   window.addEventListener('jpt:notification-settings',()=>{preloadSavedRingtone().then(()=>{if(activeId!==null)arm()})});
 
   preloadSavedRingtone();
   let n=0, restored=false;
-  setInterval(()=>{if(activeId!==null)verifyActiveOrder()},2000);
+  setInterval(()=>{if(activeId!==null)verifyActiveOrder()},5000);
   const timer=setInterval(()=>{
     wrap();bind();
     if(!restored){restored=true;restore();}
