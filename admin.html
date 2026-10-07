@@ -700,14 +700,47 @@ function closeModal(){$('modal').classList.remove('show')}$('modal').onclick=e=>
 
 function refreshOrderCountdowns(){document.querySelectorAll('.countdown[data-deadline]').forEach(el=>{const d=el.dataset.deadline;if(!d)return;const left=Math.max(0,new Date(d).getTime()-Date.now());const secs=Math.floor(left/1000),mm=Math.floor(secs/60),ss=secs%60;el.textContent=left?String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0'):'TIME OVER'});} setInterval(refreshOrderCountdowns,1000);
 async function reloadAll(){
+  const tasks=[
+    ['access',loadAccess],
+    ['outlet',loadOutlet],
+    ['order realtime',bindOrderRealtime],
+    ['menu',loadMenu],
+    ['categories',loadCategories],
+    ['offers',loadOffers],
+    ['campaigns',loadCampaigns],
+    ['orders',loadOrders],
+    ['images',loadImages]
+  ];
+
   try{
     await loadAccess();
     localStorage.setItem('jpt_admin_outlet',activeOutlet);
     await loadOutlet();
     await bindOrderRealtime();
-    await Promise.all([loadMenu(),loadCategories(),loadOffers(),loadCampaigns(),loadOrders(),loadImages()]);
-    loadTodayExisting();
-  }catch(e){console.error(e);toast('Dashboard load error: '+(e.message||e))}
+
+    const failures=[];
+    for(const [name,fn] of tasks.slice(3)){
+      try{
+        await Promise.resolve(fn?.());
+      }catch(error){
+        console.error('[JPT Dashboard]',name,error);
+        failures.push(name+': '+(error?.message||error));
+      }
+    }
+
+    try{loadTodayExisting()}catch(error){
+      console.error('[JPT Dashboard] today offer',error);
+      failures.push('today offer: '+(error?.message||error));
+    }
+
+    if(failures.length){
+      console.warn('[JPT Dashboard] partial load failures',failures);
+      toast('Dashboard loaded with warnings. Orders remain available.');
+    }
+  }catch(e){
+    console.error('[JPT Dashboard] critical load failure',e);
+    toast('Dashboard load error: '+(e?.message||e));
+  }
 }
 $('outletSelect').onchange=async function(){activeOutlet=this.value;localStorage.setItem('jpt_admin_outlet',activeOutlet);await reloadAll()};
 $('reloadBtn').onclick=reloadAll;
@@ -937,8 +970,8 @@ checkSession();
 <script>
 try{if("serviceWorker" in navigator){navigator.serviceWorker.register("./jpt-partner-sw.js?v=12").catch(()=>{});}}catch(e){}
 </script>
-<script src="./jpt-order-control-bridge-v1.js?v=1"></script>
-<script src="./jpt-partner-orders-ui-v1.js?v=orderflow-stale-new-fix-20261006-1"></script>
+<script src="./jpt-order-control-bridge-v1.js?v=canonical-rpc-20261007"></script>
+<script src="./jpt-partner-orders-ui-v1.js?v=canonical-transition-20261007"></script>
 <script src="./jpt-partner-timing-manager-v1.js?v=1"></script>
 <script src="./jpt-settings-command-center-v2.js?v=3"></script>
 <script src="./jpt-partner-delivery-tracking-v2.js?v=2"></script>
