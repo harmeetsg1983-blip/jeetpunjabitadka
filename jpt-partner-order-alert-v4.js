@@ -125,8 +125,10 @@
     }catch(e){if(audio===a)stopAudio();armed=false;return false;}
   }
 
-  async function play(){
+  async function play(expectedGeneration=null){
+    if(expectedGeneration!==null && expectedGeneration!==generation)return false;
     const prefs=await getPrefs();
+    if(expectedGeneration!==null && expectedGeneration!==generation)return false;
     if(prefs.orderNotifications===false)return false;
     let url=cachedRingUrl;
     if(!url){
@@ -144,7 +146,9 @@
       const a=new Audio(url); audio=a;
       a.preload='auto'; a.playsInline=true; a.loop=true;
       a.volume=Math.max(0,Math.min(1,Number(prefs.ringVolume??100)/100));
+      if(expectedGeneration!==null && expectedGeneration!==generation){stopAudio();return false;}
       await a.play();
+      if(expectedGeneration!==null && expectedGeneration!==generation){stopAudio();return false;}
       stopTone(); armed=true; return true;
     }catch(e){
       stopAudio(); armed=playFallbackTone(); return armed;
@@ -261,7 +265,7 @@
       attention(o);
       if(isNewActive) await notifyNewOrder(o);
       const g=generation;
-      const playing=await play();
+      const playing=await play(g);
       if(g!==generation || activeId!==id)return playing;
       try{navigator.vibrate?.([450,150,450,150,700])}catch(e){}
       return playing;
@@ -308,7 +312,7 @@
     }catch(e){}
   }
 
-  window.JPTPartnerOrderAlertV4={version:'4.9-persistent-loop',arm,ring,stop:hardStop,active:()=>activeId,getPrefs,resumeAudioFromGesture,preloadSavedRingtone};
+  window.JPTPartnerOrderAlertV4={version:'5.0-integrated-race-safe',arm,ring,stop:hardStop,active:()=>activeId,getPrefs,resumeAudioFromGesture,preloadSavedRingtone};
   window.addEventListener('jpt:notification-settings',()=>{preloadSavedRingtone().then(()=>{if(activeId!==null)arm()})});
 
   preloadSavedRingtone();
