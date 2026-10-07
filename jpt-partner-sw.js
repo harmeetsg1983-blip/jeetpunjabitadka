@@ -1,4 +1,4 @@
-const CACHE='jpt-partner-pwa-v17-integrated-orders';
+const CACHE='jpt-partner-pwa-v18-unified-orders';
 const ASSETS=['./partner-app.html','./partner-v107.html','./admin.html','./partner-manifest.webmanifest','./jpt-partner-icon-512.png'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
