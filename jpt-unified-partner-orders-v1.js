@@ -56,6 +56,7 @@ function toast(msg){
   if(n)n.textContent=String(msg||'');
 }
 function stopRingtone(){
+  try{window.AndroidOrderAlarm?.stopAlarm?.(activeRingtoneOrderId||'')}catch(e){}
   /* ONLY ACCEPT/REJECT call this function. */
   audioGeneration++;
   activeRingtoneOrderId=null;
