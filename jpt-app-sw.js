@@ -1,4 +1,4 @@
-const CACHE='jpt-royal-shell-v2';
+const CACHE='jpt-royal-shell-v3-unified-live';
 self.addEventListener('install',e=>e.waitUntil(self.skipWaiting()));
 self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch',e=>{
@@ -10,14 +10,10 @@ self.addEventListener('fetch',e=>{
   }
   e.respondWith((async()=>{
     try{
-      const r=await fetch(e.request);
-      const t=await r.text();
-      const marker='<script src="./jpt-v106-delivery-location-handover.js?v=delivery1"></script>';
-      const inject='<script src="./customer-order-tracking-v106-v2.js?v=tracking-v11-rider"></script>';
-      const body=t.includes(marker)?t.replace(marker,inject+marker):t;
+      const r=await fetch(e.request,{cache:'no-store'});
       const h=new Headers(r.headers);
       h.set('Cache-Control','no-store');
-      return new Response(body,{status:r.status,statusText:r.statusText,headers:h});
+      return new Response(r.body,{status:r.status,statusText:r.statusText,headers:h});
     }catch(err){
       return caches.match(e.request);
     }
