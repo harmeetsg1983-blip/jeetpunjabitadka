@@ -288,7 +288,7 @@
     var rating=(rc>0&&Number.isFinite(ra)) ? '⭐ '+ra.toFixed(1)+' · '+rc+' rating'+(rc===1?'':'s') : '⭐ New · No ratings yet';
     var rlat=Number(o&&o.rider_lat),rlng=Number(o&&o.rider_lng);
     var valid=Number.isFinite(rlat)&&Number.isFinite(rlng)&&Math.abs(rlat)<=90&&Math.abs(rlng)<=180;
-    var mapUrl=valid?'https://www.openstreetmap.org/?mlat='+encodeURIComponent(rlat)+'&mlon='+encodeURIComponent(rlng)+'#map=16/'+encodeURIComponent(rlat)+'/'+encodeURIComponent(rlng):'';
+    var mapUrl=valid?'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(rlat+','+rlng):'';
     var locationText=valid?'📍 Live rider location available':'📍 Rider GPS location is waiting for the next update';
     host.style.display='block';
     host.innerHTML='<div class="jpt-rider-head"><div class="jpt-rider-avatar">'+esc(initials)+'</div><div style="min-width:0;flex:1"><div class="jpt-rider-status">DELIVERY PARTNER ASSIGNED</div><div class="jpt-rider-name">'+esc(name)+'</div><div class="jpt-rider-meta">Your delivery partner for this order</div><div class="jpt-rider-rating">'+esc(rating)+'</div></div></div><div class="jpt-rider-live">'+esc(locationText)+(o.rider_location_at?' · Updated '+new Date(o.rider_location_at).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'')+'</div><div class="jpt-rider-actions">'+(phone?'<a class="jpt-rider-action jpt-rider-call" href="tel:'+esc(phone)+'">📞 Call rider</a>':'<span class="jpt-rider-action" style="background:#f0f0f0;color:#777">Contact unavailable</span>')+(valid?'<a class="jpt-rider-action jpt-rider-map" target="_blank" rel="noopener" href="'+esc(mapUrl)+'">📍 View live location</a>':'<span class="jpt-rider-action" style="background:#f0f0f0;color:#777">📍 Location updating…</span>')+'</div>';
@@ -324,7 +324,7 @@
     var mapHost=el.querySelector('#jptTrackMap');
     var clat=Number(o&&o.delivery_lat),clng=Number(o&&o.delivery_lng);
     if(Number.isFinite(clat)&&Number.isFinite(clng)&&Math.abs(clat)<=90&&Math.abs(clng)<=180){
-      var mapUrl='https://www.openstreetmap.org/export/embed.html?bbox='+(clng-0.01)+'%2C'+(clat-0.01)+'%2C'+(clng+0.01)+'%2C'+(clat+0.01)+'&layer=mapnik&marker='+clat+'%2C'+clng;
+      var mapUrl='https://www.google.com/maps?q='+encodeURIComponent(clat+','+clng)+'&z=16&output=embed';
       if(mapHost)mapHost.innerHTML='<iframe title="Delivery map" loading="eager" src="'+mapUrl+'"></iframe>';
     }else if(mapHost)mapHost.innerHTML='<div style="height:100%;display:grid;place-items:center;color:#777;font-weight:800">Delivery location will appear here</div>';
 
