@@ -110,7 +110,6 @@ function handleNewIncomingOrder(orderData){
 }
 
 function startRingtone(order){
-  console.log("LOG 2: startRingtone called for order:", order?.id);
   const id=String(order?.id||'');
   if(!id || status(order?.status)!=='new') return;
   if(activeRingtoneOrderId===id && audio) return;
@@ -149,15 +148,13 @@ function startRingtone(order){
   }
 
   try{
-    console.log("LOG 3: Attempting audio.play() or Native Bridge call...");
     audio.pause();
     audio.currentTime=0;
     audio.load();
     const playResult=audio.play();
 
     if(playResult?.catch){
-      playResult.catch((err)=>{
-        console.error("Audio error:", err);
+      playResult.catch(()=>{
         if(generation===audioGeneration){
           const msg=document.getElementById('ordersNotice');
           if(msg)msg.textContent='NEW ORDER received — browser audio could not start. Use the native alarm/notification path or tap the dashboard.';
@@ -404,7 +401,6 @@ async function subscribe(){
     channel.on('postgres_changes',{event:'INSERT',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
       const o=payload?.new;
       if(!o || !codes.includes(String(o.outlet_id)))return;
-      console.log("LOG 1: Order INSERT fired for order:", o.id, "Status:", o.status);
       rows.set(String(o.id),Object.assign({},o,{__liveNew:true}));
       render();
       if(status(o.status)==='new')startRingtone(o);
