@@ -54,9 +54,9 @@ function mediaOf(c){
  if(!isShowcase)return null;
  const video=c.video_url||s.video_url||null, image=c.banner_url||s.image_url||null;
  if(!video&&!image)return null;
- return {video,image,priority:Number(c.priority||0),id:c.id};
+ return {video,image,priority:Number(c.priority||0),id:c.id,created_at:c.created_at||'',rotation_seconds:Number(s.rotation_seconds||11)};
 }
-function playQueue(host,queue){
+function playQueue(host,queue,seconds){
  let idx=0,timer=null,token=0;
  const show=()=>{
   const item=queue[idx%queue.length];idx++;
@@ -72,8 +72,8 @@ function playQueue(host,queue){
    v.addEventListener('error',next,{once:true});
    const p=v.play();if(p&&p.catch)p.catch(()=>{});
   }else{
-   const img=document.createElement('img');img.src=item.image;img.alt='Outlet video sponsor';host.appendChild(img);
-   clearTimeout(timer);timer=setTimeout(()=>{if(my===token)show()},10000);
+   const img=document.createElement('img');img.src=item.image;img.alt='Jeet Punjabi Tadka board';host.appendChild(img);
+   clearTimeout(timer);timer=setTimeout(()=>{if(my===token)show()},Math.max(10000,Math.min(12000,Number(seconds||item.rotation_seconds||11)*1000)));
   }
  };
  if(queue.length)show();
@@ -82,7 +82,7 @@ async function mount(){
  const anchor=document.getElementById('highlightGrid');
  if(!anchor||document.getElementById('jptOutletShowcase'))return;
  const wrap=document.createElement('section');wrap.id='jptOutletShowcase';
- wrap.innerHTML='<div class="jpt-os-head"><b>🏪 Our Restaurants</b><small>VIDEO • POSTER</small></div><div class="jpt-os-list" id="jptOsList"></div>';
+ wrap.innerHTML='<div class="jpt-os-head"><b>🏪 Our Restaurants</b><small>BOARD • VIDEO • POSTER</small></div><div class="jpt-os-list" id="jptOsList"></div>';
  anchor.parentNode.insertBefore(wrap,anchor);
  anchor.style.display='none';
  const list=wrap.querySelector('#jptOsList');
@@ -93,21 +93,38 @@ async function mount(){
   const rows=(or.data||[]).filter(x=>x.code);
   const ids=rows.map(x=>String(x.code));
   if(!ids.length){list.innerHTML='<div class="jpt-os-empty"><div><b>NO OUTLETS AVAILABLE</b></div></div>';return;}
-  const cr=await sb.from('campaigns').select('*').in('outlet_id',ids);
+  const cr=await sb.from('campaigns').select('*').in('outlet_id',ids).eq('active',true);
   if(cr.error)throw cr.error;
   const recs=Object.fromEntries(rows.map(x=>[String(x.code),x]));
-  const by={};ids.forEach(id=>{by[id]=[]});
-  (cr.data||[]).forEach(c=>{const id=String(c.outlet_id||'');if(by[id]){const m=mediaOf(c);if(m&&active(c))by[id].push(m)}});
-  ids.forEach(id=>{by[id].sort((a,b)=>b.priority-a.priority);by[id]=by[id].slice(0,1)});
+  const by={};ids.forEach(id=>{by[id]={images:[],videos:[]}});
+  (cr.data||[]).forEach(c=>{
+    const id=String(c.outlet_id||'');if(!by[id])return;
+    const m=mediaOf(c);if(!m||!active(c))return;
+    if(m.image)by[id].images.push(m);
+    if(m.video)by[id].videos.push(m);
+  });
+  ids.forEach(id=>{
+    by[id].images.sort((a,b)=>b.priority-a.priority);
+    by[id].images=by[id].images.slice(0,10);
+    by[id].videos.sort((a,b)=>b.priority-a.priority);
+    by[id].videos=by[id].videos.slice(0,1);
+  });
   list.innerHTML=ids.map((id,i)=>{
    const r=recs[id]||{},legacy=r.banner_url||fallback[id]||'',o={name:r.name||id,accent:accentFor(id,i)};
+   const hasImages=by[id].images.length>0, hasVideo=by[id].videos.length>0;
    return '<article class="jpt-os-card" style="--os-accent:'+o.accent+'">'+
     '<div class="jpt-os-name" style="color:'+o.accent+'">'+esc(o.name)+' <span>'+esc(id)+'</span></div>'+
-    '<div class="jpt-os-poster" data-os-poster="'+esc(id)+'">'+(legacy?'<img src="'+esc(legacy)+'" alt="'+esc(o.name)+' main board">':'<div class="jpt-os-poster-empty">MAIN BOARD NOT CONFIGURED</div>')+'</div>'+(by[id].length?'<div class="jpt-os-video" data-os-video="'+esc(id)+'"></div>':'')+
-    '<div class="jpt-os-footer"><b>LIVE BANNER • '+esc(id)+'</b><button type="button" data-os-open="'+esc(id)+'">VIEW MENU</button></div>'+
+    '<div class="jpt-os-poster" data-os-poster="'+esc(id)+'">'+(hasImages?'':(legacy?'<img src="'+esc(legacy)+'" alt="'+esc(o.name)+' main board">':'<div class="jpt-os-poster-empty">MAIN BOARD NOT CONFIGURED</div>'))+'</div>'+
+    (hasVideo?'<div class="jpt-os-video" data-os-video="'+esc(id)+'"></div>':'')+
+    '<div class="jpt-os-footer"><b>'+esc(hasImages?('LIVE BOARD • '+by[id].images.length+'/10'):'LIVE BANNER • '+id)+'</b><button type="button" data-os-open="'+esc(id)+'">VIEW MENU</button></div>'+
    '</article>';
   }).join('');
-  ids.forEach(id=>{const h=list.querySelector('[data-os-video="'+CSS.escape(id)+'"]');if(h&&by[id].length)playQueue(h,by[id]);});
+  ids.forEach(id=>{
+    const p=list.querySelector('[data-os-poster="'+CSS.escape(id)+'"]');
+    if(p&&by[id].images.length)playQueue(p,by[id].images,11);
+    const h=list.querySelector('[data-os-video="'+CSS.escape(id)+'"]');
+    if(h&&by[id].videos.length)playQueue(h,by[id].videos,11);
+  });
   list.querySelectorAll('[data-os-open]').forEach(b=>b.onclick=()=>window.switchOutlet&&window.switchOutlet(b.dataset.osOpen));
  }catch(e){console.warn('[JPT Outlet Showcase]',e);}
 }
