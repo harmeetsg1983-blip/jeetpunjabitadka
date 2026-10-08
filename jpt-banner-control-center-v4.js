@@ -206,12 +206,10 @@ async function saveOutletBanner(code,file,title,ed,preview,msgEl){
  const prepared=await ed.blob(file);
  msg(msgEl,isVideo?'Preparing resumable video upload…':'Uploading image…',true);
  const up=await uploadMedia(prepared,'menu-images','outlet-banners/'+code,msgEl);
- let insertedId=null;
- let previousRows=[];
  try{
-  const existing=await sb().from(CAMPAIGNS).select('id,active,banner_url,video_url,schedule_json').eq('outlet_id',code).eq('schedule_json->>campaign_type','media').eq('schedule_json->>surface','customer_outlet_showcase');
-  if(existing.error)throw new Error('CURRENT MEDIA READ FAILED: '+existing.error.message);
-  previousRows=existing.data||[];
+  const current=await sb().from(CAMPAIGNS).select('id,active,banner_url,video_url,schedule_json,created_at,priority').eq('outlet_id',code).eq('schedule_json->>campaign_type','media').eq('schedule_json->>surface','customer_outlet_showcase').order('created_at',{ascending:true});
+  if(current.error)throw new Error('CURRENT MEDIA READ FAILED: '+current.error.message);
+  const rows=current.data||[];
   const row={
    outlet_id:code,
    title:title||code+' Banner',
@@ -219,41 +217,70 @@ async function saveOutletBanner(code,file,title,ed,preview,msgEl){
    active:true,
    start_at:null,
    end_at:null,
-   priority:100,
+   priority:Date.now(),
    banner_url:isVideo?null:up.url,
    video_url:isVideo?up.url:null,
-   schedule_json:{version:4,campaign_type:'media',surface:'customer_outlet_showcase',media_type:isVideo?'video':'image',video_url:isVideo?up.url:null,image_url:isVideo?null:up.url,storage_bucket:'menu-images',storage_path:up.path,placement:'outlet_showcase',publication:'published',banner_control_id:FIXED_IDS[code]||('OUT-'+String(code||'').replace(/[^A-Za-z0-9_-]/g,'').slice(0,24))}
+   schedule_json:{version:5,campaign_type:'media',surface:'customer_outlet_showcase',media_type:isVideo?'video':'image',video_url:isVideo?up.url:null,image_url:isVideo?null:up.url,storage_bucket:'menu-images',storage_path:up.path,placement:isVideo?'outlet_video':'outlet_board',publication:'published',rotation_seconds:isVideo?null:11,banner_control_id:FIXED_IDS[code]||('OUT-'+String(code||'').replace(/[^A-Za-z0-9_-]/g,'').slice(0,24))}
   };
-  const ins=await sb().from(CAMPAIGNS).insert(row);
+  const ins=await sb().from(CAMPAIGNS).insert(row).select('id').single();
   if(ins.error)throw new Error('BANNER SAVE FAILED: '+ins.error.message);
-  insertedId=true;
+  const newId=ins.data?.id;
 
-  // New record is now safely committed. Only now retire the previous showcase records.
-  const oldIds=previousRows.map(x=>x.id).filter(Boolean);
-  if(oldIds.length){
-   const off=await sb().from(CAMPAIGNS).update({active:false}).in('id',oldIds).eq('outlet_id',code);
-   if(off.error){
-    await sb().from(CAMPAIGNS).update({active:false}).eq('outlet_id',code).eq('schedule_json->>storage_path',up.path);
-    throw new Error('OLD MEDIA RETIRE FAILED: '+off.error.message);
-   }
+  if(isVideo){
+    const oldVideos=rows.filter(x=>x.active&&x.video_url&&x.id!==newId);
+    if(oldVideos.length){
+      const off=await sb().from(CAMPAIGNS).update({active:false}).in('id',oldVideos.map(x=>x.id)).eq('outlet_id',code);
+      if(off.error)throw new Error('OLD VIDEO RETIRE FAILED: '+off.error.message);
+      for(const old of oldVideos){
+        const s=old.schedule_json&&typeof old.schedule_json==='object'?old.schedule_json:{};
+        if(s.storage_path)try{await sb().storage.from(s.storage_bucket||'menu-images').remove([s.storage_path])}catch(e){}
+      }
+    }
+    const ou=await sb().from(OUTLETS).update({}).eq('code',code);
+    if(ou.error)throw new Error('OUTLET VIDEO SYNC FAILED: '+ou.error.message);
+    msg(msgEl,'✅ VIDEO PUBLISHED • '+code+' • 1 live video',true);
+  }else{
+    const activeImages=rows.filter(x=>x.active&&x.banner_url&&x.id!==newId);
+    const keepMax=9;
+    if(activeImages.length>keepMax){
+      const retire=activeImages.slice(0,activeImages.length-keepMax);
+      const off=await sb().from(CAMPAIGNS).update({active:false}).in('id',retire.map(x=>x.id)).eq('outlet_id',code);
+      if(off.error)throw new Error('IMAGE QUEUE CLEANUP FAILED: '+off.error.message);
+      for(const old of retire){
+        const s=old.schedule_json&&typeof old.schedule_json==='object'?old.schedule_json:{};
+        if(s.storage_path)try{await sb().storage.from(s.storage_bucket||'menu-images').remove([s.storage_path])}catch(e){}
+      }
+    }
+    const ou=await sb().from(OUTLETS).update({banner_url:up.url}).eq('code',code);
+    if(ou.error)throw new Error('OUTLET BANNER MAPPING FAILED: '+ou.error.message);
+    const total=Math.min(10,activeImages.length+1);
+    msg(msgEl,'✅ IMAGE PUBLISHED • '+code+' • '+total+'/10 live board images',true);
   }
-
-  // Keep the legacy outlet field synchronized only after the campaign is live.
-  const patch=isVideo?{banner_url:null}:{banner_url:up.url};
-  const ou=await sb().from(OUTLETS).update(patch).eq('code',code);
-  if(ou.error){
-   if(insertedId)await sb().from(CAMPAIGNS).update({active:false}).eq('id',insertedId).eq('outlet_id',code);
-   for(const old of previousRows.filter(x=>x.active))await sb().from(CAMPAIGNS).update({active:true}).eq('id',old.id).eq('outlet_id',code);
-   throw new Error('OUTLET BANNER MAPPING FAILED: '+ou.error.message);
-  }
-
-  msg(msgEl,'✅ LIVE PUBLISHED • '+code+' • '+(isVideo?'VIDEO':'IMAGE'),true);
   return up.url;
  }catch(e){
-  // If DB publication failed, remove the just-uploaded object so failed attempts do not accumulate.
   try{await sb().storage.from('menu-images').remove([up.path])}catch(cleanup){}
   throw e;
 }
+}
+
+async function deleteMediaRecord(code,id,msgEl){
+ const c=sb();if(!code||!id)throw new Error('Media record is required.');
+ const q=await c.from(CAMPAIGNS).select('id,active,banner_url,video_url,schedule_json').eq('id',id).eq('outlet_id',code).maybeSingle();
+ if(q.error)throw q.error;
+ if(!q.data)throw new Error('Media record not found.');
+ const row=q.data;
+ const off=await c.from(CAMPAIGNS).update({active:false}).eq('id',id).eq('outlet_id',code);
+ if(off.error)throw off.error;
+ const s=row.schedule_json&&typeof row.schedule_json==='object'?row.schedule_json:{};
+ if(s.storage_path)try{await c.storage.from(s.storage_bucket||'menu-images').remove([s.storage_path])}catch(e){}
+ if(row.banner_url){
+   const cur=await c.from('outlets').select('banner_url').eq('code',code).maybeSingle();
+   if(cur.data?.banner_url===row.banner_url){
+     const next=await c.from(CAMPAIGNS).select('banner_url').eq('outlet_id',code).eq('active',true).eq('schedule_json->>surface','customer_outlet_showcase').not('banner_url','is',null).order('created_at',{ascending:false}).limit(1).maybeSingle();
+     await c.from('outlets').update({banner_url:next.data?.banner_url||null}).eq('code',code);
+   }
+ }
+ msg(msgEl,'🗑️ Media removed.',true);
 }
 async function outletToggle(code,row,next,msgEl){
  const c=sb();if(!row?.id)throw new Error('No saved banner found for this outlet.');
