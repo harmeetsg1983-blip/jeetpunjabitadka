@@ -1,10 +1,10 @@
-const CACHE='jpt-delivery-v10-screen-refresh';
+const CACHE='jpt-delivery-v11-audio-launch';
 const SHELL=[
   './delivery-partner-app.html',
   './delivery-partner-manifest.webmanifest',
   './jpt-delivery-icon-192.png',
   './jpt-delivery-icon-512.png',
-  './delivery-partner-v11.html'
+  './delivery-partner-app.html'
 ];
 
 self.addEventListener('install',e=>e.waitUntil(
