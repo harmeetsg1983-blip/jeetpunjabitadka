@@ -44,8 +44,6 @@ main{padding-bottom:12px}.item{display:flex;gap:14px;padding:15px 14px;border:1p
 <section class="hero" id="hero" aria-label="Promotional banner"><div class="heroTrack" id="heroTrack" aria-live="polite"></div></section>
 <section class="videoBanner" id="videoBanner"><div class="videoFallback"><div><b>🎬 Festival & Restaurant Video</b>Today's featured video/campaign will appear here.</div></div></section>
 
-<div class="section">🏷️ Other Outlets & Active Offers</div>
-<div id="highlightGrid" class="highlightGrid"></div>
 <div id="homeOfferBar" class="royalOfferBar" aria-live="polite"></div>
 
 <main>
@@ -131,7 +129,8 @@ function renderOutlets(){const bar=$('outletbar');if(!bar)return;const q=String(
 function renderHighlights(){
  const title=document.querySelector('.section');
  const grid=$('highlightGrid');
- if(title&&grid){const show=outletId==='JPT-001'; title.style.display=show?'':'none'; grid.style.display=show?'':'none';}
+ if(!grid)return;
+ if(title){const show=outletId==='JPT-001'; title.style.display=show?'':'none'; grid.style.display=show?'':'none';}
  const ids=Object.keys(OUTLETS).filter(id=>id!=='JPT-001').slice(0,12);
  $('highlightGrid').innerHTML=ids.map(id=>{
   const o=OUTLETS[id], rec=outletRecords[id]||{}, os=(offersByOutlet[id]||[]).filter(activeWindow);
