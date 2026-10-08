@@ -210,7 +210,6 @@ async function loadAllOutletOffers(){
    });
   }
  }catch(e){}
- renderHighlights();
 }
 let heroTimer=null;
 function renderHero(){
@@ -342,7 +341,6 @@ async function loadManagedMenu(){
   offers=(offersByOutlet[outletId]||[]).filter(activeWindow).filter(o=>{const t=String(o.title||'').toLowerCase(),code=String(o.code||o.promo_code||o.coupon_code||'').toUpperCase();return !((t.includes('₹500')&&t.includes('₹100'))||(t.includes('₹1000')&&t.includes('₹200'))||code==='JPT100'||code==='JPT200')});
   renderHomeOffers();
   let ca=await sb.from('campaigns').select('*').eq('outlet_id',outletId);if(!ca.error)campaigns=(ca.data||[]).filter(activeWindow);
-  renderHero();renderVideo();renderHomeOffers();renderHighlights();
  }catch(e){$('menu').innerHTML='<div class="box" style="margin:14px">Menu connection is temporarily unavailable. Please try again.</div>'}
  updateCart()
 }
