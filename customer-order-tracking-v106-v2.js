@@ -75,7 +75,7 @@
   async function ensureCustomerNotifications(){
     try{
       if('serviceWorker' in navigator){
-        await navigator.serviceWorker.register('./customer-app-sw.js?v=8',{scope:'./',updateViaCache:'none'});
+        await navigator.serviceWorker.register('./customer-app-sw.js?v=9',{scope:'./',updateViaCache:'none'});
       }
       if('Notification' in window && Notification.permission==='default'){
         try{await Notification.requestPermission()}catch(e){}
