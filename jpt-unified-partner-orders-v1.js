@@ -19,6 +19,12 @@ let timerHandle=null;
 let selectedQueue='all';
 let managedSignature='';
 const outletSelect=document.getElementById('outletSelect');
+/* MULTI-OUTLET CORE FREEZE CONTRACT:
+   - outletDisplayName() resolves names only from authorized partner outlet data.
+   - every managed outlet gets its own INSERT/UPDATE realtime subscription.
+   - every NEW order enters the same ringtone owner regardless of outlet.
+   - no customer/order transition logic is changed here.
+*/
 
 async function primeOrderAudio(){
   try{
@@ -65,6 +71,13 @@ function bindOrderAudioGesture(){
 }
 function outlet(){
   return String(localStorage.getItem('jpt_admin_outlet')||outletSelect?.value||'JPT-001');
+}
+function outletDisplayName(id){
+  const key=String(id||'');
+  const list=window.JPTPartnerAccess?.getOutlets?.()||window.JPT_PARTNER_OUTLETS||[];
+  const hit=list.find(x=>String(x?.outlet_id||x?.code||x?.id||'')===key);
+  const name=String(hit?.outlet_name||hit?.name||'');
+  return name ? name+' ('+key+')' : (key||'—');
 }
 function managedOutlets(){
   const list=window.JPTPartnerAccess?.getOutlets?.()||window.JPT_PARTNER_OUTLETS||[];
@@ -242,7 +255,7 @@ function render(){
     return '<article class="jpt-order-card'+newClass+'" data-order-card="'+esc(o.id)+'">'+
       '<div class="jpt-order-head"><div><div class="jpt-label">ORDER ID</div><div class="jpt-order-id">#'+esc(o.order_no||o.id)+'</div></div>'+
       '<span class="tag jpt-status">'+esc(st.replaceAll('_',' ').toUpperCase())+'</span></div>'+
-      '<div class="muted" style="margin:6px 0;font-weight:800">OUTLET: '+esc(o.outlet_id||'—')+'</div>'+
+      '<div class="muted" style="margin:6px 0;font-weight:800">OUTLET: '+esc(outletDisplayName(o.outlet_id))+'</div>'+
       '<div class="jpt-customer"><div class="jpt-label">CUSTOMER</div><div class="jpt-customer-name">'+esc(o.customer_name||'Customer')+'</div>'+
       (o.customer_phone?'<div class="muted">'+esc(o.customer_phone)+'</div>':'')+'</div>'+
       '<div class="jpt-items"><div class="jpt-label">ITEMS</div>'+itemHtml+'</div>'+
