@@ -283,10 +283,13 @@ async function deleteMediaRecord(code,id,msgEl){
  msg(msgEl,'🗑️ Media removed.',true);
 }
 async function outletToggle(code,row,next,msgEl){
- const c=sb();if(!row?.id)throw new Error('No saved banner found for this outlet.');
- const r=await c.from(CAMPAIGNS).update({active:next}).eq('id',row.id).eq('outlet_id',code);
- if(r.error)throw r.error;
- msg(msgEl,next?'✅ Banner ON':'Banner OFF',true);
+ const c=sb();if(!code)throw new Error('Outlet code is required.');
+ const q=await c.from(CAMPAIGNS).update({active:next})
+   .eq('outlet_id',code)
+   .eq('schedule_json->>campaign_type','media')
+   .eq('schedule_json->>surface','customer_outlet_showcase');
+ if(q.error)throw q.error;
+ msg(msgEl,next?'✅ Entire outlet board ON':'✅ Entire outlet board OFF',true);
 }
 
 async function outletDelete(code,row,msgEl){
