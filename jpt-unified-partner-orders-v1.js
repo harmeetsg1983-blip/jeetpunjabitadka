@@ -344,40 +344,59 @@ async function markReady(id){
   const key=String(id);
   if(markReadyInFlight.has(key))return;
   const o=rows.get(key); if(!o)return;
+
+  /* UI lock: prevent double-click/race while the server transition is in flight. */
   markReadyInFlight.add(key);
+  const clicked=document.querySelector('[data-ready="'+CSS.escape(key)+'"]');
+  if(clicked){
+    clicked.disabled=true;
+    clicked.setAttribute('aria-busy','true');
+    clicked.textContent='UPDATING…';
+  }
+
   try{
     const fresh=await read(id,o.outlet_id).catch(()=>null);
     if(fresh)Object.assign(o,fresh);
     const now=status(o.status);
-    if(now==='ready'){
-      rows.set(key,o); render(); return;
+
+    /* Idempotent success: if another listener/action already made it READY
+       (or moved it beyond READY), sync server truth and do not show an error. */
+    if(now==='ready'||now==='out_for_delivery'||now==='delivered'){
+      rows.set(key,o);
+      toast(now==='ready'?'Order marked READY.':'Order already advanced — syncing current server state.');
+      render();
+      return;
     }
+
     if(now!=='accepted'&&now!=='preparing'){
       toast('MARK READY blocked: server order is '+now.toUpperCase()+'.');
-      render(); return;
+      render();
+      return;
     }
-    const r=await window.sb.from('orders')
-      .update({status:'ready',ready_at:new Date().toISOString(),updated_at:new Date().toISOString()})
-      .eq('id',Number(id))
-      .eq('outlet_id',String(o.outlet_id||''))
-      .in('status',['accepted','preparing'])
-      .select('*')
-      .maybeSingle();
+
+    const r=await window.sb.rpc('jpt_partner_transition_order',{
+      p_order_id:Number(id),
+      p_next_status:'ready',
+      p_target_minutes:Number(o.target_minutes||15),
+      p_rejection_reason:null
+    });
     if(r.error)throw r.error;
-    if(!r.data){
+
+    const server=Array.isArray(r.data)?r.data[0]:r.data;
+    if(server)rows.set(key,Object.assign(o,server));
+    else{
       const verify=await read(id,o.outlet_id).catch(()=>null);
-      if(verify && status(verify.status)==='ready'){
-        rows.set(key,verify); render(); return;
-      }
-      throw new Error('Order state changed before MARK READY.');
+      if(verify)rows.set(key,verify);
     }
-    rows.set(key,r.data);
+
     toast('Order marked READY.');
     render();
     try{await window.sb.rpc('delivery_offer_next',{p_order_id:Number(id)})}catch(e){}
   }catch(e){
-    const fresh=await read(id,o?.outlet_id).catch(()=>null); if(fresh)rows.set(key,fresh);
-    render(); toast('MARK READY failed: '+(e.message||e));
+    const fresh=await read(id,o?.outlet_id).catch(()=>null);
+    if(fresh)rows.set(key,fresh);
+    render();
+    toast('MARK READY failed: '+(e.message||e));
   }finally{
     markReadyInFlight.delete(key);
   }
