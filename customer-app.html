@@ -57,7 +57,7 @@ share.addEventListener('click',async function(){
   else if(navigator.clipboard){try{await navigator.clipboard.writeText(data.url);share.textContent='✓ LINK COPIED';setTimeout(()=>share.textContent='↗ SHARE APP',1600);}catch(_){}}
 });
 window.addEventListener('appinstalled',function(){hideGate();});
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./customer-app-sw.js?v=4',{scope:'./',updateViaCache:'none'}).catch(function(){});});}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./customer-app-sw.js?v=8',{scope:'./',updateViaCache:'none'}).catch(function(){});});}
 })();
 </script>
 </body>
