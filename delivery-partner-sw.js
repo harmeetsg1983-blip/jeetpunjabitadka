@@ -3,8 +3,7 @@ const SHELL=[
   './delivery-partner-app.html',
   './delivery-partner-manifest.webmanifest',
   './jpt-delivery-icon-192.png',
-  './jpt-delivery-icon-512.png',
-  './delivery-partner-app.html'
+  './jpt-delivery-icon-512.png'
 ];
 
 self.addEventListener('install',e=>e.waitUntil(
