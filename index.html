@@ -135,7 +135,7 @@ function renderHighlights(){
  $('highlightGrid').innerHTML=ids.map(id=>{
   const o=OUTLETS[id], rec=outletRecords[id]||{}, os=(offersByOutlet[id]||[]).filter(activeWindow);
   const best=os[0], label=best?offerText(best):'View menu';
-  const bg=rec.cover_image||rec.banner_image||rec.image_url||rec.image||ROYAL_MEDIA[id]||'';
+  const bg=rec.cover_image||rec.banner_image||rec.image_url||rec.image||'';
   const style=`border-color:${o.accent};${bg?`background-image:url('${esc(bg)}')`:''}`;
   return `<div class="highlight" style="${style}" onclick="switchOutlet('${id}')"><b style="color:${o.accent}">${esc(rec.name||o.name)}</b><small>${id} • Direct outlet ordering</small><div class="offer" style="border:1px solid ${o.accent}">${esc(label)}</div></div>`
  }).join('');
