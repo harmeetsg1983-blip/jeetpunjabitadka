@@ -1,10 +1,10 @@
-const CACHE='jpt-delivery-launcher-v1';
+const CACHE='jpt-delivery-launcher-v2';
 
 const ASSETS=[
   './delivery-partner-launcher.html',
   './delivery-partner-launcher-manifest.webmanifest',
-  './jpt-delivery-partner-icon-192.png',
-  './jpt-delivery-partner-icon-512.png'
+  './jpt-delivery-icon-192.png',
+  './jpt-delivery-icon-512.png'
 ];
 
 self.addEventListener('install',e=>{
