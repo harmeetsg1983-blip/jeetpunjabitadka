@@ -366,7 +366,7 @@ function renderOutletCard(o,data,ed){
    <button class="danger" type="button" data-delete>DELETE LIVE BANNER</button>
   </div>
   <div class="jpt-bcc-status" data-msg></div>
-  <div class="jpt-bcc-list"><b>Current Media Record</b><div class="jpt-bcc-row">${url?'<img class="jpt-bcc-thumb" src="'+esc(url)+'">':'<div class="jpt-bcc-thumb"></div>'}<div><div>${esc(row?.title||'No saved media')}</div><div class="jpt-bcc-small">${row?.video_url?'VIDEO':'IMAGE'} • ${row?.active?'ON':'OFF'} • Priority ${Number(row?.priority||0)}</div></div></div></div>`;
+  <div class="jpt-bcc-list"><b>Published Media • ${activeRows.length} live</b>${activeRows.length?activeRows.map((r,i)=>'<div class="jpt-bcc-row"><img class="jpt-bcc-thumb" src="'+esc(r.video_url||r.banner_url||'')+'"><div style="flex:1;min-width:0"><div>'+esc(r.title||'Untitled')+'</div><div class="jpt-bcc-small">'+(r.video_url?'VIDEO':'IMAGE')+' • '+(r.video_url?'Video slot':'Board '+(i+1))+'</div></div><button type="button" data-media-delete="'+esc(r.id)+'" class="danger">DELETE</button></div>').join(''):'<div class="jpt-bcc-small">No published media.</div>'}</div>`;
  const preview=box.querySelector('[data-preview]');
  if(url)mediaPreview(url,isVideo,preview);
  const state={row,code:o.code};
@@ -389,6 +389,11 @@ function renderOutletCard(o,data,ed){
    msg(m,'SAVE FAILED @ '+saveStep+': '+(e?.message||String(e))+' | '+String(e?.stack||'').split('\n').slice(0,3).join(' ← '),false);
   }finally{b.disabled=false}
  };
+ box.querySelectorAll('[data-media-delete]').forEach(btn=>btn.onclick=async()=>{
+  if(!confirm('Delete this published media?'))return;
+  try{await deleteMediaRecord(o.code,btn.dataset.mediaDelete,box.querySelector('[data-msg]'));await bootOutlet()}
+  catch(e){msg(box.querySelector('[data-msg]'),e.message||String(e),false)}
+ });
  box.querySelector('[data-toggle]').onclick=async()=>{
   try{await outletToggle(o.code,state.row,!state.row?.active,box.querySelector('[data-msg]'));await bootOutlet()}catch(e){msg(box.querySelector('[data-msg]'),e.message||String(e),false)}
  };
