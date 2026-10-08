@@ -271,7 +271,12 @@
       try{window.open(target,'_blank','noopener')}catch(e){location.href=target}
     };
     var help=document.getElementById('jptTrackHelp');
-    if(help)help.onclick=function(){if(typeof window.toast==='function')window.toast('Order support: please contact the restaurant using WhatsApp.');};
+    if(help)help.onclick=function(){
+      var num='9148161094';
+      var msg='Hello Jeet Punjabi Tadka, I need help with order '+String(o&&o.order_no||'');
+      var target='https://wa.me/91'+num+'?text='+encodeURIComponent(msg);
+      try{window.open(target,'_blank','noopener')}catch(e){location.href=target}
+    };
   }
 
   function renderRiderProfile(o){
