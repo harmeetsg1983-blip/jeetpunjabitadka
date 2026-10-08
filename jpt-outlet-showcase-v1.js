@@ -17,7 +17,6 @@ const LEGACY={
  "TOP-005":{name:"Taste of Punjab",accent:"#7b74e8"}
 };
 const accentFor=(code,i)=>LEGACY[code]?.accent||["#d8ae42","#49b36a","#df6680","#f29b32","#7b74e8"][i%5];
-const fallback=window.ROYAL_MEDIA||{};
 const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const css=document.createElement('style');css.textContent=`
 #jptOutletShowcase{margin:12px 14px 18px}
@@ -110,11 +109,11 @@ async function mount(){
     by[id].videos=by[id].videos.slice(0,1);
   });
   list.innerHTML=ids.map((id,i)=>{
-   const r=recs[id]||{},legacy=r.banner_url||fallback[id]||'',o={name:r.name||id,accent:accentFor(id,i)};
+   const r=recs[id]||{},o={name:r.name||id,accent:accentFor(id,i)};
    const hasImages=by[id].images.length>0, hasVideo=by[id].videos.length>0;
    return '<article class="jpt-os-card" style="--os-accent:'+o.accent+'">'+
     '<div class="jpt-os-name" style="color:'+o.accent+'">'+esc(o.name)+' <span>'+esc(id)+'</span></div>'+
-    '<div class="jpt-os-poster" data-os-poster="'+esc(id)+'">'+(hasImages?'':(legacy?'<img src="'+esc(legacy)+'" alt="'+esc(o.name)+' main board">':'<div class="jpt-os-poster-empty">MAIN BOARD NOT CONFIGURED</div>'))+'</div>'+
+    '<div class="jpt-os-poster" data-os-poster="'+esc(id)+'">'+hasImages?'':'<div class="jpt-os-poster-empty"></div>'+'</div>'+
     (hasVideo?'<div class="jpt-os-video" data-os-video="'+esc(id)+'"></div>':'')+
     '<div class="jpt-os-footer"><b>'+esc(hasImages?('LIVE BOARD • '+by[id].images.length+'/10'):'LIVE BANNER • '+id)+'</b><button type="button" data-os-open="'+esc(id)+'">VIEW MENU</button></div>'+
    '</article>';
