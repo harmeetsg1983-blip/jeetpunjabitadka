@@ -1,4 +1,4 @@
-const CACHE="jpt-customer-shell-v8-showcase";
+const CACHE="jpt-customer-shell-v9-showcase-revert";
 const ASSETS=[
   "./customer-app.html",
   "./customer-manifest.webmanifest",
