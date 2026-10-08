@@ -353,7 +353,7 @@
 
     var rlat=Number(o&&o.rider_lat),rlng=Number(o&&o.rider_lng);
     if(Number.isFinite(rlat)&&Number.isFinite(rlng)&&Math.abs(rlat)<=90&&Math.abs(rlng)<=180){
-      var riderMapUrl='https://www.openstreetmap.org/?mlat='+rlat+'&mlon='+rlng+'#map=16/'+rlat+'/'+rlng;
+      var riderMapUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(rlat+','+rlng);
       html+='<div class="jpt-track-sub" style="margin-top:10px">🚴 Rider live location available • <a target="_blank" rel="noopener" href="'+riderMapUrl+'">Open</a></div>';
     }else if(o&&o.assignment_status){
       html+='<div class="jpt-track-sub" style="margin-top:10px">🚴 Rider live location will appear after GPS sharing.</div>';
