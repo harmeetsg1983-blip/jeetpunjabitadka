@@ -1,4 +1,4 @@
-const CACHE='jpt-delivery-launcher-v2';
+const CACHE='jpt-delivery-launcher-v1';
 
 const ASSETS=[
   './delivery-partner-launcher.html',
