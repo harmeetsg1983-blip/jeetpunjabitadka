@@ -12,7 +12,52 @@
 <script>
 const SUPABASE_URL='https://qrkbhrmxejtpvheplath.supabase.co',SUPABASE_KEY='sb_publishable_xySAr0cGnVCaC_sgtwk8Zw_IW_b5sgh';const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);window.sb=sb;let stream=null,selfieBlob=null,offer=null,audio=null,offerTimer=null,locationTimer=null,locationWatchId=null,current=null,lastOrderStatus='';let deliveryLiveChannel=null,deliveryPrivateChannel=null;
 const $=id=>document.getElementById(id);function show(id){['home','profile','history','tools'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}function phone(v){let d=(v||'').replace(/\D/g,'');return d.startsWith('91')&&d.length===12?d.slice(2):d}
+let jptLoginEmail='';let jptLoginBusy=false;
+function showPartnerLogin(message=''){
+  let box=document.getElementById('jptPartnerLogin');
+  if(!box){
+    box=document.createElement('div');box.id='jptPartnerLogin';box.style.cssText='position:fixed;inset:0;background:#050505f7;z-index:9999;display:flex;align-items:center;justify-content:center;padding:18px';
+    box.innerHTML='<div class="card" style="width:min(520px,100%);margin:0"><div class="big">Delivery Partner Login</div><p class="muted">Sign in with the existing approved rider account. No new onboarding is created by this screen.</p><label>Email</label><input id="jptLoginEmail" type="email" autocomplete="email" placeholder="Enter registered email"><button id="jptSendCode" class="gold" style="width:100%;margin-top:6px">SEND LOGIN CODE</button><div id="jptLoginOtpBox" class="hidden" style="margin-top:10px"><label>6-digit email code</label><input id="jptLoginOtp" inputmode="numeric" maxlength="6" placeholder="Enter code"><button id="jptVerifyCode" class="success" style="width:100%;margin-top:6px">VERIFY & OPEN APP</button></div><div id="jptLoginMsg" class="muted" style="margin-top:10px"></div></div>';
+    document.body.appendChild(box);
+    document.getElementById('jptSendCode').onclick=sendPartnerLoginCode;
+    document.getElementById('jptVerifyCode').onclick=verifyPartnerLoginCode;
+  }
+  box.style.display='flex';if(message)document.getElementById('jptLoginMsg').textContent=message;
+}
+function hidePartnerLogin(){const b=document.getElementById('jptPartnerLogin');if(b)b.style.display='none'}
+async function sendPartnerLoginCode(){
+  if(jptLoginBusy)return;jptLoginBusy=true;
+  try{
+    const email=(document.getElementById('jptLoginEmail')?.value||'').trim().toLowerCase();
+    if(!email||!email.includes('@'))throw new Error('Enter the registered rider email.');
+    const r=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:false}});
+    if(r.error)throw r.error;
+    jptLoginEmail=email;
+    document.getElementById('jptLoginOtpBox').classList.remove('hidden');
+    document.getElementById('jptLoginMsg').textContent='Login code sent. Enter the 6-digit code from the registered email.';
+  }catch(e){document.getElementById('jptLoginMsg').textContent=e.message||'Could not send login code.'}
+  finally{jptLoginBusy=false}
+}
+async function verifyPartnerLoginCode(){
+  if(jptLoginBusy)return;jptLoginBusy=true;
+  try{
+    const token=(document.getElementById('jptLoginOtp')?.value||'').trim();
+    if(!jptLoginEmail||!/^\\d{6}$/.test(token))throw new Error('Enter the 6-digit login code.');
+    const r=await sb.auth.verifyOtp({email:jptLoginEmail,token,type:'email'});
+    if(r.error)throw r.error;
+    const session=r.data?.session;if(!session)throw new Error('Login session was not created.');
+    const u=session.user;
+    const partner=await sb.from('delivery_partners').select('id,status,is_active,onboarding_completed,verification_status').eq('user_id',u.id).maybeSingle();
+    if(partner.error)throw partner.error;
+    if(!partner.data)throw new Error('This account is not linked to an approved delivery partner.');
+    if(!partner.data.is_active||!partner.data.onboarding_completed||partner.data.verification_status!=='verified')throw new Error('Delivery partner approval is not active yet.');
+    hidePartnerLogin();
+    await bootDeliveryPartnerApp();
+  }catch(e){document.getElementById('jptLoginMsg').textContent=e.message||'Login failed.'}
+  finally{jptLoginBusy=false}
+}
 async function ensureSession(){let {data}=await sb.auth.getSession();if(data.session)return data.session;let r=await sb.auth.signInAnonymously();if(r.error)throw r.error;return r.data.session||null}
+
 async function refresh(){try{let s=await ensureSession();if(!s)return;window.JPTDeliveryDevice?.boot();window.JPTDeliveryPushSubscription?.boot();let {data}=await sb.from('delivery_partners').select('id,status,is_active,onboarding_completed,verification_status,last_seen_at').eq('user_id',s.user.id).maybeSingle();if(data){window.JPT_DELIVERY_PARTNER_ID=String(data.id||'');$('onboardState').textContent='Onboarding: '+(data.onboarding_completed?'Submitted':'Not submitted');$('verifyState').textContent='Admin: '+(data.verification_status||'pending');const seen=data.last_seen_at?Date.parse(data.last_seen_at):0;const fresh=seen&&((Date.now()-seen)<=120000);renderStatus(data.status==='online'&&fresh);if(data.status==='online'&&!fresh&&$('submitMsg'))$('submitMsg').textContent='Rider session is stale. Tap GO ONLINE to refresh the live connection.';}await loadEarnings()}catch(e){$('submitMsg').textContent='Session setup: '+e.message}}
 function renderStatus(v){$('statusPill').textContent=v?'ONLINE':'OFFLINE';$('statusPill').className='pill '+(v?'online':'');if(v)startDeliveryHeartbeat();else stopDeliveryHeartbeat()}
 let deliveryHeartbeatTimer=null;
@@ -110,12 +155,22 @@ function playDeliveryAcceptedTone(){
   }catch(e){}
 }
 function testTone(){startTone();setTimeout(stopTone,5000)}
-window.addEventListener('load',async()=>{await refresh();await startDeliveryLiveChannel();await startDeliveryPrivateBroadcast();await loadActive();});
+async function bootDeliveryPartnerApp(){
+  const s=await ensureSession();if(!s)return;
+  await refresh();await startDeliveryLiveChannel();await startDeliveryPrivateBroadcast();await loadActive();
+}
+window.addEventListener('load',async()=>{
+  const s=await ensureSession();
+  if(!s)return;
+  await refresh();await startDeliveryLiveChannel();await startDeliveryPrivateBroadcast();await loadActive();
+});
 </script><script>
 let jptInstallPrompt=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();jptInstallPrompt=e;const b=document.getElementById('installApp');if(b)b.style.display='block';});
 window.addEventListener('appinstalled',()=>{const b=document.getElementById('installApp');if(b){b.textContent='✓ JPT DELIVERY APP INSTALLED';b.style.display='block';}});
 document.addEventListener('click',async e=>{if(e.target&&e.target.id==='installApp'&&jptInstallPrompt){jptInstallPrompt.prompt();await jptInstallPrompt.userChoice;jptInstallPrompt=null;e.target.style.display='none';}});
+// Auth gate: permanent approved rider accounts only. Anonymous sessions are no longer used for delivery operations.
+window.addEventListener('load',async()=>{try{const s=await sb.auth.getSession();if(s.data?.session?.user?.is_anonymous){await sb.auth.signOut();showPartnerLogin('Please sign in with the registered approved rider account.');}else if(!s.data?.session){showPartnerLogin();}}catch(e){showPartnerLogin(e.message||'Sign-in required.')}});
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./delivery-partner-sw.js',{scope:'./',updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));}
 </script>
 <script src="./jpt-delivery-sponsor-connector-v2.js?v=2"></script>
