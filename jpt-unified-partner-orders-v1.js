@@ -299,6 +299,7 @@ async function read(id,outletId){
 async function accept(id){
   const key=String(id);
   const o=rows.get(key); if(!o)return;
+  console.info('[JPT ORDER ID MAP]',{action:'ACCEPT',cardKey:key,id:o.id,idType:typeof o.id,order_no:o.order_no,outlet_id:o.outlet_id,status:o.status,rpc_p_order_id:Number(o.id),rpcIdIsSafeInteger:Number.isSafeInteger(Number(o.id))});
   const minutes=Math.max(15,Math.min(40,Number(o.__draftMinutes||o.target_minutes||15)));
   const local=localDeadline(minutes);
   const previous={status:o.status,target_minutes:o.target_minutes,deadline_at:o.deadline_at,__localDeadline:o.__localDeadline,__optimisticStatus:o.__optimisticStatus};
@@ -375,6 +376,7 @@ async function markReady(id){
   const key=String(id);
   if(markReadyInFlight.has(key))return;
   const o=rows.get(key); if(!o)return;
+  console.info('[JPT ORDER ID MAP]',{action:'MARK READY',cardKey:key,id:o.id,idType:typeof o.id,order_no:o.order_no,outlet_id:o.outlet_id,status:o.status,rpc_p_order_id:Number(o.id),rpcIdIsSafeInteger:Number.isSafeInteger(Number(o.id))});
 
   /* UI lock: prevent double-click/race while the server transition is in flight. */
   markReadyInFlight.add(key);
@@ -496,6 +498,14 @@ async function subscribe(){
       const old=rows.get(String(o.id))||{};
       rows.set(String(o.id),Object.assign({},old,o));
       render();
+    });
+    ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
+      const deletedId=payload?.old?.id;
+      if(deletedId===undefined||deletedId===null)return;
+      const key=String(deletedId);
+      const existed=rows.delete(key);
+      if(activeRingtoneOrderId===key)stopRingtone();
+      if(existed){console.info('[JPT QUEUE] removed deleted database row',{id:key,outlet_id:code});render();}
     });
     ch.subscribe((s,e)=>{
       const n=document.getElementById('ordersNotice');
