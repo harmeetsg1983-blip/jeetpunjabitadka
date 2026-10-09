@@ -11,6 +11,7 @@ window.__JPTOrdersV3Active=true;
 
 const LIVE_STATUSES=new Set(['new','accepted','preparing','ready','out_for_delivery']);
 const rows=new Map();
+const terminalOrderIds=new Set();
 let channel=null;
 let audio=null;
 let activeRingtoneOrderId=null;
@@ -483,12 +484,15 @@ async function transition(id,next){
 }
 async function initialLoad(){
   const codes=managedOutlets();
+  /* Partner live board is an active queue, not an order-history screen.
+     Exclude terminal statuses at source so old orders cannot return on reload. */
+  const activeStatuses=['new','received','accepted','preparing','ready','out_for_delivery'];
   const r=codes.length===1
-    ? await window.sb.from('orders').select('*').eq('outlet_id',codes[0]).order('created_at',{ascending:false}).limit(100)
-    : await window.sb.from('orders').select('*').in('outlet_id',codes).order('created_at',{ascending:false}).limit(500);
+    ? await window.sb.from('orders').select('*').eq('outlet_id',codes[0]).in('status',activeStatuses).order('created_at',{ascending:false}).limit(100)
+    : await window.sb.from('orders').select('*').in('outlet_id',codes).in('status',activeStatuses).order('created_at',{ascending:false}).limit(500);
   if(r.error){toast('Orders load failed: '+r.error.message);return;}
   rows.clear();
-  (r.data||[]).forEach(o=>rows.set(String(o.id),o));
+  (r.data||[]).filter(o=>LIVE_STATUSES.has(status(o.status))).forEach(o=>rows.set(String(o.id),o));
 
   /* Reconcile cards against the same server lookup used by action recovery.
      Missing/unreadable rows are hidden from this in-memory queue only.
@@ -529,21 +533,33 @@ async function subscribe(){
     ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
       const o=payload?.new;
       if(!o || String(o.outlet_id)!==code || !liveCodes.includes(String(o.outlet_id)))return;
-      rows.set(String(o.id),Object.assign({},o,{__liveNew:true}));
+      const key=String(o.id);
+      if(terminalOrderIds.has(key)||!LIVE_STATUSES.has(status(o.status)))return;
+      rows.set(key,Object.assign({},o,{__liveNew:true}));
       render();
       if(status(o.status)==='new')startRingtone(o);
     });
     ch.on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
       const o=payload?.new;
       if(!o || String(o.outlet_id)!==code || !liveCodes.includes(String(o.outlet_id)))return;
-      const old=rows.get(String(o.id))||{};
-      rows.set(String(o.id),Object.assign({},old,o));
+      const key=String(o.id);
+      if(!LIVE_STATUSES.has(status(o.status))){
+        terminalOrderIds.add(key);
+        const existed=rows.delete(key);
+        if(activeRingtoneOrderId===key)stopRingtone();
+        if(existed)render();
+        return;
+      }
+      if(terminalOrderIds.has(key))return;
+      const old=rows.get(key)||{};
+      rows.set(key,Object.assign({},old,o));
       render();
     });
     ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
       const deletedId=payload?.old?.id;
       if(deletedId===undefined||deletedId===null)return;
       const key=String(deletedId);
+      terminalOrderIds.add(key);
       const existed=rows.delete(key);
       if(activeRingtoneOrderId===key)stopRingtone();
       if(existed){console.info('[JPT QUEUE] removed deleted database row',{id:key,outlet_id:code});render();}
