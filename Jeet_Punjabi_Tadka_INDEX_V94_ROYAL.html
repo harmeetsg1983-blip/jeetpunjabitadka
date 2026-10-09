@@ -111,17 +111,12 @@ function toast(t){$('toast')?.remove();let x=document.createElement('div');x.id=
 function setTheme(){document.documentElement.style.setProperty('--accent',OUTLETS[outletId].accent);$('restaurant').textContent=outletRecords[outletId]?.name||OUTLETS[outletId].name;$('menuTitle').textContent=(outletId==='JPT-001'?'📋 Jeet Punjabi Tadka Menu':'📋 '+(outletRecords[outletId]?.name||OUTLETS[outletId].name)+' Menu')}
 function renderOutlets(){$('outletbar').innerHTML=Object.entries(OUTLETS).map(([id,o])=>`<button class="outlet ${id===outletId?'on':''}" onclick="switchOutlet('${id}')">${esc(o.name)}</button>`).join('')}
 function renderHighlights(){
+ /* JPT HOTFIX: remove the obsolete extra outlet-banner showcase.
+    Outlet switching remains available in the normal outlet selector. */
  const title=document.querySelector('.section');
  const grid=$('highlightGrid');
- if(title&&grid){const show=outletId==='JPT-001'; title.style.display=show?'':'none'; grid.style.display=show?'':'none';}
- const ids=Object.keys(OUTLETS).filter(id=>id!=='JPT-001');
- $('highlightGrid').innerHTML=ids.map(id=>{
-  const o=OUTLETS[id], rec=outletRecords[id]||{}, os=(offersByOutlet[id]||[]).filter(activeWindow);
-  const best=os[0], label=best?offerText(best):'View menu';
-  const bg=rec.cover_image||rec.banner_image||rec.image_url||rec.image||ROYAL_MEDIA[id]||'';
-  const style=`border-color:${o.accent};${bg?`background-image:url('${esc(bg)}')`:''}`;
-  return `<div class="highlight" style="${style}" onclick="switchOutlet('${id}')"><b style="color:${o.accent}">${esc(rec.name||o.name)}</b><small>${id} • Direct outlet ordering</small><div class="offer" style="border:1px solid ${o.accent}">${esc(label)}</div></div>`
- }).join('');
+ if(grid){grid.innerHTML='';grid.style.display='none';}
+ if(title)title.style.display='none';
 }
 async function switchOutlet(id){outletId=id;history.replaceState({},'',location.pathname+'?outlet='+encodeURIComponent(id));cartState={};selectedPromo=null;items=[];offers=[];campaigns=[];imageMap={};setTheme();renderOutlets();await loadManagedMenu()}
 function renderChips(cats){$('chips').innerHTML=['All',...cats].map((c,i)=>`<button class="chip ${i===0?'on':''}" data-cat="${esc(c)}" onclick="filterCat(this.dataset.cat,this)">${esc(c)}</button>`).join('')}
