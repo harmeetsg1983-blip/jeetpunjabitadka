@@ -297,9 +297,11 @@ async function read(id,outletId){
   return r.data;
 }
 async function accept(id){
-  const o=rows.get(String(id)); if(!o)return;
+  const key=String(id);
+  const o=rows.get(key); if(!o)return;
   const minutes=Math.max(15,Math.min(40,Number(o.__draftMinutes||o.target_minutes||15)));
   const local=localDeadline(minutes);
+  const previous={status:o.status,target_minutes:o.target_minutes,deadline_at:o.deadline_at,__localDeadline:o.__localDeadline,__optimisticStatus:o.__optimisticStatus};
 
   /* Explicit ACCEPT click: this is the ONLY place the ringtone is stopped. */
   stopRingtone();
@@ -320,12 +322,19 @@ async function accept(id){
     });
     if(r.error)throw r.error;
     const server=Array.isArray(r.data)?r.data[0]:r.data;
-    if(server)rows.set(String(id),Object.assign(rows.get(String(id))||{},server));
+    if(!server)throw new Error('Server returned no order record; status was not confirmed.');
+    rows.set(key,Object.assign(o,server));
     toast('Order accepted — '+minutes+' minute preparation timer started.');
     render();
   }catch(e){
     const fresh=await read(id,o?.outlet_id).catch(()=>null);
-    if(fresh)rows.set(String(id),fresh);
+    if(fresh)rows.set(key,fresh);
+    else{
+      Object.assign(o,previous);
+      if(previous.__localDeadline===undefined)delete o.__localDeadline;
+      if(previous.__optimisticStatus===undefined)delete o.__optimisticStatus;
+      rows.set(key,o);
+    }
     render();
     toast('ACCEPT failed: '+(e.message||e));
   }
@@ -399,7 +408,8 @@ async function markReady(id){
     if(server)rows.set(key,Object.assign(o,server));
     else{
       const verify=await read(id,o.outlet_id).catch(()=>null);
-      if(verify)rows.set(key,verify);
+      if(!verify)throw new Error('Server returned no order record; READY status was not confirmed.');
+      rows.set(key,verify);
     }
 
     toast('Order marked READY.');
