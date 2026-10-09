@@ -351,12 +351,12 @@ async function placeOrder(){
   let msg=`NEW ORDER ${ord.order_no}%0A${encodeURIComponent(rows.map(r=>r.x.name+' x '+r.q).join('\\n'))}%0ASubtotal: ${encodeURIComponent(money(c.subtotal))}%0ADiscount: ${encodeURIComponent(money(c.discount))}%0ADelivery: ${encodeURIComponent(c.delivery?money(c.delivery):'FREE')}%0ATotal: ${encodeURIComponent(money(c.total))}%0AOutlet: ${encodeURIComponent(OUTLETS[outletId].name)}%0AOutlet ID: ${encodeURIComponent(outletId)}%0APayment: ${encodeURIComponent(payment)}%0ACustomer: ${encodeURIComponent(ord.customer_name)}%0APhone: ${phone}%0AAddress: ${encodeURIComponent(ord.customer_address)}`;
   /* Do not open a secondary browser/app window before tracking. WhatsApp is explicit/secondary. */
   waWindow=null;
-  let result=await sb.from('orders').insert(ord);
+  let result=await sb.from('orders').insert(ord).select('id,order_no,outlet_id,status,eta_minutes,created_at').single();
   if(result.error){
     try{waWindow?.close()}catch(e){}
     jptCheckoutBusy=false;return toast('Order save failed: '+result.error.message);
   }
-  let placed={order_no:ord.order_no,phone:phone,created_at:new Date().toISOString(),outlet_id:outletId,status:'new',eta_minutes:ord.eta_minutes,target_minutes:null,deadline_at:null};
+  let placed={id:result.data?.id||null,order_no:result.data?.order_no||ord.order_no,phone:phone,created_at:result.data?.created_at||new Date().toISOString(),outlet_id:result.data?.outlet_id||outletId,status:result.data?.status||'new',eta_minutes:Number(result.data?.eta_minutes||ord.eta_minutes||45),target_minutes:null,deadline_at:null};
   window.JPT_LAST_PLACED_ORDER=placed;
   try{localStorage.setItem('jpt_v106_last_order',JSON.stringify(placed))}catch(e){}
   try{window.dispatchEvent(new CustomEvent('jpt:order-placed',{detail:placed}))}catch(e){}
