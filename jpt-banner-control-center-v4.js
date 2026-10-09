@@ -240,10 +240,10 @@ async function saveOutletBanner(code,file,title,ed,preview,msgEl){
     if(ou.error)throw new Error('OUTLET VIDEO SYNC FAILED: '+ou.error.message);
     msg(msgEl,'✅ VIDEO PUBLISHED • '+code+' • 1 live video',true);
   }else{
-    const activeImages=rows.filter(x=>x.active&&x.banner_url&&x.id!==newId);
-    const keepMax=9;
-    if(activeImages.length>keepMax){
-      const retire=activeImages.slice(0,activeImages.length-keepMax);
+    const activeImages=rows.filter(x=>x.active&&(x.banner_url||x.video_url)&&x.id!==newId);
+    const keepMax=1;
+    if(activeImages.length>=keepMax){
+      const retire=activeImages;
       const off=await sb().from(CAMPAIGNS).update({active:false}).in('id',retire.map(x=>x.id)).eq('outlet_id',code);
       if(off.error)throw new Error('IMAGE QUEUE CLEANUP FAILED: '+off.error.message);
       for(const old of retire){
@@ -253,8 +253,7 @@ async function saveOutletBanner(code,file,title,ed,preview,msgEl){
     }
     const ou=await sb().from(OUTLETS).update({banner_url:up.url}).eq('code',code);
     if(ou.error)throw new Error('OUTLET BANNER MAPPING FAILED: '+ou.error.message);
-    const total=Math.min(10,activeImages.length+1);
-    msg(msgEl,'✅ IMAGE PUBLISHED • '+code+' • '+total+'/10 live board images',true);
+    msg(msgEl,'✅ IMAGE PUBLISHED • '+code+' • 1/1 live banner',true);
   }
   return up.url;
  }catch(e){
