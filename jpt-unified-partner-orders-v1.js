@@ -459,6 +459,18 @@ async function initialLoad(){
   if(r.error){toast('Orders load failed: '+r.error.message);return;}
   rows.clear();
   (r.data||[]).forEach(o=>rows.set(String(o.id),o));
+
+  /* Reconcile cards against the same server lookup used by action recovery.
+     Missing/unreadable rows are hidden from this in-memory queue only.
+     Never delete or update database records during reconciliation. */
+  const checks=[...rows.entries()];
+  for(let i=0;i<checks.length;i+=8){
+    await Promise.all(checks.slice(i,i+8).map(async([key,o])=>{
+      const live=await read(o.id,o.outlet_id).catch(()=>null);
+      if(live)rows.set(key,Object.assign(o,live));
+      else rows.delete(key);
+    }));
+  }
   render();
 }
 let channels=[];
