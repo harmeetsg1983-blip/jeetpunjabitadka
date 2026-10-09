@@ -21,7 +21,7 @@ html,body{margin:0;width:100%;height:100%;background:#090909;overflow:hidden}
      #ordersList and could force a reload loop because V107 uses #ordersBody.
 -->
 <iframe id="partnerFrame"
-        src="./admin.html?v=20261009-cache-refresh-1"
+        src="./admin.html?v=20261009-server-reconcile-4"
         title="Jeet Punjabi Tadka Restaurant Partner App"></iframe>
 
 <script>
@@ -40,7 +40,7 @@ html,body{margin:0;width:100%;height:100%;background:#090909;overflow:hidden}
   const pushOutletId=q.get('outlet_id')||'';
   const pushOrderNo=q.get('order_no')||'';
   if(q.get('push')==='order'){
-    const base='./admin.html?v=20261009-cache-refresh-1';
+    const base='./admin.html?v=20261009-server-reconcile-4';
     const p=new URLSearchParams({push:'order'});
     if(pushOrderId)p.set('order_id',pushOrderId);
     if(pushOutletId)p.set('outlet_id',pushOutletId);
