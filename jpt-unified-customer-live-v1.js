@@ -62,15 +62,21 @@ function render(){
  const st=status(order.status);
  const prep=mins(order.target_minutes||15);
  let left=0;
- if(st==='accepted'||st==='preparing')left=Math.max(0,new Date(order.deadline_at||Date.now()).getTime()-Date.now());
- else if(st==='ready'||st==='out_for_delivery')left=Math.max(0,new Date(order.ready_at||order.out_for_delivery_at||Date.now()).getTime()+DELIVERY_BUFFER*60000-Date.now());
+ if(st==='new'){
+   const start=Date.parse(order.created_at||Date.now());
+   left=Math.max(0,start+mins(order.eta_minutes||45)*60000-Date.now());
+ }else if(st==='accepted'||st==='preparing'){
+   left=Math.max(0,new Date(order.deadline_at||Date.now()).getTime()-Date.now());
+ }else if(st==='ready'||st==='out_for_delivery'){
+   left=Math.max(0,new Date(order.ready_at||order.out_for_delivery_at||Date.now()).getTime()+DELIVERY_BUFFER*60000-Date.now());
+ }
  const titles={new:['Order placed','Waiting for restaurant acceptance.'],accepted:['Order confirmed','Restaurant accepted your order.'],preparing:['Preparing your order','Your food is being prepared.'],ready:['Ready for delivery','Your order is ready.'],out_for_delivery:['Out for delivery','Your order is on the way.'],delivered:['Delivered','Thank you for ordering.'],cancelled:['Order cancelled','This order is no longer active.']};
  const t=titles[st]||titles.new;
  const steps=[['NEW',0],['ACCEPTED',1],['READY',2],['OUT FOR DELIVERY',3],['DELIVERED',4]];
  const rank={new:0,accepted:1,preparing:2,ready:2,out_for_delivery:3,delivered:4,cancelled:-1};
  const r=rank[st]??0;
  $('julStatus').innerHTML='<div class="jul-status-title">'+esc(t[0])+'</div><div class="jul-sub">'+esc(t[1])+'</div>'+
-  ((st==='accepted'||st==='preparing'||st==='ready'||st==='out_for_delivery')?'<div class="jul-eta"><span>Estimated arrival</span><b id="julCountdown">'+countdown(left)+'</b></div>':'')+
+  ((st==='new'||st==='accepted'||st==='preparing'||st==='ready'||st==='out_for_delivery')?'<div class="jul-eta"><span>'+(st==='new'?'Estimated time':'Estimated arrival')+'</span><b id="julCountdown">'+countdown(left)+'</b></div>':'')+
   '<div class="jul-steps">'+steps.map((x,i)=>'<div class="jul-step"><span class="jul-dot '+(r>=x[1]?'on':'')+'"></span>'+x[0]+'</div>').join('')+'</div>';
  const items=Array.isArray(order.items)?order.items:[];
  $('julOrder').innerHTML='<h3>Order '+esc(order.order_no||'')+'</h3>'+
