@@ -195,8 +195,23 @@ function startRingtone(order){
 function localDeadline(minutes){
   return new Date(Date.now()+Number(minutes)*60000).toISOString();
 }
+function timerDeadline(o){
+  const direct=o?.deadline_at||o?.__localDeadline;
+  const directMs=Date.parse(direct||'');
+  if(Number.isFinite(directMs)&&directMs>0)return new Date(directMs).toISOString();
+
+  /* Older accepted rows may not have deadline_at. Recover from the best
+     available acceptance/status timestamp instead of silently showing 00:00. */
+  const start=o?.accepted_at||o?.preparing_at||o?.status_changed_at||o?.updated_at;
+  const startMs=Date.parse(start||'');
+  if(!Number.isFinite(startMs)||startMs<=0)return null;
+  const minutes=Math.max(15,Math.min(40,Number(o?.target_minutes||15)));
+  return new Date(startMs+minutes*60000).toISOString();
+}
 function remaining(deadline){
-  const ms=Math.max(0,new Date(deadline||0).getTime()-Date.now());
+  const deadlineMs=Date.parse(deadline||'');
+  if(!Number.isFinite(deadlineMs)||deadlineMs<=0)return null;
+  const ms=Math.max(0,deadlineMs-Date.now());
   const s=Math.floor(ms/1000);
   return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
 }
@@ -240,10 +255,10 @@ function render(){
   body.innerHTML=filtered.map(o=>{
     const st=status(o.status);
     const target=Math.max(15,Math.min(40,Number(o.target_minutes||o.__draftMinutes||15)));
-    const deadline=o.deadline_at||o.__localDeadline;
-    const timer=st==='accepted'||st==='preparing'?remaining(deadline):'—';
+    const deadline=timerDeadline(o);
+    const timer=st==='accepted'||st==='preparing'?(remaining(deadline)||'TIMER NOT SET'):'—';
     const timerButton=(st==='accepted'||st==='preparing')?
-      '<div class="jpt-ready-countdown" data-timer="'+esc(o.id)+'">ORDER READY ('+timer+')</div>':'';
+      '<div class="jpt-ready-countdown" data-timer="'+esc(o.id)+'">PREP TIME LEFT ('+timer+')</div>':'';
     const rider=riderInfo(o);
     const its=items(o);
     const newClass=st==='new'&&o.__liveNew?' jpt-new-order':'';
@@ -277,7 +292,7 @@ function render(){
   });
   document.querySelectorAll('[data-accept]').forEach(b=>b.textContent='ACCEPT ORDER');
   document.querySelectorAll('[data-reject]').forEach(b=>b.textContent='REJECT ORDER');
-  document.querySelectorAll('[data-ready]').forEach(b=>b.textContent='ORDER READY');
+  document.querySelectorAll('[data-ready]').forEach(b=>b.textContent='MARK READY');
   document.querySelectorAll('[data-delivery]').forEach(b=>b.textContent='OUT FOR DELIVERY');
   document.querySelectorAll('[data-delivered]').forEach(b=>b.textContent='MARK DELIVERED');
   document.querySelectorAll('.jpt-rider-box .btn').forEach(b=>b.textContent='CALL RIDER');
@@ -579,7 +594,8 @@ function updateTimers(){
     const o=rows.get(String(el.dataset.timer));if(!o)return;
     const st=status(o.status);
     if(st!=='accepted'&&st!=='preparing')return;
-    el.textContent='Order Ready ('+remaining(o.deadline_at||o.__localDeadline)+')';
+    const left=remaining(timerDeadline(o));
+    el.textContent=left?'PREP TIME LEFT ('+left+')':'PREP TIMER NOT SET';
   });
 }
 function bindQueue(){
