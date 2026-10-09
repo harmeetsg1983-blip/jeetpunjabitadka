@@ -155,6 +155,7 @@
         .from('campaigns')
         .select('id,title,active,start_at,end_at,priority,banner_url,video_url,schedule_json,created_at')
         .eq('outlet_id', id)
+        .eq('active', true)
         .order('priority', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(50);
@@ -169,6 +170,40 @@
     } catch (e) {
       return null;
     }
+  }
+
+  async function loadOutletBanner(id) {
+    try {
+      var client = window.sb || window.supabaseClient;
+      if (!client || !id) return null;
+      var result = await client
+        .from('outlets')
+        .select('code,banner_url')
+        .eq('code', id)
+        .maybeSingle();
+      if (result.error || !result.data) return null;
+      var url = String(result.data.banner_url || '').trim();
+      if (!/^https?:\\/\\//i.test(url)) return null;
+      return await new Promise(function (resolve) {
+        var image = new Image();
+        image.onload = function () { resolve(url); };
+        image.onerror = function () { resolve(null); };
+        image.src = url;
+      });
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function hideEmptyBox(box) {
+    box.innerHTML = '';
+    box.style.display = 'none';
+    box.setAttribute('aria-hidden', 'true');
+  }
+
+  function showBox(box) {
+    box.style.display = '';
+    box.removeAttribute('aria-hidden');
   }
 
   function renderManagedMedia(box, media, id) {
@@ -195,18 +230,20 @@
     var box = document.getElementById('videoBanner');
     if (!box) return;
 
-    /* Restore the owned welcome video/banner surface. */
-    setupBox(box);
-
     var id = getOutlet();
     var managed = await loadManagedMedia(id);
 
     if (managed) {
+      showBox(box);
+      setupBox(box);
       renderManagedMedia(box, managed, id);
       return;
     }
 
+    /* JPT's existing local welcome video is an explicitly configured asset. */
     if (id === 'JPT-001') {
+      showBox(box);
+      setupBox(box);
       var video = box.querySelector('video');
 
       if (!video) {
@@ -241,13 +278,17 @@
       return;
     }
 
-    var src = ASSETS[id];
-    if (!src) {
-      /* Clear stale media when the selected outlet has no media. */
-      box.innerHTML = '';
-      box.style.background = '#090909';
+    /* Other outlets must have an active campaign or a valid live banner_url.
+       Do not show a blank/placeholder board or treat a stale local asset as live. */
+    var outletBanner = await loadOutletBanner(id);
+    if (!outletBanner) {
+      hideEmptyBox(box);
       return;
     }
+
+    showBox(box);
+    setupBox(box);
+    var src = outletBanner;
 
     var img = box.querySelector('img');
 
