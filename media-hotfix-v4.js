@@ -193,12 +193,7 @@
     var box = document.getElementById('videoBanner');
     if (!box) return;
 
-    /* JPT HOTFIX: remove the five unwanted outlet-specific banner displays.
-       Keep the main hero, menu, offers, outlet selector and ordering untouched. */
-    box.innerHTML = '';
-    box.style.display = 'none';
-    return;
-
+    /* Restore the owned welcome video/banner surface. */
     setupBox(box);
 
     var id = getOutlet();
