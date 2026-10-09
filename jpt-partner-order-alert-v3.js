@@ -95,7 +95,8 @@
 
     document.getElementById('jptV3ArmAlert').onclick=async()=>{
       const ok=await arm();
-      document.getElementById('jptV3AlertStatus').textContent=
+      const status=document.getElementById('jptV3AlertStatus');
+      if(status) status.textContent=
         ok?'🔔 Alert sound armed on this device.':'⚠️ Could not arm sound. Tap TEST ALERT once and try ARM again.';
     };
 
