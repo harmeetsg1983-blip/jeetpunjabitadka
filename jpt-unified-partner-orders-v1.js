@@ -290,16 +290,39 @@ function render(){
 function updateCounts(all){
   const c=document.getElementById('ordersCount'); if(c)c.textContent=String(all.length);
 }
+/* Public order numbers are labels, not database primary keys. Resolve every action to orders.id. */
+function resolveOrderRow(ref){
+  const token=String(ref??'').trim();
+  if(!token)return null;
+  if(rows.has(token)){const row=rows.get(token);return row?{key:String(row.id),row}:null;}
+  for(const row of rows.values()){
+    if(String(row?.id??'')===token||String(row?.order_no??'')===token||String(row?.order_id??'')===token)return {key:String(row.id),row};
+  }
+  return null;
+}
 async function read(id,outletId){
-  const code=String(outletId||rows.get(String(id))?.outlet_id||'');
-  const r=await window.sb.from('orders').select('*').eq('id',id).eq('outlet_id',code).maybeSingle();
+  const token=String(id??'').trim();
+  const code=String(outletId||resolveOrderRow(token)?.row?.outlet_id||'');
+  if(!token||!code)return null;
+  let r=null;
+  if(/^\d+$/.test(token)){
+    r=await window.sb.from('orders').select('*').eq('id',token).eq('outlet_id',code).maybeSingle();
+    if(r.error)throw r.error;
+    if(r.data)return r.data;
+  }
+  /* Read-only compatibility fallback; transitions always use the resolved PK. */
+  r=await window.sb.from('orders').select('*').eq('order_no',token).eq('outlet_id',code).maybeSingle();
+  if(r.error)throw r.error;
+  if(r.data)return r.data;
+  r=await window.sb.from('orders').select('*').eq('order_id',token).eq('outlet_id',code).maybeSingle();
   if(r.error)throw r.error;
   return r.data;
 }
 async function accept(id){
-  const key=String(id);
-  const o=rows.get(key); if(!o)return;
-  console.info('[JPT ORDER ID MAP]',{action:'ACCEPT',cardKey:key,id:o.id,idType:typeof o.id,order_no:o.order_no,outlet_id:o.outlet_id,status:o.status,rpc_p_order_id:Number(o.id),rpcIdIsSafeInteger:Number.isSafeInteger(Number(o.id))});
+  const resolved=resolveOrderRow(id);if(!resolved)return;
+  const key=resolved.key,o=resolved.row,databaseId=Number(o.id);
+  if(!Number.isSafeInteger(databaseId)||databaseId<=0){toast('ACCEPT blocked: database order ID is invalid.');return;}
+  console.info('[JPT ORDER ID MAP]',{action:'ACCEPT',inputRef:String(id),cardKey:key,databaseId,idType:typeof o.id,order_no:o.order_no,order_id:o.order_id,outlet_id:o.outlet_id,status:o.status,rpc_p_order_id:databaseId,rpcIdIsSafeInteger:Number.isSafeInteger(databaseId)});
   const minutes=Math.max(15,Math.min(40,Number(o.__draftMinutes||o.target_minutes||15)));
   const local=localDeadline(minutes);
   const previous={status:o.status,target_minutes:o.target_minutes,deadline_at:o.deadline_at,__localDeadline:o.__localDeadline,__optimisticStatus:o.__optimisticStatus};
@@ -316,7 +339,7 @@ async function accept(id){
 
   try{
     const r=await window.sb.rpc('jpt_partner_transition_order',{
-      p_order_id:Number(id),
+      p_order_id:databaseId,
       p_next_status:'accepted',
       p_target_minutes:minutes,
       p_rejection_reason:null
@@ -328,7 +351,7 @@ async function accept(id){
     toast('Order accepted — '+minutes+' minute preparation timer started.');
     render();
   }catch(e){
-    const fresh=await read(id,o?.outlet_id).catch(()=>null);
+    const fresh=await read(databaseId,o?.outlet_id).catch(()=>null);
     if(fresh){
       rows.set(key,Object.assign(o,fresh));
     }else if(/order not found/i.test(String(e?.message||e))){
@@ -350,33 +373,36 @@ async function accept(id){
   }
 }
 async function reject(id){
+  const resolved=resolveOrderRow(id);if(!resolved)return;
+  const key=resolved.key,o=resolved.row,databaseId=Number(o.id);
+  if(!Number.isSafeInteger(databaseId)||databaseId<=0){toast('REJECT blocked: database order ID is invalid.');return;}
   /* Explicit REJECT click: this is the ONLY place the ringtone is stopped. */
   stopRingtone();
-  const o=rows.get(String(id)); if(!o)return;
   try{
     const r=await window.sb.rpc('jpt_partner_transition_order',{
-      p_order_id:Number(id),
+      p_order_id:databaseId,
       p_next_status:'cancelled',
       p_target_minutes:15,
       p_rejection_reason:'Rejected by restaurant'
     });
     if(r.error)throw r.error;
     const server=Array.isArray(r.data)?r.data[0]:r.data;
-    if(server)rows.set(String(id),Object.assign(o,server));
+    if(server)rows.set(key,Object.assign(o,server));
     else o.status='cancelled';
     toast('Order rejected.');
     render();
   }catch(e){
-    const fresh=await read(id,o?.outlet_id).catch(()=>null); if(fresh)rows.set(String(id),fresh);
+    const fresh=await read(databaseId,o?.outlet_id).catch(()=>null); if(fresh)rows.set(key,Object.assign(o,fresh));
     render(); toast('REJECT failed: '+(e.message||e));
   }
 }
 const markReadyInFlight=new Set();
 async function markReady(id){
-  const key=String(id);
+  const resolved=resolveOrderRow(id);if(!resolved)return;
+  const key=resolved.key,o=resolved.row,databaseId=Number(o.id);
+  if(!Number.isSafeInteger(databaseId)||databaseId<=0){toast('MARK READY blocked: database order ID is invalid.');return;}
   if(markReadyInFlight.has(key))return;
-  const o=rows.get(key); if(!o)return;
-  console.info('[JPT ORDER ID MAP]',{action:'MARK READY',cardKey:key,id:o.id,idType:typeof o.id,order_no:o.order_no,outlet_id:o.outlet_id,status:o.status,rpc_p_order_id:Number(o.id),rpcIdIsSafeInteger:Number.isSafeInteger(Number(o.id))});
+  console.info('[JPT ORDER ID MAP]',{action:'MARK READY',inputRef:String(id),cardKey:key,databaseId,idType:typeof o.id,order_no:o.order_no,order_id:o.order_id,outlet_id:o.outlet_id,status:o.status,rpc_p_order_id:databaseId,rpcIdIsSafeInteger:Number.isSafeInteger(databaseId)});
 
   /* UI lock: prevent double-click/race while the server transition is in flight. */
   markReadyInFlight.add(key);
@@ -388,7 +414,7 @@ async function markReady(id){
   }
 
   try{
-    const fresh=await read(id,o.outlet_id).catch(()=>null);
+    const fresh=await read(databaseId,o.outlet_id).catch(()=>null);
     if(fresh)Object.assign(o,fresh);
     const now=status(o.status);
 
@@ -408,7 +434,7 @@ async function markReady(id){
     }
 
     const r=await window.sb.rpc('jpt_partner_transition_order',{
-      p_order_id:Number(id),
+      p_order_id:databaseId,
       p_next_status:'ready',
       p_target_minutes:Number(o.target_minutes||15),
       p_rejection_reason:null
@@ -418,16 +444,16 @@ async function markReady(id){
     const server=Array.isArray(r.data)?r.data[0]:r.data;
     if(server)rows.set(key,Object.assign(o,server));
     else{
-      const verify=await read(id,o.outlet_id).catch(()=>null);
+      const verify=await read(databaseId,o.outlet_id).catch(()=>null);
       if(!verify)throw new Error('Server returned no order record; READY status was not confirmed.');
       rows.set(key,verify);
     }
 
     toast('Order marked READY.');
     render();
-    try{await window.sb.rpc('delivery_offer_next',{p_order_id:Number(id)})}catch(e){}
+    try{await window.sb.rpc('delivery_offer_next',{p_order_id:databaseId})}catch(e){}
   }catch(e){
-    const fresh=await read(id,o?.outlet_id).catch(()=>null);
+    const fresh=await read(databaseId,o?.outlet_id).catch(()=>null);
     if(fresh)rows.set(key,Object.assign(o,fresh));
     else if(/order not found/i.test(String(e?.message||e))){
       /* Remove only the stale UI card; preserve database and related records. */
@@ -442,14 +468,16 @@ async function markReady(id){
   }
 }
 async function transition(id,next){
-  const o=rows.get(String(id));if(!o)return;
+  const resolved=resolveOrderRow(id);if(!resolved)return;
+  const key=resolved.key,o=resolved.row,databaseId=Number(o.id);
+  if(!Number.isSafeInteger(databaseId)||databaseId<=0){toast('Order update blocked: database order ID is invalid.');return;}
   try{
     const r=await window.sb.rpc('jpt_partner_transition_order',{
-      p_order_id:Number(id),p_next_status:next,p_target_minutes:Number(o.target_minutes||15),p_rejection_reason:null
+      p_order_id:databaseId,p_next_status:next,p_target_minutes:Number(o.target_minutes||15),p_rejection_reason:null
     });
     if(r.error)throw r.error;
     const server=Array.isArray(r.data)?r.data[0]:r.data;
-    if(server)rows.set(String(id),server);
+    if(server)rows.set(key,Object.assign(o,server));
     render();
   }catch(e){toast('Order update failed: '+(e.message||e));}
 }
