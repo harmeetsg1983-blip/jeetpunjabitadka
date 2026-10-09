@@ -431,25 +431,25 @@ async function loadOutlet(){
   }
   const name=outletNameValue(currentOutletRow);
   const id=outletIdValue(currentOutletRow)||activeOutlet;
-  $('brandName').textContent=name;$('heroName').textContent=name;$('homeName').textContent=name;
-  $('heroId').textContent=id;$('homeId').textContent=id;$('brandMeta').textContent=(currentOutletRow?.phone||'')+' • Partner Dashboard V107';
-  $('brandLogo').textContent=id.slice(-3);$('storeSign').textContent=id.slice(-6);
+  if($('brandName'))$('brandName').textContent=name;if($('heroName'))$('heroName').textContent=name;if($('homeName'))$('homeName').textContent=name;
+  if($('heroId'))$('heroId').textContent=id;if($('homeId'))$('homeId').textContent=id;if($('brandMeta'))$('brandMeta').textContent=(currentOutletRow?.phone||'')+' • Partner Dashboard V107';
+  if($('brandLogo'))$('brandLogo').textContent=id.slice(-3);if($('storeSign'))$('storeSign').textContent=id.slice(-6);
   const logo=currentOutletRow?.logo_url||'';
-  if(logo){ $('brandLogo').innerHTML='<img src="'+esc(logo)+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px">'; $('storeSign').innerHTML='<img src="'+esc(logo)+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px">'; }
+  if(logo){ const bl=$('brandLogo'),ss=$('storeSign');if(bl)bl.innerHTML='<img src="'+esc(logo)+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px">';if(ss)ss.innerHTML='<img src="'+esc(logo)+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px">'; }
   const banner=currentOutletRow?.banner_url||'';
-  $('hero').style.backgroundImage=banner?'linear-gradient(90deg,rgba(0,0,0,.88),rgba(0,0,0,.45)),url(\"'+esc(banner)+'\")':'';
+  if($('hero'))$('hero').style.backgroundImage=banner?'linear-gradient(90deg,rgba(0,0,0,.88),rgba(0,0,0,.45)),url(\"'+esc(banner)+'\")':'';
   setStatus(Boolean(currentOutletRow?.accepting_orders && currentOutletRow?.is_active));
 }
 
 function setStatus(on){
-  const box=$('statusBox');box.className='status '+(on?'online':'offline');
-  $('statusTitle').textContent=on?'Restaurant is now Online!':'Restaurant marked Offline';
-  $('statusText').textContent=on?'Orders incoming':'Not receiving orders';
-  $('statusToggle').textContent=on?'Mark Offline':'Mark Online';
-  $('statusToggle').className='btn '+(on?'red':'green');
-  $('homeMessage').innerHTML=on?'<span class="success">● ONLINE — accepting new orders</span>':'<span class="danger">● OFFLINE — new orders are not being accepted</span>';
-  $('offlineBtn').textContent=on?'Mark Offline':'Mark Online';
-  $('offlineBtn').className='btn '+(on?'red':'green');
+  const box=$('statusBox');if(box)box.className='status '+(on?'online':'offline');
+  if($('statusTitle'))$('statusTitle').textContent=on?'Restaurant is now Online!':'Restaurant marked Offline';
+  if($('statusText'))$('statusText').textContent=on?'Orders incoming':'Not receiving orders';
+  if($('statusToggle'))$('statusToggle').textContent=on?'Mark Offline':'Mark Online';
+  if($('statusToggle'))$('statusToggle').className='btn '+(on?'red':'green');
+  if($('homeMessage'))$('homeMessage').innerHTML=on?'<span class="success">● ONLINE — accepting new orders</span>':'<span class="danger">● OFFLINE — new orders are not being accepted</span>';
+  if($('offlineBtn'))$('offlineBtn').textContent=on?'Mark Offline':'Mark Online';
+  if($('offlineBtn'))$('offlineBtn').className='btn '+(on?'red':'green');
 }
 
 async function toggleStatus(){
