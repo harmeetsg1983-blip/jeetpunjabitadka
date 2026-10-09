@@ -139,6 +139,8 @@
        Banner Control Center -> surface=customer_outlet_showcase.
        Never let top/home/legacy campaign media leak into #videoBanner. */
     if (s.surface !== 'customer_outlet_showcase') return null;
+    /* This renderer owns only the lower outlet-showcase slot. */
+    if (s.placement !== 'lower') return null;
     var video = row.video_url || s.video_url || null;
     var image = row.banner_url || s.image_url || null;
     if (!video && !image) return null;
