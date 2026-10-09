@@ -227,10 +227,10 @@ async function saveOutletBanner(code,file,title,ed,preview,msgEl){
   const newId=ins.data?.id;
 
   if(isVideo){
-    const oldVideos=rows.filter(x=>x.active&&x.video_url&&x.id!==newId);
+    const oldVideos=rows.filter(x=>x.active&&(x.video_url||x.banner_url)&&x.id!==newId);
     if(oldVideos.length){
       const off=await sb().from(CAMPAIGNS).update({active:false}).in('id',oldVideos.map(x=>x.id)).eq('outlet_id',code);
-      if(off.error)throw new Error('OLD VIDEO RETIRE FAILED: '+off.error.message);
+      if(off.error)throw new Error('OLD MEDIA RETIRE FAILED: '+off.error.message);
       for(const old of oldVideos){
         const s=old.schedule_json&&typeof old.schedule_json==='object'?old.schedule_json:{};
         if(s.storage_path)try{await sb().storage.from(s.storage_bucket||'menu-images').remove([s.storage_path])}catch(e){}
