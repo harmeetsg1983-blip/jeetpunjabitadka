@@ -328,8 +328,17 @@ async function accept(id){
     render();
   }catch(e){
     const fresh=await read(id,o?.outlet_id).catch(()=>null);
-    if(fresh)rows.set(key,fresh);
-    else{
+    if(fresh){
+      rows.set(key,Object.assign(o,fresh));
+    }else if(/order not found/i.test(String(e?.message||e))){
+      /* A realtime/cached card can outlive a row deleted or moved server-side.
+         Remove only this stale in-memory card; never delete database history. */
+      rows.delete(key);
+      if(activeRingtoneOrderId===key)stopRingtone();
+      toast('This order is no longer on the server. Stale card removed; database unchanged.');
+      render();
+      return;
+    }else{
       Object.assign(o,previous);
       if(previous.__localDeadline===undefined)delete o.__localDeadline;
       if(previous.__optimisticStatus===undefined)delete o.__optimisticStatus;
@@ -417,9 +426,15 @@ async function markReady(id){
     try{await window.sb.rpc('delivery_offer_next',{p_order_id:Number(id)})}catch(e){}
   }catch(e){
     const fresh=await read(id,o?.outlet_id).catch(()=>null);
-    if(fresh)rows.set(key,fresh);
+    if(fresh)rows.set(key,Object.assign(o,fresh));
+    else if(/order not found/i.test(String(e?.message||e))){
+      /* Remove only the stale UI card; preserve database and related records. */
+      rows.delete(key);
+      toast('This order is no longer on the server. Stale card removed; database unchanged.');
+    }else{
+      toast('MARK READY failed: '+(e.message||e));
+    }
     render();
-    toast('MARK READY failed: '+(e.message||e));
   }finally{
     markReadyInFlight.delete(key);
   }
