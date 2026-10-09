@@ -504,6 +504,19 @@ async function initialLoad(){
   render();
 }
 let channels=[];
+async function removeLegacyOrderChannels(){
+  /* admin.html still contains a legacy realtime listener. It calls the old
+     showOrderAlarm() path on INSERT, so remove only that known old orders channel
+     once this unified runtime becomes the active owner. */
+  try{
+    if(typeof window.sb?.getChannels!=='function')return;
+    const legacy=window.sb.getChannels().filter(ch=>String(ch?.topic||'').includes('jpt-v107-orders-'));
+    for(const ch of legacy){
+      try{await window.sb.removeChannel(ch)}catch(e){console.warn('[JPT legacy order channel cleanup]',e)}
+    }
+    if(legacy.length)console.info('[JPT Unified Orders] disabled legacy order realtime channel(s):',legacy.length);
+  }catch(e){console.warn('[JPT legacy order channel cleanup]',e)}
+}
 async function subscribe(){
   for(const ch of channels){try{await window.sb.removeChannel(ch)}catch(e){}}
   channels=[];
@@ -560,6 +573,7 @@ function bindQueue(){
 }
 async function boot(){
   if(!window.sb){setTimeout(boot,500);return;}
+  await removeLegacyOrderChannels();
   bindQueue();
   bindOrderAudioGesture();
   const refresh=document.getElementById('ordersRefresh');
