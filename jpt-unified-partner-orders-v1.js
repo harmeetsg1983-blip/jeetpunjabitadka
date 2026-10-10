@@ -387,9 +387,19 @@ async function accept(id){
   }
 }
 async function reject(id){
-  /* Explicit REJECT click: this is the ONLY place the ringtone is stopped. */
+  const key=String(id);
+  /* ACCEPT, REJECT and lifecycle actions share one synchronous per-order lock. */
+  if(actionBusy.has(key)||transitionBusy.has(key))return;
+  const o=rows.get(key); if(!o)return;
+  if(status(o.status)!=='new'){
+    await initialLoad().catch(()=>{});
+    render();
+    toast('REJECT blocked: order is no longer NEW.');
+    return;
+  }
+  actionBusy.add(key);
   stopRingtone();
-  const o=rows.get(String(id)); if(!o)return;
+  render();
   try{
     const r=await window.sb.rpc('jpt_partner_transition_order',{
       p_order_id:Number(id),
@@ -398,14 +408,26 @@ async function reject(id){
       p_rejection_reason:'Rejected by restaurant'
     });
     if(r.error)throw r.error;
-    const server=Array.isArray(r.data)?r.data[0]:r.data;
-    if(server)rows.set(String(id),Object.assign(o,server));
-    else o.status='cancelled';
-    toast('Order rejected.');
+    const responseRow=Array.isArray(r.data)?r.data[0]:r.data;
+    /* Prefer a fresh authoritative row; only use RPC row if verification read fails. */
+    const fresh=await read(id,o.outlet_id).catch(()=>null);
+    const server=fresh||responseRow;
+    if(!server)throw new Error('Server did not confirm REJECT status.');
+    rows.set(key,Object.assign({},o,server));
+    focusQueueForStatus(server.status||'cancelled');
+    toast('Order rejected — server status '+status(server.status).toUpperCase()+'.');
     render();
   }catch(e){
-    const fresh=await read(id,o?.outlet_id).catch(()=>null); if(fresh)rows.set(String(id),fresh);
-    render(); toast('REJECT failed: '+(e.message||e));
+    const fresh=await read(id,o.outlet_id).catch(()=>null);
+    if(fresh){
+      rows.set(key,Object.assign({},o,fresh));
+      focusQueueForStatus(fresh.status);
+    }
+    render();
+    toast('REJECT failed; server state refreshed: '+(e?.message||e));
+  }finally{
+    actionBusy.delete(key);
+    render();
   }
 }
 const transitionBusy=new Set();
@@ -428,6 +450,8 @@ async function lifecycleTransition(id,next){
     delivered:['out_for_delivery']
   };
   const label={ready:'UPDATING…',out_for_delivery:'UPDATING…',delivered:'UPDATING…'}[next]||'UPDATING…';
+  /* Shared lock blocks ACCEPT/REJECT/READY/delivery actions on this order. */
+  actionBusy.add(key);
   transitionBusy.add(key);
   setActionBusyUi(key,true,label);
   /* Optimistic state mutation makes the card/status react immediately.
@@ -499,6 +523,7 @@ async function lifecycleTransition(id,next){
     render();
   }finally{
     transitionBusy.delete(key);
+    actionBusy.delete(key);
     setActionBusyUi(key,false);
     render();
   }
