@@ -555,7 +555,14 @@ async function subscribe(){
       const o=payload?.new;
       if(!o || String(o.outlet_id)!==code || !liveCodes.includes(String(o.outlet_id)))return;
       const old=rows.get(String(o.id))||{};
+      const oldStatus=status(old.status),nextStatus=status(o.status);
       rows.set(String(o.id),Object.assign({},old,o));
+      /* If the active queue was showing this order's prior state, follow its
+         server-confirmed lifecycle state immediately instead of leaving the
+         operator on a stale NEW/ACCEPTED tab. */
+      if(old.id && oldStatus!==nextStatus && selectedQueue===oldStatus){
+        focusQueueForStatus(nextStatus);
+      }
       render();
     });
     ch.subscribe((s,e)=>{
