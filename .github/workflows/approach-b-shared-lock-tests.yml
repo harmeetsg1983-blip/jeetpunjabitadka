@@ -1,0 +1,39 @@
+name: Shared Order Action Lock Tests
+
+on:
+  push:
+    branches:
+      - 'approach-b/shared-order-action-lock-integration'
+    paths:
+      - 'jpt-unified-partner-orders-v1.js'
+      - 'tests/jpt-unified-partner-orders-action-lock.test.cjs'
+      - '.github/workflows/approach-b-shared-lock-tests.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'jpt-unified-partner-orders-v1.js'
+      - 'tests/jpt-unified-partner-orders-action-lock.test.cjs'
+      - '.github/workflows/approach-b-shared-lock-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  action-lock-regression:
+    name: Syntax and action-lock regression tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax-check partner runtime
+        run: node --check jpt-unified-partner-orders-v1.js
+      - name: Syntax-check regression tests
+        run: node --check tests/jpt-unified-partner-orders-action-lock.test.cjs
+      - name: Run action-lock regression tests
+        run: node --test tests/jpt-unified-partner-orders-action-lock.test.cjs
