@@ -383,6 +383,7 @@ async function accept(id){
       if(previous.__optimisticStatus===undefined)delete o.__optimisticStatus;
       rows.set(key,o);
       toast('ACCEPT failed: '+message);
+      }
     }
     render();
   }finally{
