@@ -1,0 +1,32 @@
+name: Approach B Controller Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'jpt-order-state-controller-v1.js'
+      - 'tests/jpt-order-state-controller-v1.test.cjs'
+      - '.github/workflows/approach-b-controller-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  controller-tests:
+    name: Node.js controller tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax-check controller
+        run: node --check jpt-order-state-controller-v1.js
+      - name: Syntax-check tests
+        run: node --check tests/jpt-order-state-controller-v1.test.cjs
+      - name: Run controller tests
+        run: node --test tests/jpt-order-state-controller-v1.test.cjs
