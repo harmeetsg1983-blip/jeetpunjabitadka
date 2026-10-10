@@ -11,6 +11,7 @@ window.__JPTOrdersV3Active=true;
 
 const LIVE_STATUSES=new Set(['new','accepted','preparing','ready','out_for_delivery']);
 const rows=new Map();
+const actionBusy=new Set();
 let channel=null;
 let audio=null;
 let activeRingtoneOrderId=null;
@@ -298,21 +299,24 @@ async function read(id,outletId){
 }
 async function accept(id){
   const key=String(id);
+  if(actionBusy.has(key))return;
   const o=rows.get(key); if(!o)return;
+  if(status(o.status)!=='new'){
+    render();
+    toast('Order already '+status(o.status).toUpperCase()+'. Queue refreshed; duplicate accept blocked.');
+    return;
+  }
+  actionBusy.add(key);
   const minutes=Math.max(15,Math.min(40,Number(o.__draftMinutes||o.target_minutes||15)));
   const local=localDeadline(minutes);
   const previous={status:o.status,target_minutes:o.target_minutes,deadline_at:o.deadline_at,__localDeadline:o.__localDeadline,__optimisticStatus:o.__optimisticStatus};
-
-  /* Explicit ACCEPT click: this is the ONLY place the ringtone is stopped. */
   stopRingtone();
-
   o.__localDeadline=local;
   o.__optimisticStatus='accepted';
   o.status='accepted';
   o.target_minutes=minutes;
   o.deadline_at=local;
   render();
-
   try{
     const r=await window.sb.rpc('jpt_partner_transition_order',{
       p_order_id:Number(id),
@@ -327,25 +331,40 @@ async function accept(id){
     toast('Order accepted — '+minutes+' minute preparation timer started.');
     render();
   }catch(e){
+    const message=String(e?.message||e);
     const fresh=await read(id,o?.outlet_id).catch(()=>null);
+    const serverStatus=message.match(/Current status:\s*([A-Z_]+)/i)?.[1]?.toLowerCase();
     if(fresh){
       rows.set(key,Object.assign(o,fresh));
-    }else if(/order not found/i.test(String(e?.message||e))){
-      /* A realtime/cached card can outlive a row deleted or moved server-side.
-         Remove only this stale in-memory card; never delete database history. */
+      const current=status(fresh.status);
+      if(current!=='new')toast('Server status synced: '+current.toUpperCase()+'. Duplicate accept stopped.');
+      else toast('ACCEPT failed: '+message);
+    }else if(serverStatus && serverStatus!=='new'){
+      /* RPC already reported authoritative state. Do not roll a stale NEW card back
+         to NEW merely because the follow-up SELECT was blocked or temporarily failed. */
+      o.status=serverStatus;
+      delete o.__optimisticStatus;
+      if(serverStatus!=='accepted'){
+        if(previous.__localDeadline===undefined)delete o.__localDeadline;
+        else o.__localDeadline=previous.__localDeadline;
+      }
+      rows.set(key,o);
+      toast('Server status synced: '+serverStatus.toUpperCase()+'. Duplicate accept stopped.');
+    }else if(/order not found/i.test(message)){
       rows.delete(key);
       if(activeRingtoneOrderId===key)stopRingtone();
       toast('This order is no longer on the server. Stale card removed; database unchanged.');
-      render();
-      return;
     }else{
       Object.assign(o,previous);
       if(previous.__localDeadline===undefined)delete o.__localDeadline;
       if(previous.__optimisticStatus===undefined)delete o.__optimisticStatus;
       rows.set(key,o);
+      toast('ACCEPT failed: '+message);
     }
     render();
-    toast('ACCEPT failed: '+(e.message||e));
+  }finally{
+    actionBusy.delete(key);
+    render();
   }
 }
 async function reject(id){
@@ -520,6 +539,32 @@ function bindQueue(){
     b.onclick=()=>{selectedQueue=b.dataset.queue||'all';document.querySelectorAll('.orderQueueBtn').forEach(x=>x.classList.toggle('gold',x===b));render()};
   });
 }
+let runtimeStarted=false,runtimeStartBusy=false;
+async function startAuthenticatedRuntime(){
+  if(runtimeStarted||runtimeStartBusy||!window.sb?.auth)return;
+  runtimeStartBusy=true;
+  try{
+    const sessionResult=await window.sb.auth.getSession();
+    if(sessionResult.error)throw sessionResult.error;
+    if(!sessionResult.data?.session?.user){
+      const n=document.getElementById('ordersNotice');
+      if(n)n.textContent='Partner login required before orders can be loaded.';
+      return;
+    }
+    /* Access mapping must be ready before outlet-scoped orders queries start. */
+    if(window.JPTPartnerAccess?.reload)await window.JPTPartnerAccess.reload();
+    await initialLoad();
+    await subscribe();
+    runtimeStarted=true;
+    managedSignature=managedOutlets().join('|');
+  }catch(e){
+    console.error('[JPT Orders] authenticated startup failed',e);
+    const n=document.getElementById('ordersNotice');
+    if(n)n.textContent='Orders startup failed: '+String(e?.message||e);
+  }finally{
+    runtimeStartBusy=false;
+  }
+}
 async function boot(){
   if(!window.sb){setTimeout(boot,500);return;}
   bindQueue();
@@ -536,28 +581,38 @@ async function boot(){
   if(alarm)alarm.onclick=()=>{};
   const enable=document.getElementById('enableAlarm');
   if(enable)enable.onclick=enableBackgroundAlerts;
-  await initialLoad();
-  await subscribe();
-  managedSignature=managedOutlets().join('|');
+  /* This script loads before the dashboard's login gate on some builds.
+     Never query orders as anon during boot; resume after a valid partner session. */
+  window.sb.auth.onAuthStateChange((event,session)=>{
+    if(event==='SIGNED_IN'&&session?.user){
+      setTimeout(()=>{startAuthenticatedRuntime().catch(()=>{});},0);
+    }else if(event==='SIGNED_OUT'){
+      runtimeStarted=false;
+      rows.clear();
+      stopRingtone();
+      render();
+    }
+  });
+  await startAuthenticatedRuntime();
   clearInterval(window.__JPTManagedOutletSync);
   window.__JPTManagedOutletSync=setInterval(async()=>{
+    if(!runtimeStarted){
+      await startAuthenticatedRuntime();
+      return;
+    }
     const sig=managedOutlets().join('|');
-    const current=outlet();
     if(sig!==managedSignature){
       managedSignature=sig;
       await initialLoad();
       await subscribe();
-    }else if(!rows.size && window.JPTPartnerAccess?.getOutlets?.()?.length){
-      await initialLoad();
-      await subscribe();
     }
     const select=document.getElementById('outletSelect');
-    if(select && select.value!==current){
+    if(select&&select.value!==outlet()){
       localStorage.setItem('jpt_admin_outlet',select.value);
       await initialLoad();
       await subscribe();
     }
-  },1500);
+  },5000);
   clearInterval(timerHandle);
   timerHandle=setInterval(updateTimers,1000);
 }
