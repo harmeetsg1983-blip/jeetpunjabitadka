@@ -11,6 +11,7 @@ window.__JPTOrdersV3Active=true;
 
 const LIVE_STATUSES=new Set(['new','accepted','preparing','ready','out_for_delivery']);
 const rows=new Map();
+const terminalOrderIds=new Set();
 let channel=null;
 let audio=null;
 let activeRingtoneOrderId=null;
@@ -194,8 +195,23 @@ function startRingtone(order){
 function localDeadline(minutes){
   return new Date(Date.now()+Number(minutes)*60000).toISOString();
 }
+function timerDeadline(o){
+  const direct=o?.deadline_at||o?.__localDeadline;
+  const directMs=Date.parse(direct||'');
+  if(Number.isFinite(directMs)&&directMs>0)return new Date(directMs).toISOString();
+
+  /* Older accepted rows may not have deadline_at. Recover from the best
+     available acceptance/status timestamp instead of silently showing 00:00. */
+  const start=o?.accepted_at||o?.preparing_at||o?.status_changed_at||o?.updated_at;
+  const startMs=Date.parse(start||'');
+  if(!Number.isFinite(startMs)||startMs<=0)return null;
+  const minutes=Math.max(15,Math.min(40,Number(o?.target_minutes||15)));
+  return new Date(startMs+minutes*60000).toISOString();
+}
 function remaining(deadline){
-  const ms=Math.max(0,new Date(deadline||0).getTime()-Date.now());
+  const deadlineMs=Date.parse(deadline||'');
+  if(!Number.isFinite(deadlineMs)||deadlineMs<=0)return null;
+  const ms=Math.max(0,deadlineMs-Date.now());
   const s=Math.floor(ms/1000);
   return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
 }
@@ -239,10 +255,10 @@ function render(){
   body.innerHTML=filtered.map(o=>{
     const st=status(o.status);
     const target=Math.max(15,Math.min(40,Number(o.target_minutes||o.__draftMinutes||15)));
-    const deadline=o.deadline_at||o.__localDeadline;
-    const timer=st==='accepted'||st==='preparing'?remaining(deadline):'—';
+    const deadline=timerDeadline(o);
+    const timer=st==='accepted'||st==='preparing'?(remaining(deadline)||'TIMER NOT SET'):'—';
     const timerButton=(st==='accepted'||st==='preparing')?
-      '<div class="jpt-ready-countdown" data-timer="'+esc(o.id)+'">ORDER READY ('+timer+')</div>':'';
+      '<div class="jpt-ready-countdown" data-timer="'+esc(o.id)+'">PREP TIME LEFT ('+timer+')</div>':'';
     const rider=riderInfo(o);
     const its=items(o);
     const newClass=st==='new'&&o.__liveNew?' jpt-new-order':'';
@@ -276,7 +292,7 @@ function render(){
   });
   document.querySelectorAll('[data-accept]').forEach(b=>b.textContent='ACCEPT ORDER');
   document.querySelectorAll('[data-reject]').forEach(b=>b.textContent='REJECT ORDER');
-  document.querySelectorAll('[data-ready]').forEach(b=>b.textContent='ORDER READY');
+  document.querySelectorAll('[data-ready]').forEach(b=>b.textContent='MARK READY');
   document.querySelectorAll('[data-delivery]').forEach(b=>b.textContent='OUT FOR DELIVERY');
   document.querySelectorAll('[data-delivered]').forEach(b=>b.textContent='MARK DELIVERED');
   document.querySelectorAll('.jpt-rider-box .btn').forEach(b=>b.textContent='CALL RIDER');
@@ -290,15 +306,39 @@ function render(){
 function updateCounts(all){
   const c=document.getElementById('ordersCount'); if(c)c.textContent=String(all.length);
 }
+/* Public order numbers are labels, not database primary keys. Resolve every action to orders.id. */
+function resolveOrderRow(ref){
+  const token=String(ref??'').trim();
+  if(!token)return null;
+  if(rows.has(token)){const row=rows.get(token);return row?{key:String(row.id),row}:null;}
+  for(const row of rows.values()){
+    if(String(row?.id??'')===token||String(row?.order_no??'')===token||String(row?.order_id??'')===token)return {key:String(row.id),row};
+  }
+  return null;
+}
 async function read(id,outletId){
-  const code=String(outletId||rows.get(String(id))?.outlet_id||'');
-  const r=await window.sb.from('orders').select('*').eq('id',id).eq('outlet_id',code).maybeSingle();
+  const token=String(id??'').trim();
+  const code=String(outletId||resolveOrderRow(token)?.row?.outlet_id||'');
+  if(!token||!code)return null;
+  let r=null;
+  if(/^\d+$/.test(token)){
+    r=await window.sb.from('orders').select('*').eq('id',token).eq('outlet_id',code).maybeSingle();
+    if(r.error)throw r.error;
+    if(r.data)return r.data;
+  }
+  /* Read-only compatibility fallback; transitions always use the resolved PK. */
+  r=await window.sb.from('orders').select('*').eq('order_no',token).eq('outlet_id',code).maybeSingle();
+  if(r.error)throw r.error;
+  if(r.data)return r.data;
+  r=await window.sb.from('orders').select('*').eq('order_id',token).eq('outlet_id',code).maybeSingle();
   if(r.error)throw r.error;
   return r.data;
 }
 async function accept(id){
-  const key=String(id);
-  const o=rows.get(key); if(!o)return;
+  const resolved=resolveOrderRow(id);if(!resolved)return;
+  const key=resolved.key,o=resolved.row,databaseId=Number(o.id);
+  if(!Number.isSafeInteger(databaseId)||databaseId<=0){toast('ACCEPT blocked: database order ID is invalid.');return;}
+  console.info('[JPT ORDER ID MAP]',{action:'ACCEPT',inputRef:String(id),cardKey:key,databaseId,idType:typeof o.id,order_no:o.order_no,order_id:o.order_id,outlet_id:o.outlet_id,status:o.status,rpc_p_order_id:databaseId,rpcIdIsSafeInteger:Number.isSafeInteger(databaseId)});
   const minutes=Math.max(15,Math.min(40,Number(o.__draftMinutes||o.target_minutes||15)));
   const local=localDeadline(minutes);
   const previous={status:o.status,target_minutes:o.target_minutes,deadline_at:o.deadline_at,__localDeadline:o.__localDeadline,__optimisticStatus:o.__optimisticStatus};
@@ -315,7 +355,7 @@ async function accept(id){
 
   try{
     const r=await window.sb.rpc('jpt_partner_transition_order',{
-      p_order_id:Number(id),
+      p_order_id:databaseId,
       p_next_status:'accepted',
       p_target_minutes:minutes,
       p_rejection_reason:null
@@ -327,7 +367,7 @@ async function accept(id){
     toast('Order accepted — '+minutes+' minute preparation timer started.');
     render();
   }catch(e){
-    const fresh=await read(id,o?.outlet_id).catch(()=>null);
+    const fresh=await read(databaseId,o?.outlet_id).catch(()=>null);
     if(fresh){
       rows.set(key,Object.assign(o,fresh));
     }else if(/order not found/i.test(String(e?.message||e))){
@@ -349,32 +389,36 @@ async function accept(id){
   }
 }
 async function reject(id){
+  const resolved=resolveOrderRow(id);if(!resolved)return;
+  const key=resolved.key,o=resolved.row,databaseId=Number(o.id);
+  if(!Number.isSafeInteger(databaseId)||databaseId<=0){toast('REJECT blocked: database order ID is invalid.');return;}
   /* Explicit REJECT click: this is the ONLY place the ringtone is stopped. */
   stopRingtone();
-  const o=rows.get(String(id)); if(!o)return;
   try{
     const r=await window.sb.rpc('jpt_partner_transition_order',{
-      p_order_id:Number(id),
+      p_order_id:databaseId,
       p_next_status:'cancelled',
       p_target_minutes:15,
       p_rejection_reason:'Rejected by restaurant'
     });
     if(r.error)throw r.error;
     const server=Array.isArray(r.data)?r.data[0]:r.data;
-    if(server)rows.set(String(id),Object.assign(o,server));
+    if(server)rows.set(key,Object.assign(o,server));
     else o.status='cancelled';
     toast('Order rejected.');
     render();
   }catch(e){
-    const fresh=await read(id,o?.outlet_id).catch(()=>null); if(fresh)rows.set(String(id),fresh);
+    const fresh=await read(databaseId,o?.outlet_id).catch(()=>null); if(fresh)rows.set(key,Object.assign(o,fresh));
     render(); toast('REJECT failed: '+(e.message||e));
   }
 }
 const markReadyInFlight=new Set();
 async function markReady(id){
-  const key=String(id);
+  const resolved=resolveOrderRow(id);if(!resolved)return;
+  const key=resolved.key,o=resolved.row,databaseId=Number(o.id);
+  if(!Number.isSafeInteger(databaseId)||databaseId<=0){toast('MARK READY blocked: database order ID is invalid.');return;}
   if(markReadyInFlight.has(key))return;
-  const o=rows.get(key); if(!o)return;
+  console.info('[JPT ORDER ID MAP]',{action:'MARK READY',inputRef:String(id),cardKey:key,databaseId,idType:typeof o.id,order_no:o.order_no,order_id:o.order_id,outlet_id:o.outlet_id,status:o.status,rpc_p_order_id:databaseId,rpcIdIsSafeInteger:Number.isSafeInteger(databaseId)});
 
   /* UI lock: prevent double-click/race while the server transition is in flight. */
   markReadyInFlight.add(key);
@@ -386,7 +430,7 @@ async function markReady(id){
   }
 
   try{
-    const fresh=await read(id,o.outlet_id).catch(()=>null);
+    const fresh=await read(databaseId,o.outlet_id).catch(()=>null);
     if(fresh)Object.assign(o,fresh);
     const now=status(o.status);
 
@@ -406,7 +450,7 @@ async function markReady(id){
     }
 
     const r=await window.sb.rpc('jpt_partner_transition_order',{
-      p_order_id:Number(id),
+      p_order_id:databaseId,
       p_next_status:'ready',
       p_target_minutes:Number(o.target_minutes||15),
       p_rejection_reason:null
@@ -416,16 +460,16 @@ async function markReady(id){
     const server=Array.isArray(r.data)?r.data[0]:r.data;
     if(server)rows.set(key,Object.assign(o,server));
     else{
-      const verify=await read(id,o.outlet_id).catch(()=>null);
+      const verify=await read(databaseId,o.outlet_id).catch(()=>null);
       if(!verify)throw new Error('Server returned no order record; READY status was not confirmed.');
       rows.set(key,verify);
     }
 
     toast('Order marked READY.');
     render();
-    try{await window.sb.rpc('delivery_offer_next',{p_order_id:Number(id)})}catch(e){}
+    try{await window.sb.rpc('delivery_offer_next',{p_order_id:databaseId})}catch(e){}
   }catch(e){
-    const fresh=await read(id,o?.outlet_id).catch(()=>null);
+    const fresh=await read(databaseId,o?.outlet_id).catch(()=>null);
     if(fresh)rows.set(key,Object.assign(o,fresh));
     else if(/order not found/i.test(String(e?.message||e))){
       /* Remove only the stale UI card; preserve database and related records. */
@@ -440,25 +484,45 @@ async function markReady(id){
   }
 }
 async function transition(id,next){
-  const o=rows.get(String(id));if(!o)return;
+  const resolved=resolveOrderRow(id);if(!resolved)return;
+  const key=resolved.key,o=resolved.row,databaseId=Number(o.id);
+  if(!Number.isSafeInteger(databaseId)||databaseId<=0){toast('Order update blocked: database order ID is invalid.');return;}
   try{
     const r=await window.sb.rpc('jpt_partner_transition_order',{
-      p_order_id:Number(id),p_next_status:next,p_target_minutes:Number(o.target_minutes||15),p_rejection_reason:null
+      p_order_id:databaseId,p_next_status:next,p_target_minutes:Number(o.target_minutes||15),p_rejection_reason:null
     });
     if(r.error)throw r.error;
     const server=Array.isArray(r.data)?r.data[0]:r.data;
-    if(server)rows.set(String(id),server);
+    if(server)rows.set(key,Object.assign(o,server));
     render();
   }catch(e){toast('Order update failed: '+(e.message||e));}
 }
 async function initialLoad(){
   const codes=managedOutlets();
+  /* Partner live board is an active queue, not an order-history screen.
+     Exclude terminal statuses at source so old orders cannot return on reload. */
+  const activeStatuses=['new','received','accepted','preparing','ready','out_for_delivery'];
   const r=codes.length===1
-    ? await window.sb.from('orders').select('*').eq('outlet_id',codes[0]).order('created_at',{ascending:false}).limit(100)
-    : await window.sb.from('orders').select('*').in('outlet_id',codes).order('created_at',{ascending:false}).limit(500);
-  if(r.error){toast('Orders load failed: '+r.error.message);return;}
+    ? await window.sb.from('orders').select('*').eq('outlet_id',codes[0]).in('status',activeStatuses).order('created_at',{ascending:false}).limit(100)
+    : await window.sb.from('orders').select('*').in('outlet_id',codes).in('status',activeStatuses).order('created_at',{ascending:false}).limit(500);
+  if(r.error){
+    /* Never leave a stale queue visible after the source-of-truth read fails.
+       Clear only the in-memory UI map; do not mutate or delete database orders. */
+    console.error('[JPT QUEUE LOAD FAILED]',{
+      message:r.error.message,
+      code:r.error.code,
+      details:r.error.details,
+      hint:r.error.hint,
+      outletCodes:codes
+    });
+    rows.clear();
+    render();
+    toast('Orders could not be verified from server. Stale cards cleared; refresh after connection is restored.');
+    return;
+  }
+  console.info('[JPT QUEUE LOAD OK]',{outletCodes:codes,rowCount:(r.data||[]).length});
   rows.clear();
-  (r.data||[]).forEach(o=>rows.set(String(o.id),o));
+  (r.data||[]).filter(o=>LIVE_STATUSES.has(status(o.status))).forEach(o=>rows.set(String(o.id),o));
 
   /* Reconcile cards against the same server lookup used by action recovery.
      Missing/unreadable rows are hidden from this in-memory queue only.
@@ -474,6 +538,19 @@ async function initialLoad(){
   render();
 }
 let channels=[];
+async function removeLegacyOrderChannels(){
+  /* admin.html still contains a legacy realtime listener. It calls the old
+     showOrderAlarm() path on INSERT, so remove only that known old orders channel
+     once this unified runtime becomes the active owner. */
+  try{
+    if(typeof window.sb?.getChannels!=='function')return;
+    const legacy=window.sb.getChannels().filter(ch=>String(ch?.topic||'').includes('jpt-v107-orders-'));
+    for(const ch of legacy){
+      try{await window.sb.removeChannel(ch)}catch(e){console.warn('[JPT legacy order channel cleanup]',e)}
+    }
+    if(legacy.length)console.info('[JPT Unified Orders] disabled legacy order realtime channel(s):',legacy.length);
+  }catch(e){console.warn('[JPT legacy order channel cleanup]',e)}
+}
 async function subscribe(){
   for(const ch of channels){try{await window.sb.removeChannel(ch)}catch(e){}}
   channels=[];
@@ -486,16 +563,36 @@ async function subscribe(){
     ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
       const o=payload?.new;
       if(!o || String(o.outlet_id)!==code || !liveCodes.includes(String(o.outlet_id)))return;
-      rows.set(String(o.id),Object.assign({},o,{__liveNew:true}));
+      const key=String(o.id);
+      if(terminalOrderIds.has(key)||!LIVE_STATUSES.has(status(o.status)))return;
+      rows.set(key,Object.assign({},o,{__liveNew:true}));
       render();
       if(status(o.status)==='new')startRingtone(o);
     });
     ch.on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
       const o=payload?.new;
       if(!o || String(o.outlet_id)!==code || !liveCodes.includes(String(o.outlet_id)))return;
-      const old=rows.get(String(o.id))||{};
-      rows.set(String(o.id),Object.assign({},old,o));
+      const key=String(o.id);
+      if(!LIVE_STATUSES.has(status(o.status))){
+        terminalOrderIds.add(key);
+        const existed=rows.delete(key);
+        if(activeRingtoneOrderId===key)stopRingtone();
+        if(existed)render();
+        return;
+      }
+      if(terminalOrderIds.has(key))return;
+      const old=rows.get(key)||{};
+      rows.set(key,Object.assign({},old,o));
       render();
+    });
+    ch.on('postgres_changes',{event:'DELETE',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
+      const deletedId=payload?.old?.id;
+      if(deletedId===undefined||deletedId===null)return;
+      const key=String(deletedId);
+      terminalOrderIds.add(key);
+      const existed=rows.delete(key);
+      if(activeRingtoneOrderId===key)stopRingtone();
+      if(existed){console.info('[JPT QUEUE] removed deleted database row',{id:key,outlet_id:code});render();}
     });
     ch.subscribe((s,e)=>{
       const n=document.getElementById('ordersNotice');
@@ -512,7 +609,8 @@ function updateTimers(){
     const o=rows.get(String(el.dataset.timer));if(!o)return;
     const st=status(o.status);
     if(st!=='accepted'&&st!=='preparing')return;
-    el.textContent='Order Ready ('+remaining(o.deadline_at||o.__localDeadline)+')';
+    const left=remaining(timerDeadline(o));
+    el.textContent=left?'PREP TIME LEFT ('+left+')':'PREP TIMER NOT SET';
   });
 }
 function bindQueue(){
@@ -520,8 +618,39 @@ function bindQueue(){
     b.onclick=()=>{selectedQueue=b.dataset.queue||'all';document.querySelectorAll('.orderQueueBtn').forEach(x=>x.classList.toggle('gold',x===b));render()};
   });
 }
+let foregroundRefreshInFlight=null;
+let lastForegroundRefreshAt=0;
+async function refreshOnForeground(reason){
+  if(document.visibilityState==='hidden')return;
+  const now=Date.now();
+  if(foregroundRefreshInFlight)return foregroundRefreshInFlight;
+  if(now-lastForegroundRefreshAt<1200)return;
+  lastForegroundRefreshAt=now;
+  foregroundRefreshInFlight=(async()=>{
+    console.info('[JPT FOREGROUND REFRESH]',{reason,at:new Date().toISOString()});
+    try{
+      await initialLoad();
+      await subscribe();
+    }catch(e){
+      console.error('[JPT FOREGROUND REFRESH FAILED]',{reason,message:e?.message||String(e)});
+    }finally{
+      foregroundRefreshInFlight=null;
+    }
+  })();
+  return foregroundRefreshInFlight;
+}
+window.addEventListener('focus',()=>{refreshOnForeground('window-focus')});
+window.addEventListener('pageshow',()=>{refreshOnForeground('pageshow')});
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible')refreshOnForeground('visibility-visible');
+});
+navigator.serviceWorker?.addEventListener?.('message',event=>{
+  const type=String(event?.data?.type||event?.data?.event||'').toLowerCase();
+  if(type.includes('order')||type.includes('refresh'))refreshOnForeground('service-worker-message');
+});
 async function boot(){
   if(!window.sb){setTimeout(boot,500);return;}
+  await removeLegacyOrderChannels();
   bindQueue();
   bindOrderAudioGesture();
   const refresh=document.getElementById('ordersRefresh');
