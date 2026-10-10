@@ -398,9 +398,26 @@ async function reject(id){
     return;
   }
   actionBusy.add(key);
-  stopRingtone();
   render();
   try{
+    /* Fail closed: do not REJECT from a stale local NEW card if the server
+       cannot confirm that this order still exists and is still NEW. */
+    const freshBefore=await read(id,o.outlet_id).catch(()=>null);
+    if(!freshBefore){
+      await initialLoad().catch(()=>{});
+      toast('REJECT paused: current server state could not be verified. Refresh orders and retry.');
+      return;
+    }
+    if(status(freshBefore.status)!=='new'){
+      rows.set(key,Object.assign({},o,freshBefore));
+      focusQueueForStatus(freshBefore.status);
+      render();
+      toast('REJECT blocked: server status is '+status(freshBefore.status).toUpperCase()+'.');
+      return;
+    }
+    rows.set(key,Object.assign({},o,freshBefore));
+    stopRingtone();
+    render();
     const r=await window.sb.rpc('jpt_partner_transition_order',{
       p_order_id:Number(id),
       p_next_status:'cancelled',
