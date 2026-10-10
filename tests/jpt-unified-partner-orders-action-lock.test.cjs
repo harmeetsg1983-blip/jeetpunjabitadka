@@ -39,3 +39,9 @@ test('existing ringtone asset and audio-owner wiring remain present', () => {
   assert.match(source, /function startRingtone\(/);
   assert.match(source, /function stopRingtone\(/);
 });
+
+test('lifecycle transition fails closed if authoritative server read fails', () => {
+  const body = section('async function lifecycleTransition(id,next){', 'async function markReady(id)');
+  assert.match(body, /const fresh=await read\(id,before\.outlet_id\)\.catch\(\(\)=>null\)/);
+  assert.match(body, /\}else\{[\s\S]*?current server state could not be verified[\s\S]*?return;\s*\}\s*const r=await window\.sb\.rpc/);
+});
