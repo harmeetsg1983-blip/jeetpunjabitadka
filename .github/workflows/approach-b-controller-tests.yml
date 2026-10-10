@@ -1,6 +1,13 @@
 name: Approach B Controller Tests
 
 on:
+  push:
+    branches:
+      - 'approach-b/isolated-order-state-controller'
+    paths:
+      - 'jpt-order-state-controller-v1.js'
+      - 'tests/jpt-order-state-controller-v1.test.cjs'
+      - '.github/workflows/approach-b-controller-tests.yml'
   pull_request:
     branches: [main]
     paths:
