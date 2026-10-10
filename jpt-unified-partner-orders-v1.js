@@ -340,27 +340,12 @@ async function accept(id){
     render();
   }catch(e){
     const message=String(e?.message||e);
-    let fresh=await read(id,o?.outlet_id).catch(()=>null);
     const serverStatus=message.match(/Current status:\s*([A-Z_]+)/i)?.[1]?.toLowerCase();
-    /* A state-conflict response means the displayed card may be stale. Requery the
-       authoritative queue before restoring NEW or leaving the old action buttons. */
-    if(!fresh && /order is not new|current status|order not found/i.test(message)){
-      await initialLoad().catch(()=>{});
-      fresh=rows.get(key)||null;
-    }
-    if(fresh){
-      rows.set(key,Object.assign(o,fresh));
-      const current=status(fresh.status);
-      if(current!=='new'){
-        focusQueueForStatus(current);
-        toast('Server status synced: '+current.toUpperCase()+'. Duplicate accept stopped.');
-      }else{
-        Object.assign(o,previous); rows.set(key,o);
-        focusQueueForStatus('new');
-        toast('ACCEPT failed: '+message);
-      }
-    }else if(serverStatus && serverStatus!=='new'){
-      o.status=serverStatus;
+    /* The RPC's explicit Current status is authoritative. A follow-up SELECT can
+       briefly return stale data; do not let it overwrite the server's conflict state. */
+    if(serverStatus && serverStatus!=='new'){
+      const fresh=await read(id,o?.outlet_id).catch(()=>null);
+      Object.assign(o,fresh||{},{status:serverStatus});
       delete o.__optimisticStatus;
       if(serverStatus!=='accepted'){
         if(previous.__localDeadline===undefined)delete o.__localDeadline;
@@ -368,8 +353,27 @@ async function accept(id){
       }
       rows.set(key,o);
       focusQueueForStatus(serverStatus);
-      toast('Server status synced: '+serverStatus.toUpperCase()+'. Duplicate accept stopped.');
-    }else if(/order not found/i.test(message)){
+      toast('Server status synced: '+serverStatus.toUpperCase()+'. No duplicate action sent.');
+    }else{
+      let fresh=await read(id,o?.outlet_id).catch(()=>null);
+      /* A state-conflict response means the displayed card may be stale. Requery the
+         authoritative queue before restoring NEW or leaving the old action buttons. */
+      if(!fresh && /order is not new|current status|order not found/i.test(message)){
+        await initialLoad().catch(()=>{});
+        fresh=rows.get(key)||null;
+      }
+      if(fresh){
+        rows.set(key,Object.assign(o,fresh));
+        const current=status(fresh.status);
+        if(current!=='new'){
+          focusQueueForStatus(current);
+          toast('Server status synced: '+current.toUpperCase()+'. Duplicate accept stopped.');
+        }else{
+          Object.assign(o,previous); rows.set(key,o);
+          focusQueueForStatus('new');
+          toast('ACCEPT failed: '+message);
+        }
+      }else if(/order not found/i.test(message)){
       rows.delete(key);
       if(activeRingtoneOrderId===key)stopRingtone();
       toast('Order not present in refreshed server queue; stale UI card removed only.');
