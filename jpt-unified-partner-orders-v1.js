@@ -618,6 +618,36 @@ function bindQueue(){
     b.onclick=()=>{selectedQueue=b.dataset.queue||'all';document.querySelectorAll('.orderQueueBtn').forEach(x=>x.classList.toggle('gold',x===b));render()};
   });
 }
+let foregroundRefreshInFlight=null;
+let lastForegroundRefreshAt=0;
+async function refreshOnForeground(reason){
+  if(document.visibilityState==='hidden')return;
+  const now=Date.now();
+  if(foregroundRefreshInFlight)return foregroundRefreshInFlight;
+  if(now-lastForegroundRefreshAt<1200)return;
+  lastForegroundRefreshAt=now;
+  foregroundRefreshInFlight=(async()=>{
+    console.info('[JPT FOREGROUND REFRESH]',{reason,at:new Date().toISOString()});
+    try{
+      await initialLoad();
+      await subscribe();
+    }catch(e){
+      console.error('[JPT FOREGROUND REFRESH FAILED]',{reason,message:e?.message||String(e)});
+    }finally{
+      foregroundRefreshInFlight=null;
+    }
+  })();
+  return foregroundRefreshInFlight;
+}
+window.addEventListener('focus',()=>{refreshOnForeground('window-focus')});
+window.addEventListener('pageshow',()=>{refreshOnForeground('pageshow')});
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible')refreshOnForeground('visibility-visible');
+});
+navigator.serviceWorker?.addEventListener?.('message',event=>{
+  const type=String(event?.data?.type||event?.data?.event||'').toLowerCase();
+  if(type.includes('order')||type.includes('refresh'))refreshOnForeground('service-worker-message');
+});
 async function boot(){
   if(!window.sb){setTimeout(boot,500);return;}
   await removeLegacyOrderChannels();
