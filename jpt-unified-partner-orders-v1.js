@@ -276,6 +276,10 @@ function render(){
     o.__draftMinutes=Math.min(40,Number(o.__draftMinutes||o.target_minutes||15)+1); render();
   });
   document.querySelectorAll('[data-accept]').forEach(b=>b.textContent='ACCEPT ORDER');
+  document.querySelectorAll('[data-reject]').forEach(b=>b.textContent='REJECT ORDER');
+  document.querySelectorAll('[data-ready]').forEach(b=>b.textContent='ORDER READY');
+  document.querySelectorAll('[data-delivery]').forEach(b=>b.textContent='OUT FOR DELIVERY');
+  document.querySelectorAll('[data-delivered]').forEach(b=>b.textContent='MARK DELIVERED');
   document.querySelectorAll('[data-accept],[data-ready],[data-delivery],[data-delivered]').forEach(b=>{
     const key=String(b.dataset.accept||b.dataset.ready||b.dataset.delivery||b.dataset.delivered||'');
     const busy=actionBusy.has(key)||transitionBusy.has(key);
@@ -283,10 +287,6 @@ function render(){
     b.setAttribute('aria-busy',busy?'true':'false');
     if(busy)b.textContent=actionBusy.has(key)?'ACCEPTING…':'UPDATING…';
   });
-  document.querySelectorAll('[data-reject]').forEach(b=>b.textContent='REJECT ORDER');
-  document.querySelectorAll('[data-ready]').forEach(b=>b.textContent='ORDER READY');
-  document.querySelectorAll('[data-delivery]').forEach(b=>b.textContent='OUT FOR DELIVERY');
-  document.querySelectorAll('[data-delivered]').forEach(b=>b.textContent='MARK DELIVERED');
   document.querySelectorAll('.jpt-rider-box .btn').forEach(b=>b.textContent='CALL RIDER');
   document.querySelectorAll('[data-accept]').forEach(b=>b.onclick=()=>accept(b.dataset.accept));
   document.querySelectorAll('[data-reject]').forEach(b=>b.onclick=()=>reject(b.dataset.reject));
