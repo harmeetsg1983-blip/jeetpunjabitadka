@@ -333,7 +333,7 @@ async function accept(id){
   }catch(e){
     const message=String(e?.message||e);
     const fresh=await read(id,o?.outlet_id).catch(()=>null);
-    const serverStatus=message.match(/Current status:\\s*([A-Z_]+)/i)?.[1]?.toLowerCase();
+    const serverStatus=message.match(/Current status:\s*([A-Z_]+)/i)?.[1]?.toLowerCase();
     if(fresh){
       rows.set(key,Object.assign(o,fresh));
       const current=status(fresh.status);
