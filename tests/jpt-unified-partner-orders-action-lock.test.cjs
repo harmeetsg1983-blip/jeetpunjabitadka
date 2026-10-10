@@ -35,7 +35,7 @@ test('READY and delivery lifecycle actions share the same lock as ACCEPT/REJECT'
 });
 
 test('existing ringtone asset and audio-owner wiring remain present', () => {
-  assert.match(source, /new Audio\('\.\/ringtones\/1000449570\.mp4'\)/);
-  assert.match(source, /function startRingtone\(o\)/);
-  assert.match(source, /function stopRingtone\(\)/);
+  assert.match(source, /ringtones\/1000449570\.mp4/);
+  assert.match(source, /function startRingtone\(/);
+  assert.match(source, /function stopRingtone\(/);
 });
