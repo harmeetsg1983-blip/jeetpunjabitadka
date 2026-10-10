@@ -335,20 +335,31 @@ async function accept(id){
     const server=Array.isArray(r.data)?r.data[0]:r.data;
     if(!server)throw new Error('Server returned no order record; status was not confirmed.');
     rows.set(key,Object.assign(o,server));
+    focusQueueForStatus(rows.get(key)?.status||'accepted');
     toast('Order accepted — '+minutes+' minute preparation timer started.');
     render();
   }catch(e){
     const message=String(e?.message||e);
-    const fresh=await read(id,o?.outlet_id).catch(()=>null);
+    let fresh=await read(id,o?.outlet_id).catch(()=>null);
     const serverStatus=message.match(/Current status:\s*([A-Z_]+)/i)?.[1]?.toLowerCase();
+    /* A state-conflict response means the displayed card may be stale. Requery the
+       authoritative queue before restoring NEW or leaving the old action buttons. */
+    if(!fresh && /order is not new|current status|order not found/i.test(message)){
+      await initialLoad().catch(()=>{});
+      fresh=rows.get(key)||null;
+    }
     if(fresh){
       rows.set(key,Object.assign(o,fresh));
       const current=status(fresh.status);
-      if(current!=='new')toast('Server status synced: '+current.toUpperCase()+'. Duplicate accept stopped.');
-      else toast('ACCEPT failed: '+message);
+      if(current!=='new'){
+        focusQueueForStatus(current);
+        toast('Server status synced: '+current.toUpperCase()+'. Duplicate accept stopped.');
+      }else{
+        Object.assign(o,previous); rows.set(key,o);
+        focusQueueForStatus('new');
+        toast('ACCEPT failed: '+message);
+      }
     }else if(serverStatus && serverStatus!=='new'){
-      /* RPC already reported authoritative state. Do not roll a stale NEW card back
-         to NEW merely because the follow-up SELECT was blocked or temporarily failed. */
       o.status=serverStatus;
       delete o.__optimisticStatus;
       if(serverStatus!=='accepted'){
@@ -356,11 +367,12 @@ async function accept(id){
         else o.__localDeadline=previous.__localDeadline;
       }
       rows.set(key,o);
+      focusQueueForStatus(serverStatus);
       toast('Server status synced: '+serverStatus.toUpperCase()+'. Duplicate accept stopped.');
     }else if(/order not found/i.test(message)){
       rows.delete(key);
       if(activeRingtoneOrderId===key)stopRingtone();
-      toast('This order is no longer on the server. Stale card removed; database unchanged.');
+      toast('Order not present in refreshed server queue; stale UI card removed only.');
     }else{
       Object.assign(o,previous);
       if(previous.__localDeadline===undefined)delete o.__localDeadline;
@@ -463,15 +475,21 @@ async function lifecycleTransition(id,next){
       if(!verify || status(verify.status)!==next)throw new Error('Server did not confirm '+next.toUpperCase()+' status.');
       rows.set(key,Object.assign({},o,verify));
     }
+    focusQueueForStatus(rows.get(key)?.status||next);
     toast('Order status updated: '+status(rows.get(key)?.status||next).toUpperCase()+'.');
     render();
     if(next==='ready'){
       try{await window.sb.rpc('delivery_offer_next',{p_order_id:Number(id)})}catch(e){}
     }
   }catch(e){
-    const fresh=await read(id,before.outlet_id).catch(()=>null);
+    let fresh=await read(id,before.outlet_id).catch(()=>null);
+    if(!fresh && /order is not|current status|order not found/i.test(String(e?.message||e))){
+      await initialLoad().catch(()=>{});
+      fresh=rows.get(key)||null;
+    }
     if(fresh){
       rows.set(key,Object.assign({},rows.get(key)||o,fresh));
+      focusQueueForStatus(fresh.status);
       toast('Order state reconciled from server: '+status(fresh.status).toUpperCase()+'. '+(String(e?.message||e)));
     }else{
       Object.assign(o,before);
@@ -537,7 +555,14 @@ async function subscribe(){
       const o=payload?.new;
       if(!o || String(o.outlet_id)!==code || !liveCodes.includes(String(o.outlet_id)))return;
       const old=rows.get(String(o.id))||{};
+      const oldStatus=status(old.status),nextStatus=status(o.status);
       rows.set(String(o.id),Object.assign({},old,o));
+      /* If the active queue was showing this order's prior state, follow its
+         server-confirmed lifecycle state immediately instead of leaving the
+         operator on a stale NEW/ACCEPTED tab. */
+      if(old.id && oldStatus!==nextStatus && selectedQueue===oldStatus){
+        focusQueueForStatus(nextStatus);
+      }
       render();
     });
     ch.subscribe((s,e)=>{
@@ -557,6 +582,15 @@ function updateTimers(){
     if(st!=='accepted'&&st!=='preparing')return;
     el.textContent='Order Ready ('+remaining(o.deadline_at||o.__localDeadline)+')';
   });
+}
+function focusQueueForStatus(value){
+  const st=status(value);
+  const target=st==='new'?'new':st==='accepted'?'accepted':st==='preparing'?'preparing':st==='ready'?'ready':st==='out_for_delivery'?'out_for_delivery':st==='delivered'?'delivered':null;
+  if(!target)return;
+  const btn=[...document.querySelectorAll('.orderQueueBtn')].find(b=>String(b.dataset.queue||'')===target);
+  if(!btn)return;
+  selectedQueue=target;
+  document.querySelectorAll('.orderQueueBtn').forEach(x=>x.classList.toggle('gold',x===btn));
 }
 function bindQueue(){
   document.querySelectorAll('.orderQueueBtn').forEach(b=>{
