@@ -505,7 +505,22 @@ async function initialLoad(){
   const r=codes.length===1
     ? await window.sb.from('orders').select('*').eq('outlet_id',codes[0]).in('status',activeStatuses).order('created_at',{ascending:false}).limit(100)
     : await window.sb.from('orders').select('*').in('outlet_id',codes).in('status',activeStatuses).order('created_at',{ascending:false}).limit(500);
-  if(r.error){toast('Orders load failed: '+r.error.message);return;}
+  if(r.error){
+    /* Never leave a stale queue visible after the source-of-truth read fails.
+       Clear only the in-memory UI map; do not mutate or delete database orders. */
+    console.error('[JPT QUEUE LOAD FAILED]',{
+      message:r.error.message,
+      code:r.error.code,
+      details:r.error.details,
+      hint:r.error.hint,
+      outletCodes:codes
+    });
+    rows.clear();
+    render();
+    toast('Orders could not be verified from server. Stale cards cleared; refresh after connection is restored.');
+    return;
+  }
+  console.info('[JPT QUEUE LOAD OK]',{outletCodes:codes,rowCount:(r.data||[]).length});
   rows.clear();
   (r.data||[]).filter(o=>LIVE_STATUSES.has(status(o.status))).forEach(o=>rows.set(String(o.id),o));
 
