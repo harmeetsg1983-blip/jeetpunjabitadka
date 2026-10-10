@@ -276,6 +276,13 @@ function render(){
     o.__draftMinutes=Math.min(40,Number(o.__draftMinutes||o.target_minutes||15)+1); render();
   });
   document.querySelectorAll('[data-accept]').forEach(b=>b.textContent='ACCEPT ORDER');
+  document.querySelectorAll('[data-accept],[data-ready],[data-delivery],[data-delivered]').forEach(b=>{
+    const key=String(b.dataset.accept||b.dataset.ready||b.dataset.delivery||b.dataset.delivered||'');
+    const busy=actionBusy.has(key)||transitionBusy.has(key);
+    b.disabled=busy;
+    b.setAttribute('aria-busy',busy?'true':'false');
+    if(busy)b.textContent=actionBusy.has(key)?'ACCEPTING…':'UPDATING…';
+  });
   document.querySelectorAll('[data-reject]').forEach(b=>b.textContent='REJECT ORDER');
   document.querySelectorAll('[data-ready]').forEach(b=>b.textContent='ORDER READY');
   document.querySelectorAll('[data-delivery]').forEach(b=>b.textContent='OUT FOR DELIVERY');
@@ -389,87 +396,97 @@ async function reject(id){
     render(); toast('REJECT failed: '+(e.message||e));
   }
 }
-const markReadyInFlight=new Set();
-async function markReady(id){
+const transitionBusy=new Set();
+function setActionBusyUi(key,busy,label){
+  const safe=CSS.escape(String(key));
+  document.querySelectorAll('[data-accept="'+safe+'"],[data-ready="'+safe+'"],[data-delivery="'+safe+'"],[data-delivered="'+safe+'"]').forEach(b=>{
+    b.disabled=!!busy;
+    b.setAttribute('aria-busy',busy?'true':'false');
+    if(busy)b.textContent=label||'UPDATING…';
+  });
+}
+async function lifecycleTransition(id,next){
   const key=String(id);
-  if(markReadyInFlight.has(key))return;
+  if(transitionBusy.has(key)||actionBusy.has(key))return;
   const o=rows.get(key); if(!o)return;
-
-  /* UI lock: prevent double-click/race while the server transition is in flight. */
-  markReadyInFlight.add(key);
-  const clicked=document.querySelector('[data-ready="'+CSS.escape(key)+'"]');
-  if(clicked){
-    clicked.disabled=true;
-    clicked.setAttribute('aria-busy','true');
-    clicked.textContent='UPDATING…';
-  }
-
+  const before={...o};
+  const allowed={
+    ready:['accepted','preparing'],
+    out_for_delivery:['ready'],
+    delivered:['out_for_delivery']
+  };
+  const label={ready:'UPDATING…',out_for_delivery:'UPDATING…',delivered:'UPDATING…'}[next]||'UPDATING…';
+  transitionBusy.add(key);
+  setActionBusyUi(key,true,label);
+  /* Optimistic state mutation makes the card/status react immediately.
+     Every path below reconciles against the authoritative database row. */
+  o.status=next;
+  delete o.__optimisticStatus;
+  rows.set(key,o);
+  render();
   try{
-    const fresh=await read(id,o.outlet_id).catch(()=>null);
-    if(fresh)Object.assign(o,fresh);
-    const now=status(o.status);
-
-    /* Idempotent success: if another listener/action already made it READY
-       (or moved it beyond READY), sync server truth and do not show an error. */
-    if(now==='ready'||now==='out_for_delivery'||now==='delivered'){
-      rows.set(key,o);
-      toast(now==='ready'?'Order marked READY.':'Order already advanced — syncing current server state.');
-      render();
+    const fresh=await read(id,before.outlet_id).catch(()=>null);
+    if(fresh){
+      const serverState=status(fresh.status);
+      if(serverState===next || (next==='ready'&&(serverState==='out_for_delivery'||serverState==='delivered')) ||
+         (next==='out_for_delivery'&&serverState==='delivered')){
+        rows.set(key,Object.assign({},o,fresh));
+        toast('Order state synced: '+serverState.toUpperCase()+'.');
+        render();
+        return;
+      }
+      if(!allowed[next]?.includes(serverState)){
+        rows.set(key,Object.assign({},o,fresh));
+        toast('Order update blocked: server status is '+serverState.toUpperCase()+'.');
+        render();
+        return;
+      }
+      rows.set(key,Object.assign({},o,fresh));
+      o.status=serverState;
+    }else if(!allowed[next]?.includes(status(before.status))){
+      Object.assign(o,before); rows.set(key,o); render();
+      toast('Order update paused: current server state could not be verified.');
       return;
     }
-
-    if(now!=='accepted'&&now!=='preparing'){
-      toast('MARK READY blocked: server order is '+now.toUpperCase()+'.');
-      render();
-      return;
-    }
-
     const r=await window.sb.rpc('jpt_partner_transition_order',{
       p_order_id:Number(id),
-      p_next_status:'ready',
+      p_next_status:next,
       p_target_minutes:Number(o.target_minutes||15),
       p_rejection_reason:null
     });
     if(r.error)throw r.error;
-
     const server=Array.isArray(r.data)?r.data[0]:r.data;
-    if(server)rows.set(key,Object.assign(o,server));
-    else{
-      const verify=await read(id,o.outlet_id).catch(()=>null);
-      if(!verify)throw new Error('Server returned no order record; READY status was not confirmed.');
-      rows.set(key,verify);
-    }
-
-    toast('Order marked READY.');
-    render();
-    try{await window.sb.rpc('delivery_offer_next',{p_order_id:Number(id)})}catch(e){}
-  }catch(e){
-    const fresh=await read(id,o?.outlet_id).catch(()=>null);
-    if(fresh)rows.set(key,Object.assign(o,fresh));
-    else if(/order not found/i.test(String(e?.message||e))){
-      /* Remove only the stale UI card; preserve database and related records. */
-      rows.delete(key);
-      toast('This order is no longer on the server. Stale card removed; database unchanged.');
+    if(server){
+      rows.set(key,Object.assign({},rows.get(key)||o,server));
     }else{
-      toast('MARK READY failed: '+(e.message||e));
+      const verify=await read(id,before.outlet_id);
+      if(!verify || status(verify.status)!==next)throw new Error('Server did not confirm '+next.toUpperCase()+' status.');
+      rows.set(key,Object.assign({},o,verify));
+    }
+    toast('Order status updated: '+status(rows.get(key)?.status||next).toUpperCase()+'.');
+    render();
+    if(next==='ready'){
+      try{await window.sb.rpc('delivery_offer_next',{p_order_id:Number(id)})}catch(e){}
+    }
+  }catch(e){
+    const fresh=await read(id,before.outlet_id).catch(()=>null);
+    if(fresh){
+      rows.set(key,Object.assign({},rows.get(key)||o,fresh));
+      toast('Order state reconciled from server: '+status(fresh.status).toUpperCase()+'. '+(String(e?.message||e)));
+    }else{
+      Object.assign(o,before);
+      rows.set(key,o);
+      toast('Order update failed; previous state restored: '+(e?.message||e));
     }
     render();
   }finally{
-    markReadyInFlight.delete(key);
+    transitionBusy.delete(key);
+    setActionBusyUi(key,false);
+    render();
   }
 }
-async function transition(id,next){
-  const o=rows.get(String(id));if(!o)return;
-  try{
-    const r=await window.sb.rpc('jpt_partner_transition_order',{
-      p_order_id:Number(id),p_next_status:next,p_target_minutes:Number(o.target_minutes||15),p_rejection_reason:null
-    });
-    if(r.error)throw r.error;
-    const server=Array.isArray(r.data)?r.data[0]:r.data;
-    if(server)rows.set(String(id),server);
-    render();
-  }catch(e){toast('Order update failed: '+(e.message||e));}
-}
+async function markReady(id){return lifecycleTransition(id,'ready')}
+async function transition(id,next){return lifecycleTransition(id,next)}
 async function initialLoad(){
   const codes=managedOutlets();
   const r=codes.length===1
