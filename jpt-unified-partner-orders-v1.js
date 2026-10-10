@@ -551,6 +551,14 @@ async function subscribe(){
     ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
       const o=payload?.new;
       if(!o || String(o.outlet_id)!==code || !liveCodes.includes(String(o.outlet_id)))return;
+      /* Enforce the board cutover on Realtime too; otherwise pre-cutover orders
+         can reappear after initialLoad correctly hides them. */
+      if(!o.created_at || Date.parse(o.created_at)<Date.parse('2026-10-10T19:43:00.000Z')){
+        rows.delete(String(o.id));
+        if(activeRingtoneOrderId===String(o.id))stopRingtone();
+        render();
+        return;
+      }
       rows.set(String(o.id),Object.assign({},o,{__liveNew:true}));
       render();
       if(status(o.status)==='new')startRingtone(o);
@@ -558,6 +566,13 @@ async function subscribe(){
     ch.on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
       const o=payload?.new;
       if(!o || String(o.outlet_id)!==code || !liveCodes.includes(String(o.outlet_id)))return;
+      /* Updates for historical orders must not reinsert them into the board. */
+      if(!o.created_at || Date.parse(o.created_at)<Date.parse('2026-10-10T19:43:00.000Z')){
+        rows.delete(String(o.id));
+        if(activeRingtoneOrderId===String(o.id))stopRingtone();
+        render();
+        return;
+      }
       const old=rows.get(String(o.id))||{};
       const oldStatus=status(old.status),nextStatus=status(o.status);
       rows.set(String(o.id),Object.assign({},old,o));
