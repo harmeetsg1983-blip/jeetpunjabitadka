@@ -507,9 +507,13 @@ async function markReady(id){return lifecycleTransition(id,'ready')}
 async function transition(id,next){return lifecycleTransition(id,next)}
 async function initialLoad(){
   const codes=managedOutlets();
+  /* One-time board cutover: hide orders created before this timestamp from the
+     partner UI without deleting or mutating their database records. New orders
+     created after cutover continue to appear normally. */
+  const boardCutoverAt='2026-10-10T19:43:00.000Z';
   const r=codes.length===1
-    ? await window.sb.from('orders').select('*').eq('outlet_id',codes[0]).order('created_at',{ascending:false}).limit(100)
-    : await window.sb.from('orders').select('*').in('outlet_id',codes).order('created_at',{ascending:false}).limit(500);
+    ? await window.sb.from('orders').select('*').eq('outlet_id',codes[0]).gte('created_at',boardCutoverAt).order('created_at',{ascending:false}).limit(100)
+    : await window.sb.from('orders').select('*').in('outlet_id',codes).gte('created_at',boardCutoverAt).order('created_at',{ascending:false}).limit(500);
   if(r.error){
     /* A failed/unauthorized refresh must never leave old cards presented as current NEW orders. */
     rows.clear();
