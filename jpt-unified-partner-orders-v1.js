@@ -475,7 +475,14 @@ async function initialLoad(){
   const r=codes.length===1
     ? await window.sb.from('orders').select('*').eq('outlet_id',codes[0]).order('created_at',{ascending:false}).limit(100)
     : await window.sb.from('orders').select('*').in('outlet_id',codes).order('created_at',{ascending:false}).limit(500);
-  if(r.error){toast('Orders load failed: '+r.error.message);return;}
+  if(r.error){
+    /* A failed/unauthorized refresh must never leave old cards presented as current NEW orders. */
+    rows.clear();
+    stopRingtone();
+    render();
+    toast('Orders load failed: '+r.error.message+' — stale cards cleared; check partner session/outlet access.');
+    return;
+  }
   rows.clear();
   (r.data||[]).forEach(o=>rows.set(String(o.id),o));
 
