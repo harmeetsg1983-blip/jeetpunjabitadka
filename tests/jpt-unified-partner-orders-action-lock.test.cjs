@@ -24,6 +24,10 @@ test('REJECT uses the same per-order lock and always releases it', () => {
   assert.match(body, /if\(actionBusy\.has\(key\)\|\|transitionBusy\.has\(key\)\)return;/);
   assert.ok(body.indexOf('actionBusy.add(key)') < body.indexOf('await window.sb.rpc'));
   assert.match(body, /finally\s*\{[\s\S]*?actionBusy\.delete\(key\)/);
+  assert.match(body, /const freshBefore=await read\(id,o\.outlet_id\)\.catch\(\(\)=>null\)/);
+  assert.ok(body.indexOf('const freshBefore=await read') < body.indexOf("p_next_status:'cancelled'"));
+  assert.ok(body.indexOf('if(!freshBefore)') < body.indexOf("p_next_status:'cancelled'"));
+  assert.match(body, /if\(status\(freshBefore\.status\)!=='new'\)/);
   assert.match(body, /const fresh=await read\(id,o\.outlet_id\)/);
 });
 
