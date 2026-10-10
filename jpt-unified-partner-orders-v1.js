@@ -479,9 +479,13 @@ async function lifecycleTransition(id,next){
       }
       rows.set(key,Object.assign({},o,fresh));
       o.status=serverState;
-    }else if(!allowed[next]?.includes(status(before.status))){
-      Object.assign(o,before); rows.set(key,o); render();
-      toast('Order update paused: current server state could not be verified.');
+    }else{
+      /* Fail closed: a local card is not authority to advance lifecycle state.
+         If the server read fails or the row is missing, do not call the transition RPC. */
+      Object.assign(o,before);
+      rows.set(key,o);
+      render();
+      toast('Order update paused: current server state could not be verified. Refresh orders and retry.');
       return;
     }
     const r=await window.sb.rpc('jpt_partner_transition_order',{
