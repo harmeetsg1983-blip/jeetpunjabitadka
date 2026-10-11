@@ -95,6 +95,19 @@ function status(v){
   const s=String(v||'new').toLowerCase().trim();
   return s==='received'?'new':s==='canceled'?'cancelled':s;
 }
+/* Order lifecycle is monotonic: delayed Realtime/SELECT responses must not
+   move a completed order back into NEW/ACCEPTED queues. */
+function lifecycleRank(v){
+  return ({new:0,accepted:1,preparing:2,ready:3,out_for_delivery:4,delivered:5,cancelled:6})[status(v)]??-1;
+}
+function mergeOrderMonotonic(oldRow,incoming){
+  const merged=Object.assign({},oldRow||{},incoming||{});
+  const oldStatus=status(oldRow?.status), nextStatus=status(incoming?.status);
+  if(oldRow?.status && lifecycleRank(oldStatus)>lifecycleRank(nextStatus)){
+    merged.status=oldRow.status;
+  }
+  return merged;
+}
 function items(x){
   let a=x?.items;
   if(typeof a==='string'){try{a=JSON.parse(a)}catch(e){a=[]}}
@@ -482,7 +495,7 @@ async function lifecycleTransition(id,next){
     if(r.error)throw r.error;
     const server=Array.isArray(r.data)?r.data[0]:r.data;
     if(server){
-      rows.set(key,Object.assign({},rows.get(key)||o,server));
+      rows.set(key,mergeOrderMonotonic(rows.get(key)||o,server));
     }else{
       const verify=await read(id,before.outlet_id);
       if(!verify || status(verify.status)!==next)throw new Error('Server did not confirm '+next.toUpperCase()+' status.');
@@ -545,7 +558,7 @@ async function initialLoad(){
   for(let i=0;i<checks.length;i+=8){
     await Promise.all(checks.slice(i,i+8).map(async([key,o])=>{
       const live=await read(o.id,o.outlet_id).catch(()=>null);
-      if(live)rows.set(key,Object.assign(o,live));
+      if(live)rows.set(key,mergeOrderMonotonic(o,live));
       else rows.delete(key);
     }));
   }
@@ -587,8 +600,10 @@ async function subscribe(){
         return;
       }
       const old=rows.get(String(o.id))||{};
-      const oldStatus=status(old.status),nextStatus=status(o.status);
-      rows.set(String(o.id),Object.assign({},old,o));
+      const oldStatus=status(old.status);
+      const merged=mergeOrderMonotonic(old,o);
+      const nextStatus=status(merged.status);
+      rows.set(String(o.id),merged);
       /* If the active queue was showing this order's prior state, follow its
          server-confirmed lifecycle state immediately instead of leaving the
          operator on a stale NEW/ACCEPTED tab. */
