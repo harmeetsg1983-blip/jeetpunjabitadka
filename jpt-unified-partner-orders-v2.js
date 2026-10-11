@@ -495,10 +495,31 @@ async function accept(id){
   }
 }
 async function reject(id){
-  /* Explicit REJECT click: this is the ONLY place the ringtone is stopped. */
+  const key=String(id);
+  if(actionBusy.has(key)||transitionBusy.has(key))return;
+  const o=rows.get(key);
+  if(!o)return;
+  /* Stop the shared ringtone immediately on an explicit REJECT click. */
   stopRingtone();
-  const o=rows.get(String(id)); if(!o)return;
+  actionBusy.add(key);
+  setActionBusyUi(key,true,'REJECTING…');
   try{
+    /* Reject only a server-confirmed NEW order; prevent stale/duplicate clicks. */
+    const canonical=await read(id,o.outlet_id);
+    if(!canonical){
+      rows.delete(key);
+      toast('REJECT paused: order no longer exists in this outlet queue.');
+      await initialLoad().catch(()=>{});
+      render();
+      return;
+    }
+    if(status(canonical.status)!=='new'){
+      rows.set(key,mergeOrderMonotonic(o,canonical));
+      focusQueueForStatus(canonical.status);
+      toast('REJECT blocked: server status is '+status(canonical.status).toUpperCase()+'.');
+      render();
+      return;
+    }
     const r=await window.sb.rpc('jpt_partner_transition_order',{
       p_order_id:Number(id),
       p_next_status:'cancelled',
@@ -507,13 +528,24 @@ async function reject(id){
     });
     if(r.error)throw r.error;
     const server=Array.isArray(r.data)?r.data[0]:r.data;
-    if(server)rows.set(String(id),Object.assign(o,server));
-    else o.status='cancelled';
+    if(server){
+      rows.set(key,Object.assign({},canonical,server));
+    }else{
+      const verify=await read(id,o.outlet_id);
+      if(!verify||status(verify.status)!=='cancelled')throw new Error('Server did not confirm CANCELLED status.');
+      rows.set(key,Object.assign({},canonical,verify));
+    }
     toast('Order rejected.');
     render();
   }catch(e){
-    const fresh=await read(id,o?.outlet_id).catch(()=>null); if(fresh)rows.set(String(id),fresh);
-    render(); toast('REJECT failed: '+(e.message||e));
+    const fresh=await read(id,o?.outlet_id).catch(()=>null);
+    if(fresh)rows.set(key,mergeOrderMonotonic(rows.get(key)||o,fresh));
+    render();
+    toast('REJECT failed: '+(e.message||e));
+  }finally{
+    actionBusy.delete(key);
+    setActionBusyUi(key,false);
+    render();
   }
 }
 const transitionBusy=new Set();
