@@ -295,7 +295,7 @@ function render(){
   });
   document.querySelectorAll('[data-accept]').forEach(b=>b.textContent='ACCEPT ORDER');
   document.querySelectorAll('[data-reject]').forEach(b=>b.textContent='REJECT ORDER');
-  document.querySelectorAll('[data-ready]').forEach(b=>b.textContent='ORDER READY');
+  document.querySelectorAll('[data-ready]').forEach(b=>b.textContent='MARK READY');
   document.querySelectorAll('[data-delivery]').forEach(b=>b.textContent='OUT FOR DELIVERY');
   document.querySelectorAll('[data-delivered]').forEach(b=>b.textContent='MARK DELIVERED');
   document.querySelectorAll('[data-accept],[data-ready],[data-delivery],[data-delivered]').forEach(b=>{
