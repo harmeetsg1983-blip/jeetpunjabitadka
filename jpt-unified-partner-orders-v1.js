@@ -556,7 +556,9 @@ async function initialLoad(){
     toast('Orders load failed: '+r.error.message+' — stale cards cleared; check partner session/outlet access.');
     return;
   }
-  /* Merge refresh results instead of clearing the live map. */
+  /* Server query is authoritative for the current board snapshot.
+     Preserve local action drafts only where possible, but never preserve a stale
+     lifecycle status over a successful fresh server response. */
   const incomingIds=new Set((r.data||[]).map(o=>String(o.id)));
   for(const [key,old] of [...rows.entries()]){
     if(!incomingIds.has(key)&&!actionBusy.has(key)&&!transitionBusy.has(key)){
@@ -567,7 +569,10 @@ async function initialLoad(){
   (r.data||[]).forEach(o=>{
     const key=String(o.id);
     if(actionBusy.has(key)||transitionBusy.has(key))return;
-    rows.set(key,mergeOrderMonotonic(rows.get(key),o));
+    const prior=rows.get(key);
+    const merged=Object.assign({},prior||{},o);
+    if(prior?.__draftMinutes!==undefined)merged.__draftMinutes=prior.__draftMinutes;
+    rows.set(key,merged);
   });
 
   /* Reconcile cards against the same server lookup used by action recovery.
@@ -579,8 +584,15 @@ async function initialLoad(){
       if(actionBusy.has(key)||transitionBusy.has(key))return;
       const live=await read(o.id,o.outlet_id).catch(()=>null);
       if(actionBusy.has(key)||transitionBusy.has(key))return;
-      if(live)rows.set(key,mergeOrderMonotonic(rows.get(key)||o,live));
-      else if(!actionBusy.has(key)&&!transitionBusy.has(key))rows.delete(key);
+      if(live){
+        /* This is a direct SELECT by order id: its status replaces stale UI state.
+           Do not retain __optimisticStatus when the server disagrees. */
+        const prior=rows.get(key)||o;
+        const reconciled=Object.assign({},prior,live);
+        if(status(prior.status)!==status(live.status))delete reconciled.__optimisticStatus;
+        if(prior.__draftMinutes!==undefined)reconciled.__draftMinutes=prior.__draftMinutes;
+        rows.set(key,reconciled);
+      }else if(!actionBusy.has(key)&&!transitionBusy.has(key))rows.delete(key);
     }));
   }
   render();
