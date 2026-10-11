@@ -85,3 +85,10 @@ These are pending test instructions only; no live assignment, database, or physi
 - Existing `delivery_partner_offer_snapshot` and `delivery_assignment_respond` RPC contracts are unchanged; the existing ringtone transition logic remains unchanged.
 - Source checks passed: request counter, stale success suppression, stale error suppression, RPC names and ringtone logic retained.
 - This is source-level verification only. Real Realtime/polling races and ringtone behavior require controlled browser/device testing. Staging only.
+
+## 2026-10-12 — Do not report status synced when refresh failed
+- Found a UI truthfulness issue in the staging delivery status handler: after the status RPC succeeded, `loadActive()` could catch a refresh failure internally, return no result, and the caller would still report the old current status as synced.
+- `loadActive()` now returns an explicit boolean for current snapshot success/failure (including stale requests); the status handler checks it and reports that confirmation is unverified if refresh fails.
+- No status transition RPC names/arguments were changed. Existing offer response/location RPCs and ringtone constants remain present.
+- Source checks passed: explicit refresh result, status handler checks result, no false synced message on failed refresh, existing lifecycle RPC retained.
+- This closes a source-level false-confirmation path only; real RPC outcomes and Android behavior still require controlled testing. Staging only.
