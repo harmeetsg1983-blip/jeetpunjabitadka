@@ -71,3 +71,10 @@ These are pending test instructions only; no live assignment, database, or physi
 - The last known assignment is intentionally preserved on refresh failure; the app does not guess that the assignment ended. The next scheduled/manual refresh can retry, and a successful snapshot clears the warning.
 - Source checks passed: warning is set on snapshot error; warning clears after a successful response; request-sequence guard remains; existing assignment/response RPC names and GPS/ringtone functions remain present.
 - Source-level verification only. Polling cadence, live RPC failures and Android UI behavior require controlled device/backend tests. Staging only; no production deployment.
+
+## 2026-10-12 — Handle thrown/network errors during active refresh
+- Wrapped the active-assignment snapshot flow in `try/catch`, so rejected promises/network exceptions are handled like returned RPC errors and show the same visible recovery message.
+- Kept the request sequence guard in both the success and catch paths, preventing a stale failed request from overwriting a newer result's message.
+- On failure the last known assignment remains visible; the UI does not infer that the assignment ended.
+- Source checks passed: thrown error handling, stale request suppression, recovery message, existing snapshot RPC and order/location RPC names retained.
+- No browser/network simulation or device test performed. Staging only.
