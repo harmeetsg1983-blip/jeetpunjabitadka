@@ -160,7 +160,9 @@
           var s=row.start_at?Date.parse(row.start_at):-Infinity,e=row.end_at?Date.parse(row.end_at):Infinity;
           if(!(s<=now&&now<=e))return false;
           var j=row.schedule_json||{};
-          return String(row.outlet_id||'')===outletCode && j.surface==='customer_outlet_showcase' && j.placement==='FIRST' && !!(row.video_url||row.banner_url);
+          var managedTop=j.controller==='jpt-outlet-media-v1' && String(j.placement||'').toLowerCase()==='top';
+          var legacyShowcase=j.surface==='customer_outlet_showcase' && String(j.placement||'').toUpperCase()==='FIRST';
+          return String(row.outlet_id||'')===outletCode && (managedTop||legacyShowcase) && !!(row.video_url||row.banner_url);
         });
         var mediaItems=campaigns.map(function(row){return {id:String(row.id||''),url:String(row.video_url||row.banner_url||''),isVideo:!!row.video_url,title:String(row.title||'')};}).filter(function(x){return !!x.url;});
         var outletMatches=!!outlet && String(outlet.code||'')===outletCode;
