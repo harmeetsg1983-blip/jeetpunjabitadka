@@ -149,3 +149,10 @@ These are pending test instructions only; no live assignment, database, or physi
 - Read-only backend check confirms the existing `public.delivery_partner_sponsor_ads` table, `delivery-partner-sponsors` storage bucket, and central-owner upload/update/delete policies exist. The existing Restaurant Partner sponsor manager already includes delivery mode, gallery file selection, crop/zoom preview, publish, ON/OFF, and delete controls. This pass did not change database schema, RLS, storage policies, or the manager.
 - Source-level checks passed for gold-only frame CSS, responsive contained media, lower-page placement, 11-second rotation, and cache-busted connector reference.
 - Remaining release gates: upload the exact user-supplied Welcome poster as a repository asset (binary asset not committed in this pass); add the permanent top Welcome frame using that exact asset; verify owner upload/publish/delete with a test sponsor image; confirm that a published image appears on the rider page; test mobile layout, slide timing, and delete propagation on Android. No browser/device E2E was performed. Staging only; no production deployment.
+
+
+### Follow-up static verification — sponsor slider V4
+- Fixed a V4 runtime guard mismatch found during re-review: the script now sets/checks the V4 singleton flag and uses a V4 stylesheet ID. JavaScript parse check passes after this correction.
+- Reconfirmed connector cache-buster loads slider V4 and the staging app references connector V4.
+- The exact user-supplied Welcome poster is still not committed as a public repository asset, so the permanent top Welcome banner is not complete. A binary asset upload is required; do not substitute generated or unrelated banners.
+- Live browser/device verification remains outstanding: sponsor upload/publish, five-second refresh propagation, delete propagation, 11-second rotation, and mobile rendering. Do not mark this feature production-ready until those tests pass.
