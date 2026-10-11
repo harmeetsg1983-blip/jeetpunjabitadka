@@ -764,7 +764,9 @@ let realtimeRetryHandle=null;
 let realtimeRetryCount=0;
 let realtimeSubscribeBusy=false;
 function scheduleRealtimeRecovery(reason){
-  if(!runtimeStarted || realtimeRetryHandle!==null)return;
+  /* Startup subscriptions can fail before runtimeStarted flips true. Permit a
+     bounded retry while authenticated startup is in progress as well. */
+  if((!runtimeStarted&&!runtimeStartBusy) || realtimeRetryHandle!==null)return;
   realtimeRetryCount=Math.min(realtimeRetryCount+1,6);
   const delay=Math.min(30000,1000*Math.pow(2,realtimeRetryCount-1));
   const n=document.getElementById('ordersNotice');
