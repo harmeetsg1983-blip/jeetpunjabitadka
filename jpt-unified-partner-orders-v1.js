@@ -89,8 +89,10 @@ function managedOutlets(){
 }
 function orderBelongsToManagedOutlet(o){ return managedOutlets().includes(String(o?.outlet_id||'')); }
 function shouldShowOnBoard(o){
+  /* Strict board cutoff: pre-cutover orders stay hidden regardless of stale active status.
+     Realtime INSERT/UPDATE must obey the same cutoff as initialLoad. */
   const created=Date.parse(o?.created_at||'');
-  return (Number.isFinite(created)&&created>=Date.parse(BOARD_CUTOVER_AT)) || LIVE_STATUSES.has(status(o?.status));
+  return Number.isFinite(created)&&created>=Date.parse(BOARD_CUTOVER_AT);
 }
 function esc(v){
   return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -544,8 +546,8 @@ async function initialLoad(){
   /* Hide only old terminal/history orders. Active lifecycle orders must remain visible
      even when they were created before the board cutover. */
   const r=codes.length===1
-    ? await window.sb.from('orders').select('*').eq('outlet_id',codes[0]).or('created_at.gte.'+BOARD_CUTOVER_AT+',status.in.(new,accepted,preparing,ready,out_for_delivery)').order('created_at',{ascending:false}).limit(100)
-    : await window.sb.from('orders').select('*').in('outlet_id',codes).or('created_at.gte.'+BOARD_CUTOVER_AT+',status.in.(new,accepted,preparing,ready,out_for_delivery)').order('created_at',{ascending:false}).limit(500);
+    ? await window.sb.from('orders').select('*').eq('outlet_id',codes[0]).gte('created_at',BOARD_CUTOVER_AT).order('created_at',{ascending:false}).limit(100)
+    : await window.sb.from('orders').select('*').in('outlet_id',codes).gte('created_at',BOARD_CUTOVER_AT).order('created_at',{ascending:false}).limit(500);
   if(r.error){
     /* A failed/unauthorized refresh must never leave old cards presented as current NEW orders. */
     rows.clear();
