@@ -643,7 +643,11 @@ async function initialLoad(){
         if(status(prior.status)===status(live.status))delete reconciled.__optimisticStatus;
         if(prior.__draftMinutes!==undefined)reconciled.__draftMinutes=prior.__draftMinutes;
         rows.set(key,reconciled);
-      }else if(!actionBusy.has(key)&&!transitionBusy.has(key))rows.delete(key);
+      }else{
+        /* The bulk outlet-scoped query already returned this order. A null or failed
+           follow-up read is not proof that it disappeared; keep the bulk snapshot. */
+        console.warn('[JPT Orders] Per-order verification unavailable; retaining loaded order',key);
+      }
     }));
   }
   render();
