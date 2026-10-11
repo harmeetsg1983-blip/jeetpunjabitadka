@@ -760,7 +760,27 @@ async function initialLoad(){
   if(pendingNew)startRingtone(pendingNew);
 }
 let channels=[];
+let realtimeRetryHandle=null;
+let realtimeRetryCount=0;
+let realtimeSubscribeBusy=false;
+function scheduleRealtimeRecovery(reason){
+  if(!runtimeStarted || realtimeRetryHandle!==null)return;
+  realtimeRetryCount=Math.min(realtimeRetryCount+1,6);
+  const delay=Math.min(30000,1000*Math.pow(2,realtimeRetryCount-1));
+  const n=document.getElementById('ordersNotice');
+  if(n)n.textContent='Realtime reconnecting ('+String(reason||'connection lost')+'). Retrying in '+Math.ceil(delay/1000)+'s; existing orders are preserved.';
+  console.warn('[JPT Orders] scheduling realtime recovery',{reason,delay,realtimeRetryCount});
+  realtimeRetryHandle=setTimeout(async()=>{
+    realtimeRetryHandle=null;
+    try{await subscribe();}
+    catch(e){console.error('[JPT Orders] realtime recovery failed',e);scheduleRealtimeRecovery(String(e?.message||e));}
+  },delay);
+}
 async function subscribe(){
+  if(realtimeSubscribeBusy)return;
+  realtimeSubscribeBusy=true;
+  try{
+
   for(const ch of channels){try{await window.sb.removeChannel(ch)}catch(e){}}
   channels=[];
   channel=null;
@@ -849,10 +869,19 @@ async function subscribe(){
       console.info('[JPT-DIAG][channel status]',{outlet:code,status:s,error:e||null,managedOutlets:managedOutlets()});
       updateVisibleDiagnostics('CHANNEL '+code+' '+s+(e?' • '+String(e.message||e):''));
       if(e)console.warn('[JPT Unified Orders '+code+']',s,e);
+      if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(String(s))){
+        scheduleRealtimeRecovery(String(s)+(e?' / '+String(e.message||e):''));
+      }else if(String(s)==='SUBSCRIBED'){
+        realtimeRetryCount=0;
+        if(realtimeRetryHandle!==null){clearTimeout(realtimeRetryHandle);realtimeRetryHandle=null;}
+      }
     });
     channels.push(ch);
   }
   channel=channels[0]||null;
+  }finally{
+    realtimeSubscribeBusy=false;
+  }
 }
 function updateTimers(){
   let shouldRender=false;
