@@ -10,6 +10,7 @@ window.__JPT_UNIFIED_ORDER_RUNTIME__=true;
 window.__JPTOrdersV3Active=true;
 
 const LIVE_STATUSES=new Set(['new','accepted','preparing','ready','out_for_delivery']);
+const BOARD_CUTOVER_AT='2026-10-10T19:43:00.000Z';
 const rows=new Map();
 const actionBusy=new Set();
 let channel=null;
@@ -87,6 +88,10 @@ function managedOutlets(){
   return [...new Set(codes.length?codes:[current])];
 }
 function orderBelongsToManagedOutlet(o){ return managedOutlets().includes(String(o?.outlet_id||'')); }
+function shouldShowOnBoard(o){
+  const created=Date.parse(o?.created_at||'');
+  return (Number.isFinite(created)&&created>=Date.parse(BOARD_CUTOVER_AT)) || LIVE_STATUSES.has(status(o?.status));
+}
 function esc(v){
   return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -536,13 +541,11 @@ async function markReady(id){return lifecycleTransition(id,'ready')}
 async function transition(id,next){return lifecycleTransition(id,next)}
 async function initialLoad(){
   const codes=managedOutlets();
-  /* One-time board cutover: hide orders created before this timestamp from the
-     partner UI without deleting or mutating their database records. New orders
-     created after cutover continue to appear normally. */
-  const boardCutoverAt='2026-10-10T19:43:00.000Z';
+  /* Hide only old terminal/history orders. Active lifecycle orders must remain visible
+     even when they were created before the board cutover. */
   const r=codes.length===1
-    ? await window.sb.from('orders').select('*').eq('outlet_id',codes[0]).gte('created_at',boardCutoverAt).order('created_at',{ascending:false}).limit(100)
-    : await window.sb.from('orders').select('*').in('outlet_id',codes).gte('created_at',boardCutoverAt).order('created_at',{ascending:false}).limit(500);
+    ? await window.sb.from('orders').select('*').eq('outlet_id',codes[0]).or('created_at.gte.'+BOARD_CUTOVER_AT+',status.in.(new,accepted,preparing,ready,out_for_delivery)').order('created_at',{ascending:false}).limit(100)
+    : await window.sb.from('orders').select('*').in('outlet_id',codes).or('created_at.gte.'+BOARD_CUTOVER_AT+',status.in.(new,accepted,preparing,ready,out_for_delivery)').order('created_at',{ascending:false}).limit(500);
   if(r.error){
     /* A failed/unauthorized refresh must never leave old cards presented as current NEW orders. */
     rows.clear();
@@ -579,6 +582,9 @@ async function initialLoad(){
     }));
   }
   render();
+  /* Restore the continuous alert for any still-NEW order already present at startup/refresh. */
+  const pendingNew=[...rows.values()].find(o=>status(o.status)==='new');
+  if(pendingNew)startRingtone(pendingNew);
 }
 let channels=[];
 async function subscribe(){
@@ -595,7 +601,7 @@ async function subscribe(){
       if(!o || String(o.outlet_id)!==code || !liveCodes.includes(String(o.outlet_id)))return;
       /* Enforce the board cutover on Realtime too; otherwise pre-cutover orders
          can reappear after initialLoad correctly hides them. */
-      if(!o.created_at || Date.parse(o.created_at)<Date.parse('2026-10-10T19:43:00.000Z')){
+      if(!shouldShowOnBoard(o)){
         rows.delete(String(o.id));
         if(activeRingtoneOrderId===String(o.id))stopRingtone();
         render();
@@ -617,7 +623,7 @@ async function subscribe(){
       const o=payload?.new;
       if(!o || String(o.outlet_id)!==code || !liveCodes.includes(String(o.outlet_id)))return;
       /* Updates for historical orders must not reinsert them into the board. */
-      if(!o.created_at || Date.parse(o.created_at)<Date.parse('2026-10-10T19:43:00.000Z')){
+      if(!shouldShowOnBoard(o)){
         rows.delete(String(o.id));
         if(activeRingtoneOrderId===String(o.id))stopRingtone();
         render();
