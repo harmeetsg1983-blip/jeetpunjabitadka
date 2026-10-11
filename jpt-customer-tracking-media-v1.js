@@ -7,7 +7,7 @@
 'use strict';
 if(window.__JPT_CUSTOMER_TRACKING_MEDIA_V1__)return;
 window.__JPT_CUSTOMER_TRACKING_MEDIA_V1__=true;
-const TABLE='checkout_sponsor_ads';
+const TABLE='campaigns';
 const $=id=>document.getElementById(id);
 const sb=()=>window.sb||window.supabaseClient||null;
 const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -30,7 +30,7 @@ function showNext(){
  const stage=$('jpttmStage'),count=$('jpttmCount');if(!stage)return;
  if(!items.length){box.hidden=false;stage.innerHTML='<div class="jpttm-empty">No current offers or videos.</div>';if(count)count.textContent='';return}
  index=((index%items.length)+items.length)%items.length;
- const x=items[index],schedule=x.schedule_json||{},type=String(x.media_type||schedule.media_kind||'image').toLowerCase(),src=String((type==='video'?(x.video_url||x.media_url):(x.media_url||x.banner_url)||''));
+ const x=items[index],schedule=x.schedule_json||{},type=String(schedule.media_kind||(x.video_url?'video':'image')).toLowerCase(),src=String((type==='video'?(x.video_url||x.banner_url):(x.banner_url||x.video_url)||''));
  if(count)count.textContent=(index+1)+' / '+items.length;
  if(!src){index=(index+1)%items.length;showNext();return}
  stage.innerHTML='<span class="jpttm-label">'+esc(x.title||x.sponsor_name||'Offer')+'</span>'+(type==='video'?'<video playsinline preload="metadata" controls></video>':'<img loading="eager" alt="Restaurant offer">');
@@ -50,15 +50,14 @@ async function refresh(){
  const box=mount();if(!box)return;
  const id=outlet();lastOutlet=id;
  try{
-  const r=await q.from(TABLE).select('id,media_url,media_type,video_url,title,sponsor_name,target_all_live,outlet_ids,is_active,starts_at,ends_at,sort_order,schedule_json,created_at').eq('is_active',true).order('sort_order',{ascending:true}).order('created_at',{ascending:false});
+  const r=await q.from(TABLE).select('id,outlet_id,title,active,start_at,end_at,priority,banner_url,video_url,schedule_json,created_at').eq('active',true).eq('outlet_id',id).order('priority',{ascending:false}).order('created_at',{ascending:false});
   if(r.error){console.warn('[JPT tracking media] media query failed',r.error.message);return}
   const now=Date.now();
   items=(r.data||[]).filter(x=>{
-   if(x.starts_at&&new Date(x.starts_at).getTime()>now)return false;
-   if(x.ends_at&&new Date(x.ends_at).getTime()<now)return false;
+   if(x.start_at&&new Date(x.start_at).getTime()>now)return false;
+   if(x.end_at&&new Date(x.end_at).getTime()<now)return false;
    const j=x.schedule_json||{};
-   if(j.surface&& !['customer_order_tracking','customer_outlet_showcase','customer_tracking'].includes(String(j.surface)))return false;
-   return !!x.target_all_live || (Array.isArray(x.outlet_ids)&&x.outlet_ids.map(String).includes(id));
+   return String(x.outlet_id||'')===id && j.controller==='jpt-outlet-media-v1' && String(j.placement||'').toLowerCase()==='lower' && !!(x.video_url||x.banner_url);
   }).slice(0,5);
   index=0;showNext();
  }catch(e){console.warn('[JPT tracking media] refresh failed',e)}
