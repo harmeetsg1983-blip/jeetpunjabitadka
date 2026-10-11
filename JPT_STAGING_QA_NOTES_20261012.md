@@ -173,3 +173,9 @@ These are pending test instructions only; no live assignment, database, or physi
 - **Remaining hard blockers:** (1) the exact user-supplied permanent Welcome image is not present as a repository asset and no top banner is coded into `delivery-partner-app-v13-staging.html`; (2) live authenticated upload→publish→display→delete and Android viewport/timing tests have not been executed. Do not claim full completion or production readiness.
 - Safety constraint remains: do not modify customer or restaurant partner production code; do not deploy or merge. The current work should be limited to the delivery staging app, its dedicated sponsor slider/connector, and QA notes.
 - After this banner/sponsor feature is actually complete, resume the previously paused Owner KYC private Aadhaar/selfie access design and controlled owner-authorization tests from the existing audit section. Do not restart that work from scratch.
+
+### 2026-10-12 — Permanent Welcome frame added (asset pending)
+- Added a permanent top-of-app Welcome banner frame immediately before the Delivery Partner Home section in `delivery-partner-app-v13-staging.html`.
+- Frame uses a gold-lit border, a 2:1 responsive viewport and `object-fit: contain` to avoid stretching the original artwork. Added a visible fallback message if the expected poster asset is absent; no substitute/generated artwork is used.
+- **Important: the original user-supplied poster binary is still not in the repository.** The frame currently points to `./assets/delivery-partner-welcome-original.webp`; until that exact asset is added, the fallback message will appear. This commit completes the frame/layout code only, not the image itself.
+- No customer app, restaurant partner app, production order flow, ringtone, service worker, database or storage policy was changed. Staging only.
