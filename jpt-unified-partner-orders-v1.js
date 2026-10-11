@@ -103,6 +103,12 @@ function status(v){
   const s=String(v||'new').toLowerCase().trim();
   return s==='received'?'new':s==='canceled'?'cancelled':s;
 }
+/* Server keeps ACCEPTED as the persisted transition; the dashboard places that
+   order in PREPARING while its server-backed countdown is running. */
+function boardStatus(o){
+  const st=status(o?.status);
+  return st==='accepted'?'preparing':st;
+}
 /* Order lifecycle is monotonic: delayed Realtime/SELECT responses must not
    move a completed order back into NEW/ACCEPTED queues. */
 function lifecycleRank(v){
@@ -245,8 +251,12 @@ function actionHtml(o){
       '<button type="button" class="btn gold" data-accept="'+id+'">ACCEPT ORDER</button>'+
       '<button type="button" class="btn red" data-reject="'+id+'">REJECT ORDER</button></div>';
   }
-  if(st==='accepted'||st==='preparing')
+  if(st==='accepted'||st==='preparing'){
+    const deadline=o.deadline_at||o.__localDeadline;
+    const left=deadline?new Date(deadline).getTime()-Date.now():0;
+    if(left>0)return '<div class="muted jpt-prep-wait" data-prep-wait="'+id+'">Preparation in progress — countdown running</div>';
     return '<button class="btn gold" data-ready="'+id+'">MARK READY</button>';
+  }
   if(st==='ready')
     return '<button class="btn gold" data-delivery="'+id+'">OUT FOR DELIVERY</button>';
   if(st==='out_for_delivery')
@@ -262,7 +272,7 @@ function render(){
      and must never return to ALL or trigger active-order actions. */
   const filtered=selectedQueue==='all'
     ? all.filter(o=>LIVE_STATUSES.has(status(o.status)))
-    : all.filter(o=>status(o.status)===selectedQueue);
+    : all.filter(o=>boardStatus(o)===selectedQueue);
   body.innerHTML=filtered.map(o=>{
     const st=status(o.status);
     const target=Math.max(15,Math.min(40,Number(o.target_minutes||o.__draftMinutes||15)));
@@ -279,7 +289,7 @@ function render(){
     const action=actionHtml(o);
     return '<article class="jpt-order-card'+newClass+'" data-order-card="'+esc(o.id)+'">'+
       '<div class="jpt-order-head"><div><div class="jpt-label">ORDER ID</div><div class="jpt-order-id">#'+esc(o.order_no||o.id)+'</div></div>'+
-      '<span class="tag jpt-status">'+esc(st.replaceAll('_',' ').toUpperCase())+'</span></div>'+
+      '<span class="tag jpt-status">'+esc(boardStatus(o).replaceAll('_',' ').toUpperCase())+'</span></div>'+
       '<div class="muted" style="margin:6px 0;font-weight:800">OUTLET: '+esc(outletDisplayName(o.outlet_id))+'</div>'+
       '<div class="jpt-customer"><div class="jpt-label">CUSTOMER</div><div class="jpt-customer-name">'+esc(o.customer_name||'Customer')+'</div>'+
       (o.customer_phone?'<div class="muted">'+esc(o.customer_phone)+'</div>':'')+'</div>'+
@@ -332,11 +342,27 @@ async function accept(id){
   const key=String(id);
   if(actionBusy.has(key))return;
   const o=rows.get(key); if(!o)return;
-  if(status(o.status)!=='new'){
-    render();
-    toast('Order already '+status(o.status).toUpperCase()+'. Queue refreshed; duplicate accept blocked.');
-    return;
+  /* A stale NEW card must not issue ACCEPT against an already-progressed order. */
+  let canonical;
+  try{canonical=await read(id,o.outlet_id);}catch(e){
+    toast('ACCEPT paused: server status could not be verified. Refresh Orders before retrying.');
+    await initialLoad().catch(()=>{});render();return;
   }
+  if(!canonical){
+    rows.delete(key);
+    if(activeRingtoneOrderId===key)stopRingtone();
+    await initialLoad().catch(()=>{});
+    toast('Order is no longer in the live server queue; stale card removed.');
+    render();return;
+  }
+  if(status(canonical.status)!=='new'){
+    rows.set(key,mergeOrderMonotonic(o,canonical));
+    if(activeRingtoneOrderId===key)stopRingtone();
+    focusQueueForStatus(canonical.status);
+    toast('Server confirms '+status(canonical.status).toUpperCase()+'. Duplicate ACCEPT blocked.');
+    render();return;
+  }
+  rows.set(key,Object.assign({},o,canonical));
   actionBusy.add(key);
   const minutes=Math.max(15,Math.min(40,Number(o.__draftMinutes||o.target_minutes||15)));
   const local=localDeadline(minutes);
@@ -681,16 +707,22 @@ async function subscribe(){
   channel=channels[0]||null;
 }
 function updateTimers(){
+  let shouldRender=false;
   document.querySelectorAll('[data-timer]').forEach(el=>{
     const o=rows.get(String(el.dataset.timer));if(!o)return;
     const st=status(o.status);
     if(st!=='accepted'&&st!=='preparing')return;
-    el.textContent='Order Ready ('+remaining(o.deadline_at||o.__localDeadline)+')';
+    const deadline=o.deadline_at||o.__localDeadline;
+    el.textContent='Order Ready ('+remaining(deadline)+')';
+    if(deadline && new Date(deadline).getTime()<=Date.now() && el.dataset.readyEnabled!=='1'){
+      el.dataset.readyEnabled='1';shouldRender=true;
+    }
   });
+  if(shouldRender)render();
 }
 function focusQueueForStatus(value){
   const st=status(value);
-  const target=st==='new'?'new':st==='accepted'?'accepted':st==='preparing'?'preparing':st==='ready'?'ready':st==='out_for_delivery'?'out_for_delivery':st==='delivered'?'delivered':null;
+  const target=st==='new'?'new':st==='accepted'?'preparing':st==='preparing'?'preparing':st==='ready'?'ready':st==='out_for_delivery'?'out_for_delivery':st==='delivered'?'delivered':null;
   if(!target)return;
   const btn=[...document.querySelectorAll('.orderQueueBtn')].find(b=>String(b.dataset.queue||'')===target);
   if(!btn)return;
