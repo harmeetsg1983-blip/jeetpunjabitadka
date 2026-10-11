@@ -579,7 +579,9 @@ async function initialLoad(){
     const key=String(o.id);
     if(actionBusy.has(key)||transitionBusy.has(key))return;
     const prior=rows.get(key);
-    const merged=Object.assign({},prior||{},o);
+    /* SELECT results can lag a just-confirmed transition. Never regress a later
+       lifecycle state already observed in this runtime from an older snapshot. */
+    const merged=mergeOrderMonotonic(prior,o);
     if(prior?.__draftMinutes!==undefined)merged.__draftMinutes=prior.__draftMinutes;
     rows.set(key,merged);
   });
@@ -597,8 +599,10 @@ async function initialLoad(){
         /* This is a direct SELECT by order id: its status replaces stale UI state.
            Do not retain __optimisticStatus when the server disagrees. */
         const prior=rows.get(key)||o;
-        const reconciled=Object.assign({},prior,live);
-        if(status(prior.status)!==status(live.status))delete reconciled.__optimisticStatus;
+        /* A lagging SELECT must not undo a later state already seen from the RPC
+           or Realtime. A confirmed server transition is monotonic in this workflow. */
+        const reconciled=mergeOrderMonotonic(prior,live);
+        if(status(prior.status)===status(live.status))delete reconciled.__optimisticStatus;
         if(prior.__draftMinutes!==undefined)reconciled.__draftMinutes=prior.__draftMinutes;
         rows.set(key,reconciled);
       }else if(!actionBusy.has(key)&&!transitionBusy.has(key))rows.delete(key);
