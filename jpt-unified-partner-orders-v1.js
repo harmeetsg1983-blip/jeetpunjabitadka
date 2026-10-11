@@ -452,14 +452,22 @@ async function lifecycleTransition(id,next){
         render();
         return;
       }
-      if(!allowed[next]?.includes(serverState)){
+      /* A read-after-write can briefly return the older NEW value even when the
+         operator has just accepted the order. Do not block a valid UI lifecycle
+         transition solely on that potentially stale SELECT; let the transition RPC
+         validate the authoritative state and reconcile from its response/error. */
+      const uiState=status(before.status);
+      const readLooksStale=(serverState==='new' && ['accepted','preparing'].includes(uiState));
+      if(!allowed[next]?.includes(serverState) && !readLooksStale){
         rows.set(key,Object.assign({},o,fresh));
         toast('Order update blocked: server status is '+serverState.toUpperCase()+'.');
         render();
         return;
       }
-      rows.set(key,Object.assign({},o,fresh));
-      o.status=serverState;
+      if(!readLooksStale){
+        rows.set(key,Object.assign({},o,fresh));
+        o.status=serverState;
+      }
     }else if(!allowed[next]?.includes(status(before.status))){
       Object.assign(o,before); rows.set(key,o); render();
       toast('Order update paused: current server state could not be verified.');
