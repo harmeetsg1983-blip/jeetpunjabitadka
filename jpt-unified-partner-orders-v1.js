@@ -85,12 +85,28 @@ function managedOutlets(){
   const access=window.JPTPartnerAccess;
   const list=access?.getOutlets?.()||window.JPT_PARTNER_OUTLETS||[];
   const codes=list.map(x=>String(x?.outlet_id||x?.code||x?.id||'')).filter(Boolean);
-  /* If the access bridge is present, an empty authorization list means access
-     is still loading or unavailable. Never silently fall back to JPT-001:
-     that makes other outlets ring without their order cards being queryable. */
+  /* When the access bridge exists, only its authorized list is trusted.
+     An empty list is a loading/error state, never permission to use JPT-001. */
   if(access && typeof access.getOutlets==='function')return [...new Set(codes)];
   const current=outlet();
   return [...new Set(codes.length?codes:[current])];
+}
+async function resolveManagedOutlets(){
+  let codes=managedOutlets();
+  if(codes.length)return codes;
+  const access=window.JPTPartnerAccess;
+  if(access && typeof access.reload==='function'){
+    try{ await access.reload(); }catch(e){
+      console.warn('[JPT Orders] outlet access reload failed',e);
+    }
+    codes=managedOutlets();
+  }
+  /* Give the bridge a short opportunity to finish if it was initialized late. */
+  for(let i=0;!codes.length&&i<4;i++){
+    await new Promise(resolve=>setTimeout(resolve,250));
+    codes=managedOutlets();
+  }
+  return [...new Set(codes.map(String).filter(Boolean))];
 }
 function orderBelongsToManagedOutlet(o){ return managedOutlets().includes(String(o?.outlet_id||'')); }
 function shouldShowOnBoard(o){
@@ -357,6 +373,9 @@ async function accept(id){
   const key=String(id);
   if(actionBusy.has(key))return;
   const o=rows.get(key); if(!o)return;
+  /* Stop the single shared ringtone immediately on the operator's ACCEPT tap,
+     before the server verification round-trip. */
+  if(activeRingtoneOrderId===key)stopRingtone();
   /* A stale NEW card must not issue ACCEPT against an already-progressed order. */
   let canonical;
   try{canonical=await read(id,o.outlet_id);}catch(e){
@@ -592,7 +611,7 @@ async function lifecycleTransition(id,next){
 async function markReady(id){return lifecycleTransition(id,'ready')}
 async function transition(id,next){return lifecycleTransition(id,next)}
 async function initialLoad(){
-  const codes=managedOutlets();
+  const codes=await resolveManagedOutlets();
   if(!codes.length){
     rows.clear();
     stopRingtone();
@@ -670,8 +689,13 @@ async function subscribe(){
   for(const ch of channels){try{await window.sb.removeChannel(ch)}catch(e){}}
   channels=[];
   channel=null;
-  const codes=managedOutlets();
-  if(!codes.length)return;
+  const codes=await resolveManagedOutlets();
+  if(!codes.length){
+    const n=document.getElementById('ordersNotice');
+    if(n)n.textContent='Partner outlet access is still unavailable. Re-login or refresh access; no fallback outlet was used.';
+    console.warn('[JPT Orders] Realtime not started: authorized outlet list is empty.');
+    return;
+  }
   const liveCodes=[...new Set(codes.map(String).filter(Boolean))];
   for(const code of liveCodes){
     const ch=window.sb.channel('jpt-unified-orders-'+code+'-'+Date.now());
@@ -743,7 +767,8 @@ async function subscribe(){
     });
     ch.subscribe((s,e)=>{
       const n=document.getElementById('ordersNotice');
-      if(s==='SUBSCRIBED')n&&(n.textContent='LIVE • Supabase Realtime connected • '+code);
+      console.info('[JPT-DIAG][channel status]',{outlet:code,status:s,error:e||null,managedOutlets:managedOutlets()});
+      if(s==='SUBSCRIBED')n&&(n.textContent='LIVE • Supabase Realtime connected • '+liveCodes.length+' managed outlet(s)');
       if(s==='CHANNEL_ERROR'||s==='TIMED_OUT')n&&(n.textContent='Realtime reconnecting • '+code+'…');
       if(e)console.warn('[JPT Unified Orders '+code+']',s,e);
     });
@@ -800,6 +825,8 @@ async function startAuthenticatedRuntime(){
     }
     /* Access mapping must be ready before outlet-scoped orders queries start. */
     if(window.JPTPartnerAccess?.reload)await window.JPTPartnerAccess.reload();
+    const authorized=await resolveManagedOutlets();
+    console.info('[JPT-DIAG][authorized outlets ready]',{count:authorized.length,outlets:authorized});
     await initialLoad();
     await subscribe();
     runtimeStarted=true;
