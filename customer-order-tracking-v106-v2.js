@@ -49,6 +49,47 @@
     s.textContent += '.jpt-track-rider{margin:0 16px 16px;padding:16px;border-radius:20px;background:#fff;border:1px solid #ececec;box-shadow:0 8px 24px #00000010}.jpt-rider-head{display:flex;align-items:center;gap:12px}.jpt-rider-avatar{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,#111,#3b321e);color:#f6d76b;display:grid;place-items:center;font-size:18px;font-weight:1000;flex:none;border:1px solid #d8ae42}.jpt-rider-name{font-size:17px;font-weight:1000;color:#15171b}.jpt-rider-meta{font-size:11px;color:#777;margin-top:3px}.jpt-rider-actions{display:flex;gap:8px;margin-top:12px}.jpt-rider-action{flex:1;text-align:center;text-decoration:none;padding:11px 8px;border-radius:12px;font-weight:1000;font-size:12px}.jpt-rider-call{background:#18a66d;color:#fff}.jpt-rider-map{background:#f4c84a;color:#111}.jpt-rider-rating{display:inline-flex;align-items:center;gap:4px;margin-top:7px;padding:5px 8px;border-radius:999px;background:#fff8dc;color:#8b6800;font-size:11px;font-weight:1000}.jpt-rider-live{margin-top:11px;padding:10px 12px;border-radius:12px;background:#f6f7f9;color:#4c4f55;font-size:12px;font-weight:800}.jpt-rider-status{font-size:10px;color:#159866;font-weight:1000;text-transform:uppercase;letter-spacing:.4px}.jpt-track-actions{display:flex;gap:8px;margin-top:12px}.jpt-track-action{flex:1;padding:11px 9px;border:0;border-radius:12px;font-weight:1000;font-size:12px;text-align:center;text-decoration:none;cursor:pointer}.jpt-track-wa{background:#18a66d;color:#fff}.jpt-track-help{background:#f4c84a;color:#111}.jpt-track-summary{margin:0 16px 16px;padding:16px;border-radius:20px;background:#fff;border:1px solid #ececec;box-shadow:0 8px 24px #00000010}.jpt-track-summary-title{font-weight:1000;font-size:15px;margin-bottom:9px}.jpt-track-summary-row{display:flex;justify-content:space-between;gap:10px;margin:7px 0;font-size:12px;color:#555}.jpt-track-summary-total{font-weight:1000;color:#15171b;border-top:1px solid #eee;padding-top:9px}';document.head.appendChild(s);
   }
 
+  function showOrderCelebration(kind,o){
+    kind=String(kind||'').toLowerCase();
+    if(kind!=='accepted'&&kind!=='delivered')return;
+    var orderNo=String(o&&o.order_no||'').trim();
+    if(!orderNo)return;
+    var key='jpt_order_celebration_'+orderNo+'_'+kind;
+    try{if(localStorage.getItem(key)==='1')return;localStorage.setItem(key,'1')}catch(e){}
+    var prior=document.getElementById('jptOrderCelebration');
+    if(prior)prior.remove();
+    var style=document.getElementById('jptOrderCelebrationStyle');
+    if(!style){
+      style=document.createElement('style');style.id='jptOrderCelebrationStyle';
+      style.textContent='@keyframes jptRibbonFall{0%{transform:translate3d(0,-15vh,0) rotate(0deg);opacity:0}8%{opacity:1}100%{transform:translate3d(var(--drift,35px),115vh,0) rotate(760deg);opacity:0}}@keyframes jptCelebratePop{0%{transform:translateY(18px) scale(.82);opacity:0}75%{transform:translateY(-3px) scale(1.03);opacity:1}100%{transform:translateY(0) scale(1);opacity:1}}@keyframes jptThumbGlow{0%,100%{box-shadow:0 0 0 0 #e7bd4b55}50%{box-shadow:0 0 0 16px #e7bd4b00}}.jpt-celebrate-ribbon{position:absolute;top:-14vh;left:var(--left);width:9px;height:28px;border-radius:3px;background:var(--ribbon);opacity:0;animation:jptRibbonFall var(--duration) linear var(--delay) forwards;pointer-events:none}.jpt-celebrate-card{position:relative;width:min(390px,calc(100vw - 34px));padding:28px 20px 20px;border-radius:26px;text-align:center;background:linear-gradient(150deg,#fff,#fff9e9);border:2px solid #e3b94c;box-shadow:0 24px 80px #0008;animation:jptCelebratePop .55s cubic-bezier(.2,.8,.2,1) both;color:#171717}.jpt-celebrate-thumb{display:grid;place-items:center;margin:0 auto 13px;width:88px;height:88px;border-radius:50%;background:linear-gradient(145deg,#ffdf72,#d7a52b);font-size:47px;animation:jptThumbGlow 1.8s ease-in-out infinite}.jpt-celebrate-title{font-size:25px;font-weight:1000;line-height:1.15;color:#161616}.jpt-celebrate-sub{font-size:14px;line-height:1.5;color:#595959;margin-top:9px}.jpt-celebrate-order{font-size:11px;font-weight:900;color:#8c6b1c;margin-top:12px}.jpt-celebrate-actions{display:flex;gap:9px;margin-top:19px}.jpt-celebrate-actions button{flex:1;min-width:0;border:0;border-radius:13px;padding:12px 9px;font-size:12px;font-weight:900}.jpt-celebrate-primary{background:linear-gradient(180deg,#f8d875,#d9a52d);color:#171717}.jpt-celebrate-secondary{background:#171717;color:#fff}@media(prefers-reduced-motion:reduce){.jpt-celebrate-ribbon,.jpt-celebrate-card,.jpt-celebrate-thumb{animation:none!important}}';
+      document.head.appendChild(style);
+    }
+    var overlay=document.createElement('div');overlay.id='jptOrderCelebration';
+    overlay.style.cssText='position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:17px;overflow:hidden;background:radial-gradient(ellipse at center,#16120beF 0%,#030303f7 72%);';
+    var palette=['#f5d477','#f8f1d0','#e8b83d','#16a778','#ff6b6b','#5ca8ff','#ce82ff','#ffffff'];
+    for(var ri=0;ri<42;ri++){
+      var ribbon=document.createElement('i');ribbon.className='jpt-celebrate-ribbon';
+      ribbon.style.setProperty('--left',(Math.random()*100)+'%');
+      ribbon.style.setProperty('--ribbon',palette[ri%palette.length]);
+      ribbon.style.setProperty('--duration',(3.1+Math.random()*3.5)+'s');
+      ribbon.style.setProperty('--delay',(Math.random()*1.2)+'s');
+      ribbon.style.setProperty('--drift',((Math.random()-.5)*180)+'px');
+      overlay.appendChild(ribbon);
+    }
+    var accepted=kind==='accepted';
+    var outletName=String(o&&o.outlet_name||o&&o.restaurant_name||OUTLET_FALLBACK_NAMES[String(o&&o.outlet_id||'')]||'your restaurant');
+    var title=accepted?'Order Accepted!':'Order Received!';
+    var subtitle=accepted?'Great news — '+outletName+' has accepted your order. We’ll keep you updated as it is prepared.':'Thank you for ordering with '+outletName+'. We hope every bite makes you smile!';
+    var card=document.createElement('div');card.className='jpt-celebrate-card';
+    card.innerHTML='<div class="jpt-celebrate-thumb" aria-hidden="true">'+(accepted?'👍':'🎉')+'</div><div class="jpt-celebrate-title">'+esc(title)+'</div><div class="jpt-celebrate-sub">'+esc(subtitle)+'</div><div class="jpt-celebrate-order">ORDER '+esc(orderNo)+' · '+(accepted?'KITCHEN CONFIRMED':'DELIVERY COMPLETE')+'</div><div class="jpt-celebrate-actions"><button type="button" class="jpt-celebrate-primary" id="jptCelebrateClose">'+(accepted?'LET’S GO ✨':'LOVED IT 👍')+'</button>'+(accepted?'':'<button type="button" class="jpt-celebrate-secondary" id="jptCelebrateHelp">HELP / SUPPORT</button>')+'</div>';
+    overlay.appendChild(card);document.body.appendChild(overlay);
+    function close(){var node=document.getElementById('jptOrderCelebration');if(node)node.remove()}
+    var closeBtn=card.querySelector('#jptCelebrateClose');if(closeBtn)closeBtn.onclick=close;
+    var help=card.querySelector('#jptCelebrateHelp');if(help)help.onclick=function(){var msg='Hello, I need help with order '+orderNo;window.open('https://wa.me/919148161094?text='+encodeURIComponent(msg),'_blank','noopener');close()};
+    overlay.addEventListener('click',function(ev){if(ev.target===overlay)close()});
+    window.setTimeout(close,accepted?6500:8000);
+  }
+
   function ensureCustomerBell(){
     var bell=document.getElementById('jptCustomerBell');
     if(!bell){
@@ -420,7 +461,7 @@
         if(r.error)throw r.error;
         var ok=Array.isArray(r.data)?(r.data[0]?.ok===true):r.data===true;
         if(!ok){b.disabled=false;b.textContent='I RECEIVED MY ORDER';return}
-        o.status='delivered';save(o);render(o);
+        o.status='delivered';save(o);showOrderCelebration('delivered',o);render(o);
       }catch(e){b.disabled=false;b.textContent='I RECEIVED MY ORDER';if(typeof window.toast==='function')window.toast('Delivery confirmation failed. Please try again.')}
     };
   }
@@ -436,6 +477,7 @@
         var nextStatus=String(row.status||'').toLowerCase().trim().replace(/\s+/g,'_');
         if(!lastStatus){addCustomerNotice('Order placed','Your order is saved and waiting for restaurant acceptance.');notifyCustomer('JPT — Order placed','Your order is saved and waiting for restaurant acceptance.','jpt-order-placed-'+o.order_no);}
         else if(nextStatus!==lastStatus){var titles={accepted:'Order accepted',preparing:'Order is being prepared',ready:'Order is READY',out_for_delivery:'Order is out for delivery',delivered:'Order delivered',cancelled:'Order cancelled'};var nt=titles[nextStatus]||'Order status updated';addCustomerNotice(nt,statusInfo(row).sub);notifyCustomer('JPT — '+nt,statusInfo(row).sub,'jpt-order-status-'+o.order_no+'-'+nextStatus);}
+        if(lastStatus && nextStatus!==lastStatus && (nextStatus==='accepted'||nextStatus==='delivered'))showOrderCelebration(nextStatus,Object.assign({},o,row));
         if(lastStatus && lastStatus!=='accepted' && nextStatus==='accepted') playCustomerAcceptedTone();
         lastStatus=nextStatus;
         var tr=await sb.rpc('get_customer_delivery_tracking',{p_order_no:o.order_no,p_phone:o.phone});
