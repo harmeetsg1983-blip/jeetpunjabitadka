@@ -156,3 +156,11 @@ These are pending test instructions only; no live assignment, database, or physi
 - Reconfirmed connector cache-buster loads slider V4 and the staging app references connector V4.
 - The exact user-supplied Welcome poster is still not committed as a public repository asset, so the permanent top Welcome banner is not complete. A binary asset upload is required; do not substitute generated or unrelated banners.
 - Live browser/device verification remains outstanding: sponsor upload/publish, five-second refresh propagation, delete propagation, 11-second rotation, and mobile rendering. Do not mark this feature production-ready until those tests pass.
+
+
+### Final re-audit before handoff — 2026-10-12
+- Re-fetched the live staging sources. Slider and connector both pass JavaScript parse checks; connector version V4 is referenced by the staging app; V4 singleton guard is correct; gold-only CSS and 11-second interval are present.
+- Reconfirmed the Partner sponsor manager includes delivery sponsor table/bucket selection, image file/gallery input, image preview/crop/zoom controls, publish/save, active toggle, and delete controls.
+- **Hard blocker remains:** no exact user-supplied Delivery Partner Welcome poster binary is present in the repository tree, and the staging app does not yet contain a top permanent Welcome banner. I did not substitute a generated or unrelated image and did not add a broken asset reference.
+- **Runtime test gate remains:** no authenticated browser/device session was available in this pass to execute owner upload → publish → rider display → delete propagation. Source-level checks are not evidence of end-to-end completion. No production merge/deploy and no backend policy/schema changes.
+- **Paused work to resume after this feature is genuinely complete:** owner-only private Aadhaar/selfie retrieval design and controlled authorization tests, as recorded in the Owner KYC document access audit section above. Do not forget this continuation point.
