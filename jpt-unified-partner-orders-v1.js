@@ -89,10 +89,11 @@ function managedOutlets(){
 }
 function orderBelongsToManagedOutlet(o){ return managedOutlets().includes(String(o?.outlet_id||'')); }
 function shouldShowOnBoard(o){
-  /* Strict board cutoff: pre-cutover orders stay hidden regardless of stale active status.
-     Realtime INSERT/UPDATE must obey the same cutoff as initialLoad. */
-  const created=Date.parse(o?.created_at||'');
-  return Number.isFinite(created)&&created>=Date.parse(BOARD_CUTOVER_AT);
+  /* The queue is lifecycle-based, not date-cutoff-based.
+     Active orders must remain visible even when created before a rollout/cutover.
+     Delivered/cancelled orders remain available in their own history tabs. */
+  return ['new','accepted','preparing','ready','out_for_delivery','delivered','cancelled']
+    .includes(status(o?.status));
 }
 function esc(v){
   return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -255,8 +256,13 @@ function actionHtml(o){
 function render(){
   const body=document.getElementById('ordersBody');
   if(!body)return;
-  const all=[...rows.values()].filter(orderBelongsToManagedOutlet).sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
-  const filtered=selectedQueue==='all'?all:all.filter(o=>status(o.status)===selectedQueue);
+  const all=[...rows.values()].filter(o=>orderBelongsToManagedOutlet(o)&&shouldShowOnBoard(o))
+    .sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
+  /* ALL is the active workboard only. Completed/cancelled records belong in history tabs
+     and must never return to ALL or trigger active-order actions. */
+  const filtered=selectedQueue==='all'
+    ? all.filter(o=>LIVE_STATUSES.has(status(o.status)))
+    : all.filter(o=>status(o.status)===selectedQueue);
   body.innerHTML=filtered.map(o=>{
     const st=status(o.status);
     const target=Math.max(15,Math.min(40,Number(o.target_minutes||o.__draftMinutes||15)));
@@ -549,8 +555,8 @@ async function initialLoad(){
   /* Hide only old terminal/history orders. Active lifecycle orders must remain visible
      even when they were created before the board cutover. */
   const r=codes.length===1
-    ? await window.sb.from('orders').select('*').eq('outlet_id',codes[0]).gte('created_at',BOARD_CUTOVER_AT).order('created_at',{ascending:false}).limit(100)
-    : await window.sb.from('orders').select('*').in('outlet_id',codes).gte('created_at',BOARD_CUTOVER_AT).order('created_at',{ascending:false}).limit(500);
+    ? await window.sb.from('orders').select('*').eq('outlet_id',codes[0]).order('created_at',{ascending:false}).limit(100)
+    : await window.sb.from('orders').select('*').in('outlet_id',codes).order('created_at',{ascending:false}).limit(500);
   if(r.error){
     /* A failed/unauthorized refresh must never leave old cards presented as current NEW orders. */
     rows.clear();
