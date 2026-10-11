@@ -10,7 +10,7 @@ window.__JPT_UNIFIED_ORDER_RUNTIME__=true;
 window.__JPTOrdersV3Active=true;
 
 const LIVE_STATUSES=new Set(['new','accepted','preparing','ready','out_for_delivery']);
-const BOARD_CUTOVER_AT='2026-10-10T19:43:00.000Z';
+const BOARD_CUTOVER_AT='2026-10-11T09:16:21.000Z';
 const rows=new Map();
 const actionBusy=new Set();
 let channel=null;
