@@ -278,6 +278,16 @@ function render(){
   const filtered=selectedQueue==='all'
     ? all.filter(o=>LIVE_STATUSES.has(status(o.status)))
     : all.filter(o=>boardStatus(o)===selectedQueue);
+  /* TEMP JPT diagnostics: report only recent NEW orders; no customer PII. */
+  const diagCutoff=Date.now()-24*60*60*1000;
+  const recentNew=[...rows.values()].filter(o=>status(o.status)==='new'&&new Date(o.created_at||0).getTime()>=diagCutoff);
+  if(recentNew.length)console.info('[JPT-DIAG][render]',{
+    selectedQueue,
+    recentNew:recentNew.map(o=>({id:String(o.id),order_no:o.order_no,outlet_id:o.outlet_id,status:status(o.status),
+      managed:orderBelongsToManagedOutlet(o),showOnBoard:shouldShowOnBoard(o),
+      inAll:all.some(x=>String(x.id)===String(o.id)),inFiltered:filtered.some(x=>String(x.id)===String(o.id))})),
+    rowIds:[...rows.keys()]
+  });
   body.innerHTML=filtered.map(o=>{
     const st=status(o.status);
     const target=Math.max(15,Math.min(40,Number(o.target_minutes||o.__draftMinutes||15)));
@@ -667,7 +677,21 @@ async function subscribe(){
     const ch=window.sb.channel('jpt-unified-orders-'+code+'-'+Date.now());
     ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
       const o=payload?.new;
-      if(!o || String(o.outlet_id)!==code || !liveCodes.includes(String(o.outlet_id)))return;
+      console.info('[JPT-DIAG][INSERT received]',{
+        channelOutlet:code,eventType:payload?.eventType,
+        id:o?.id==null?null:String(o.id),order_no:o?.order_no,
+        outlet_id:o?.outlet_id,status:o?.status,
+        managedOutlets:managedOutlets(),
+        outletMatches:!!o&&String(o.outlet_id)===code,
+        outletIsSubscribed:!!o&&liveCodes.includes(String(o.outlet_id)),
+        belongsToManagedOutlet:!!o&&orderBelongsToManagedOutlet(o),
+        shouldShowOnBoard:!!o&&shouldShowOnBoard(o),
+        rowIdsBefore:[...rows.keys()]
+      });
+      if(!o || String(o.outlet_id)!==code || !liveCodes.includes(String(o.outlet_id))){
+        console.warn('[JPT-DIAG][INSERT rejected by outlet gate]',{channelOutlet:code,id:o?.id,outlet_id:o?.outlet_id,managedOutlets:managedOutlets()});
+        return;
+      }
       /* Enforce the board cutover on Realtime too; otherwise pre-cutover orders
          can reappear after initialLoad correctly hides them. */
       if(!shouldShowOnBoard(o)){
@@ -680,12 +704,17 @@ async function subscribe(){
       /* Never let a delayed INSERT payload roll an order backward or overwrite
          an action currently being committed. Replayed NEW events must not ring
          if the in-memory/server-confirmed lifecycle has already advanced. */
-      if(actionBusy.has(key)||transitionBusy.has(key))return;
+      if(actionBusy.has(key)||transitionBusy.has(key)){
+        console.warn('[JPT-DIAG][INSERT skipped busy]',{id:key,actionBusy:actionBusy.has(key),transitionBusy:transitionBusy.has(key)});
+        return;
+      }
       const previous=rows.get(key);
       const merged=mergeOrderMonotonic(previous,o);
       const isNew=status(merged.status)==='new';
       rows.set(key,Object.assign({},merged,{__liveNew:isNew}));
+      console.info('[JPT-DIAG][INSERT stored]',{id:key,order_no:merged.order_no,outlet_id:merged.outlet_id,status:status(merged.status),isNew,rowIdsAfter:[...rows.keys()]});
       render();
+      console.info('[JPT-DIAG][INSERT rendered]',{id:key,cardExists:!!document.querySelector('[data-order-card="'+CSS.escape(key)+'"]'),queue:selectedQueue});
       if(isNew)startRingtone(merged);
     });
     ch.on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
