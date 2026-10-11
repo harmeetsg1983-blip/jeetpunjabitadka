@@ -53,3 +53,9 @@
 6. Repeat on a real Android device after a reload. Record browser/OS, assignment IDs (test IDs only), and outcomes before any deployment decision.
 
 These are pending test instructions only; no live assignment, database, or physical-device result is implied.
+
+## 2026-10-12 — Ignore stale GPS positions before RPC
+- One-shot geolocation now checks that the originally captured assignment is still current before calling `delivery_partner_record_location`; otherwise it resolves false and exits.
+- Continuous watch callbacks perform the same assignment-identity check before making the location RPC, so an already-queued callback from a cleared watch is dropped.
+- Source checks passed: stale one-shot position dropped; stale watch position dropped before RPC; location RPC contract unchanged; order lifecycle and ringtone constants retained.
+- This is source-level verification only. Device/browser and backend behavior remain untested; staging only.
