@@ -689,7 +689,14 @@ function focusQueueForStatus(value){
 }
 function bindQueue(){
   document.querySelectorAll('.orderQueueBtn').forEach(b=>{
-    b.onclick=()=>{selectedQueue=b.dataset.queue||'all';document.querySelectorAll('.orderQueueBtn').forEach(x=>x.classList.toggle('gold',x===b));render()};
+    b.onclick=async()=>{
+      selectedQueue=b.dataset.queue||'all';
+      document.querySelectorAll('.orderQueueBtn').forEach(x=>x.classList.toggle('gold',x===b));
+      /* Always reconcile queue cards against Supabase before rendering. */
+      try{ await initialLoad(); await subscribe(); }
+      catch(e){ console.error('[JPT queue refresh]',e); toast('Queue refresh failed. Please use Refresh Orders before taking another action.'); }
+      render();
+    };
   });
 }
 let runtimeStarted=false,runtimeStartBusy=false;
