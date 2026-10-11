@@ -1,9 +1,9 @@
-/* JPT Delivery Sponsor Connector V3 */
+/* JPT Delivery Sponsor Connector V4 — staging cache bust */
 (function(){
 'use strict';
 
-if(window.__JPT_DELIVERY_SPONSOR_CONNECTOR_V3__)return;
-window.__JPT_DELIVERY_SPONSOR_CONNECTOR_V3__=true;
+if(window.__JPT_DELIVERY_SPONSOR_CONNECTOR_V4__)return;
+window.__JPT_DELIVERY_SPONSOR_CONNECTOR_V4__=true;
 
 function load(src,attr){
   return new Promise((resolve)=>{
@@ -20,8 +20,8 @@ function load(src,attr){
 
 async function boot(){
   await load(
-    './jpt-delivery-sponsor-slider-v3.js?v=3',
-    'data-jpt-delivery-sponsor-v3'
+    './jpt-delivery-sponsor-slider-v3.js?v=4',
+    'data-jpt-delivery-sponsor-v4'
   );
 }
 
