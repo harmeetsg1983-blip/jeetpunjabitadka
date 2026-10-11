@@ -523,10 +523,15 @@ async function lifecycleTransition(id,next){
     if(fresh){
       /* Reconciliation reads may briefly lag behind a confirmed transition.
          Preserve a later lifecycle state already observed by this runtime. */
-      const reconciled=mergeOrderMonotonic(rows.get(key)||o,fresh);
+      /* A direct server read resolves a failed transition. Prefer the server's
+         current status here so a stale ACCEPTED card cannot survive a NEW response. */
+      const prior=rows.get(key)||o;
+      const reconciled=Object.assign({},prior,fresh);
+      if(status(prior.status)!==status(fresh.status))delete reconciled.__optimisticStatus;
+      if(prior.__draftMinutes!==undefined)reconciled.__draftMinutes=prior.__draftMinutes;
       rows.set(key,reconciled);
       focusQueueForStatus(reconciled.status);
-      toast('Order state reconciled: '+status(reconciled.status).toUpperCase()+'. '+(String(e?.message||e)));
+      toast('Order state reconciled from server: '+status(reconciled.status).toUpperCase()+'. '+(String(e?.message||e)));
     }else{
       Object.assign(o,before);
       rows.set(key,o);
