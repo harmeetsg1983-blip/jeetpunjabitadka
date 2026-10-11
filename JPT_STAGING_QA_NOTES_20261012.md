@@ -13,6 +13,7 @@
 - Confirmed the lower tracking carousel is outlet-scoped and filters for active campaigns whose `schedule_json.controller` is `jpt-outlet-media-v1` and `placement` is `lower`.
 - Reviewed Delivery Partner V13 staging sections and identified its existing flow boundaries: verification/onboarding, delivery offer response, assignment snapshot, pickup/out-for-delivery/delivered transitions, and GPS location flow remain in the staging copy. These handlers were not modified in this pass.
 - Added isolated sponsor-slider media error handling: if an image/video fails to load, the slider advances after a short delay when another item exists; with a single broken item, the sponsor surface hides instead of remaining blank. This is limited to the staging branch.
+- Added a customer tracking celebration overlay for the `accepted` and `delivered` order status transitions: animated multicolour/gold ribbons, thumbs-up/celebration icon, outlet-specific copy, order number, and a delivery-complete help option. It is deduplicated per order/status in local storage and does not change the order state or write feedback to the database. The customer's explicit `I RECEIVED MY ORDER` confirmation also triggers the delivered celebration after the existing RPC succeeds.
 
 ## Important verification limits
 - This was a source review only. No browser/device execution or live end-to-end order was performed.
