@@ -451,7 +451,7 @@ async function lifecycleTransition(id,next){
   /* Optimistic state mutation makes the card/status react immediately.
      Every path below reconciles against the authoritative database row. */
   o.status=next;
-  delete o.__optimisticStatus;
+  o.__optimisticStatus=next;
   rows.set(key,o);
   render();
   try{
@@ -548,8 +548,19 @@ async function initialLoad(){
     toast('Orders load failed: '+r.error.message+' — stale cards cleared; check partner session/outlet access.');
     return;
   }
-  rows.clear();
-  (r.data||[]).forEach(o=>rows.set(String(o.id),o));
+  /* Merge refresh results instead of clearing the live map. */
+  const incomingIds=new Set((r.data||[]).map(o=>String(o.id)));
+  for(const [key,old] of [...rows.entries()]){
+    if(!incomingIds.has(key)&&!actionBusy.has(key)&&!transitionBusy.has(key)){
+      rows.delete(key);
+      if(activeRingtoneOrderId===key)stopRingtone();
+    }
+  }
+  (r.data||[]).forEach(o=>{
+    const key=String(o.id);
+    if(actionBusy.has(key)||transitionBusy.has(key))return;
+    rows.set(key,mergeOrderMonotonic(rows.get(key),o));
+  });
 
   /* Reconcile cards against the same server lookup used by action recovery.
      Missing/unreadable rows are hidden from this in-memory queue only.
@@ -557,9 +568,11 @@ async function initialLoad(){
   const checks=[...rows.entries()];
   for(let i=0;i<checks.length;i+=8){
     await Promise.all(checks.slice(i,i+8).map(async([key,o])=>{
+      if(actionBusy.has(key)||transitionBusy.has(key))return;
       const live=await read(o.id,o.outlet_id).catch(()=>null);
-      if(live)rows.set(key,mergeOrderMonotonic(o,live));
-      else rows.delete(key);
+      if(actionBusy.has(key)||transitionBusy.has(key))return;
+      if(live)rows.set(key,mergeOrderMonotonic(rows.get(key)||o,live));
+      else if(!actionBusy.has(key)&&!transitionBusy.has(key))rows.delete(key);
     }));
   }
   render();
@@ -601,6 +614,7 @@ async function subscribe(){
       }
       const old=rows.get(String(o.id))||{};
       const oldStatus=status(old.status);
+      if(actionBusy.has(String(o.id))||transitionBusy.has(String(o.id)))return;
       const merged=mergeOrderMonotonic(old,o);
       const nextStatus=status(merged.status);
       rows.set(String(o.id),merged);
