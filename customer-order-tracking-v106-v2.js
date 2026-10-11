@@ -204,8 +204,15 @@
         '<div class="jpt-track-ad-label">'+esc(item.title||data.name||'Restaurant Partner')+'</div>';
       var media=host.querySelector('video,img');
       if(item.isVideo&&media){
+        media.muted=true;
         media.onended=function(){index=(index+1)%items.length;outletMediaIndexes[data.code]=index;showItem()};
         media.onerror=function(){if(items.length>1){index=(index+1)%items.length;outletMediaIndexes[data.code]=index;showItem()}};
+        var sound=document.createElement('button');
+        sound.type='button';sound.className='jpt-track-ad-sound';sound.textContent='🔇 SOUND OFF';
+        sound.setAttribute('aria-label','Toggle banner video sound');
+        sound.style.cssText='position:absolute;right:9px;bottom:9px;z-index:4;border:1px solid #d8ae42;border-radius:99px;padding:7px 10px;background:#111e;color:#f5d477;font-weight:900;font-size:10px';
+        sound.onclick=function(){media.muted=!media.muted;sound.textContent=media.muted?'🔇 SOUND OFF':'🔊 SOUND ON';media.play().catch(function(){})};
+        host.appendChild(sound);
         media.play().catch(function(){});
       }else{
         outletMediaTimers[data.code]=setTimeout(function(){index=(index+1)%items.length;outletMediaIndexes[data.code]=index;showItem()},11000);
