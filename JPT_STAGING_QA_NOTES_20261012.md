@@ -119,3 +119,5 @@ These are pending test instructions only; no live assignment, database, or physi
 - This guard detects an existing controller; it does not unregister it or attempt to change production browser state. The staging page still does not register the production worker and does not load the push-subscription helper.
 - Post-change source checks passed: warning markup, controller detection, warning visibility toggle, install CTA hide/block, controller-change recheck, no production worker registration, delivery status RPC retained, foreground ringtone functions retained.
 - Limitation: source checks do not prove behavior in a browser. Clean-profile device validation and real order/GPS tests remain pending; do not install or test from a profile showing the warning.
+
+- Follow-up safety audit: `beforeinstallprompt` now checks the runtime service-worker controller guard before showing the install CTA; if controlled, the prompt is discarded and the CTA remains hidden. Static source check only; still requires clean-profile browser verification.
