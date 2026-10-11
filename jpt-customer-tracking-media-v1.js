@@ -1,6 +1,6 @@
 /* JPT Customer Tracking Media V1
    Isolated media carousel for the post-checkout tracking screen only.
-   Reads existing checkout_sponsor_ads; no database/schema changes.
+   Reads the existing public.campaigns table; no database/schema changes.
    Does not wrap or modify checkout/order lifecycle code.
 */
 (function(){
