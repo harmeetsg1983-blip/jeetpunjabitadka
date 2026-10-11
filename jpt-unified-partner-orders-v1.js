@@ -514,9 +514,12 @@ async function lifecycleTransition(id,next){
       fresh=rows.get(key)||null;
     }
     if(fresh){
-      rows.set(key,Object.assign({},rows.get(key)||o,fresh));
-      focusQueueForStatus(fresh.status);
-      toast('Order state reconciled from server: '+status(fresh.status).toUpperCase()+'. '+(String(e?.message||e)));
+      /* Reconciliation reads may briefly lag behind a confirmed transition.
+         Preserve a later lifecycle state already observed by this runtime. */
+      const reconciled=mergeOrderMonotonic(rows.get(key)||o,fresh);
+      rows.set(key,reconciled);
+      focusQueueForStatus(reconciled.status);
+      toast('Order state reconciled: '+status(reconciled.status).toUpperCase()+'. '+(String(e?.message||e)));
     }else{
       Object.assign(o,before);
       rows.set(key,o);
@@ -598,9 +601,17 @@ async function subscribe(){
         render();
         return;
       }
-      rows.set(String(o.id),Object.assign({},o,{__liveNew:true}));
+      const key=String(o.id);
+      /* Never let a delayed INSERT payload roll an order backward or overwrite
+         an action currently being committed. Replayed NEW events must not ring
+         if the in-memory/server-confirmed lifecycle has already advanced. */
+      if(actionBusy.has(key)||transitionBusy.has(key))return;
+      const previous=rows.get(key);
+      const merged=mergeOrderMonotonic(previous,o);
+      const isNew=status(merged.status)==='new';
+      rows.set(key,Object.assign({},merged,{__liveNew:isNew}));
       render();
-      if(status(o.status)==='new')startRingtone(o);
+      if(isNew)startRingtone(merged);
     });
     ch.on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
       const o=payload?.new;
