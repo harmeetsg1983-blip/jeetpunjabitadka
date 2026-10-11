@@ -973,9 +973,18 @@ async function boot(){
       setTimeout(()=>{startAuthenticatedRuntime().catch(()=>{});},0);
     }else if(event==='SIGNED_OUT'){
       runtimeStarted=false;
+      runtimeStartBusy=false;
+      /* Do not let a pending reconnect recreate subscriptions after logout. */
+      if(realtimeRetryHandle!==null){clearTimeout(realtimeRetryHandle);realtimeRetryHandle=null;}
+      realtimeRetryCount=0;
+      for(const ch of channels){try{window.sb.removeChannel(ch);}catch(e){}}
+      channels=[];
+      channel=null;
       rows.clear();
       stopRingtone();
       render();
+      const n=document.getElementById('ordersNotice');
+      if(n)n.textContent='Signed out. Realtime subscriptions stopped; log in again to load partner orders.';
     }
   });
   await startAuthenticatedRuntime();
