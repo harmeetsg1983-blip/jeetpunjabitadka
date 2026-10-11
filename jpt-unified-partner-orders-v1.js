@@ -270,9 +270,7 @@ function render(){
     const itemHtml=its.length?its.map(i=>
       '<div class="jpt-item-line"><span>'+esc(i.name||i.item_name||'Item')+'</span><b>× '+Number(i.qty??i.quantity??1)+'</b></div>'
     ).join(''):'<div class="muted">No item details available</div>';
-    const action=actionHtml(o)
-      .replace(/>\s*<\/button>/g,'>ACTION</button>')
-      .replace(/>\s*<\/b>/g,'>TIME</b>');
+    const action=actionHtml(o);
     return '<article class="jpt-order-card'+newClass+'" data-order-card="'+esc(o.id)+'">'+
       '<div class="jpt-order-head"><div><div class="jpt-label">ORDER ID</div><div class="jpt-order-id">#'+esc(o.order_no||o.id)+'</div></div>'+
       '<span class="tag jpt-status">'+esc(st.replaceAll('_',' ').toUpperCase())+'</span></div>'+
