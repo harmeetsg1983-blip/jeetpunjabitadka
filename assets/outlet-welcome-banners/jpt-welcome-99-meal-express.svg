@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="340" viewBox="0 0 1600 340" role="img" aria-labelledby="title desc">
+<title id="title">99 MEAL EXPRESS — Welcome</title><desc id="desc">Premium black and gold welcome advertisement for 99 MEAL EXPRESS.</desc>
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#030303"/><stop offset=".48" stop-color="#17130a"/><stop offset="1" stop-color="#030303"/></linearGradient>
+ <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff4b4"/><stop offset=".25" stop-color="#ffd75e"/><stop offset=".58" stop-color="#b87913"/><stop offset=".82" stop-color="#ffeaa0"/><stop offset="1" stop-color="#8e5b0b"/></linearGradient>
+ <radialGradient id="shine"><stop stop-color="#ffd75e" stop-opacity=".32"/><stop offset="1" stop-color="#ffd75e" stop-opacity="0"/></radialGradient>
+ <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+ <filter id="soft"><feGaussianBlur stdDeviation="22"/></filter>
+</defs>
+<rect width="1600" height="340" fill="url(#bg)"/><ellipse cx="800" cy="160" rx="540" ry="210" fill="url(#shine)"/>
+<rect x="10" y="10" width="1580" height="320" rx="24" fill="none" stroke="#ffd75e" stroke-width="15" opacity=".32" filter="url(#soft)"/>
+<rect x="12" y="12" width="1576" height="316" rx="22" fill="none" stroke="url(#gold)" stroke-width="5" filter="url(#glow)"/>
+<rect x="25" y="25" width="1550" height="290" rx="16" fill="none" stroke="#e9c25a" stroke-opacity=".55" stroke-width="1.5"/>
+<path d="M44 72V44H72 M1528 44h28v28 M44 268v28h28 M1528 296h28v-28" fill="none" stroke="#fff0a4" stroke-width="4" filter="url(#glow)"/>
+<g fill="url(#gold)" stroke="#6d470b" stroke-width="1.5"><path d="M90 170c18-30 18-60 0-90 34 18 55 42 55 65 0 18-15 30-31 30 18 10 35 7 48-7-4 27-25 44-52 44-26 0-42-17-42-39 0-16 7-29 22-43Z"/><path d="M1510 170c-18-30-18-60 0-90-34 18-55 42-55 65 0 18 15 30 31 30-18 10-35 7-48-7 4 27 25 44 52 44 26 0 42-17 42-39 0-16-7-29-22-43Z"/></g>
+<g transform="translate(1320 170)">
+ <circle r="94" fill="#080706" stroke="url(#gold)" stroke-width="5" filter="url(#glow)"/><circle r="78" fill="#17120a" stroke="#8b621a" stroke-width="2"/><circle r="62" fill="#3a1e0a" stroke="#e8c05b" stroke-width="3"/>
+ <ellipse cx="-12" cy="-8" rx="44" ry="31" fill="#bd6923"/><ellipse cx="-12" cy="-14" rx="34" ry="22" fill="#e8a13c"/>
+ <circle cx="-25" cy="-21" r="7" fill="#5e8129"/><circle cx="5" cy="-5" r="8" fill="#6b902d"/><circle cx="16" cy="-24" r="5" fill="#e8d18b"/><path d="M-48 17q33 15 66-1" fill="none" stroke="#f5d87a" stroke-width="4"/>
+ <g fill="#77a03c"><ellipse cx="-48" cy="-44" rx="8" ry="15" transform="rotate(-42 -48 -44)"/><ellipse cx="43" cy="33" rx="8" ry="15" transform="rotate(32 43 33)"/></g>
+</g>
+<g text-anchor="middle">
+ <text x="700" y="100" font-family="Georgia,serif" font-size="19" letter-spacing="7" fill="#f7df93">WELCOME TO</text>
+ <text x="700" y="163" font-family="Georgia,serif" font-weight="700" font-size="51" letter-spacing="1.4" fill="url(#gold)" stroke="#241603" stroke-width="1">99 MEAL EXPRESS</text>
+ <path d="M360 185H1040" stroke="url(#gold)" stroke-width="2" opacity=".9"/>
+ <text x="700" y="222" font-family="Arial,sans-serif" font-weight="700" font-size="22" letter-spacing="3" fill="#fff0b0">GREAT MEALS • EVERYDAY VALUE</text>
+ <text x="700" y="258" font-family="Arial,sans-serif" font-size="15" letter-spacing="5" fill="#d4bd7a">QUICK • FRESH • DELICIOUS</text>
+</g>
+<g transform="translate(230 286)" fill="none" stroke="#ffd75e" stroke-width="2"><path d="M-85 0H-20 M20 0H85"/><path d="M0 -8l8 8-8 8-8-8Z" fill="#ffd75e"/></g>
+<text x="1320" y="294" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="800" letter-spacing="2" fill="#fff0b0">FRESH • FLAVOUR • JOY</text>
+</svg>
