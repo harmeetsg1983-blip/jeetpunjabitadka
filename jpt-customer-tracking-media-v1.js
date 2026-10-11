@@ -66,7 +66,7 @@ async function refresh(){
 function sync(){
  const tracker=$('jptOrderTracker'),box=mount();
  const visible=!!(tracker&&tracker.classList.contains('show'));
- if(visible&&!active){active=true;if(box)box.hidden=false;refresh();refreshTimer=setInterval(()=>{if(lastOutlet!==outlet())refresh();else refresh()},60000)}
+ if(visible&&!active){active=true;if(box)box.hidden=false;refresh();refreshTimer=setInterval(refresh,60000)}
  else if(!visible&&active){active=false;clearMediaTimer();if(refreshTimer){clearInterval(refreshTimer);refreshTimer=null}if(box)box.hidden=true}
 }
 function boot(){
