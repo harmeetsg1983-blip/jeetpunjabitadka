@@ -20,7 +20,20 @@ let audioGeneration=0;
 let timerHandle=null;
 let selectedQueue='all';
 let managedSignature='';
+const outletRealtimeState={};
+let lastRealtimeInsert=null;
 const outletSelect=document.getElementById('outletSelect');
+function updateVisibleDiagnostics(extra){
+  const n=document.getElementById('ordersNotice');
+  if(!n)return;
+  const codes=managedOutlets();
+  const channelSummary=codes.map(code=>String(code)+':'+String(outletRealtimeState[String(code)]||'WAITING')).join(' | ')||'NONE';
+  const last=lastRealtimeInsert
+    ? ('LAST INSERT #'+String(lastRealtimeInsert.order_no||lastRealtimeInsert.id)+' ['+String(lastRealtimeInsert.outlet_id)+']')
+    : 'NO INSERT EVENT RECEIVED';
+  n.textContent='JPT LIVE DIAGNOSTICS — ACCESS: '+(codes.length?codes.join(', '):'EMPTY')+
+    ' | CHANNELS: '+channelSummary+' | '+last+(extra?' | '+String(extra):'');
+}
 /* MULTI-OUTLET CORE FREEZE CONTRACT:
    - outletDisplayName() resolves names only from authorized partner outlet data.
    - every managed outlet gets its own INSERT/UPDATE realtime subscription.
@@ -700,6 +713,8 @@ async function subscribe(){
     const ch=window.sb.channel('jpt-unified-orders-'+code+'-'+Date.now());
     ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
       const o=payload?.new;
+      lastRealtimeInsert={id:o?.id,order_no:o?.order_no,outlet_id:o?.outlet_id,status:o?.status,receivedAt:new Date().toISOString()};
+      updateVisibleDiagnostics('INSERT EVENT RECEIVED');
       console.info('[JPT-DIAG][INSERT received]',{
         channelOutlet:code,eventType:payload?.eventType,
         id:o?.id==null?null:String(o.id),order_no:o?.order_no,
@@ -736,6 +751,7 @@ async function subscribe(){
       const isNew=status(merged.status)==='new';
       rows.set(key,Object.assign({},merged,{__liveNew:isNew}));
       console.info('[JPT-DIAG][INSERT stored]',{id:key,order_no:merged.order_no,outlet_id:merged.outlet_id,status:status(merged.status),isNew,rowIdsAfter:[...rows.keys()]});
+      updateVisibleDiagnostics('STORED '+String(merged.order_no||key)+' • '+String(merged.outlet_id));
       render();
       console.info('[JPT-DIAG][INSERT rendered]',{id:key,cardExists:!!document.querySelector('[data-order-card="'+CSS.escape(key)+'"]'),queue:selectedQueue});
       if(isNew)startRingtone(merged);
@@ -766,9 +782,9 @@ async function subscribe(){
     });
     ch.subscribe((s,e)=>{
       const n=document.getElementById('ordersNotice');
+      outletRealtimeState[code]=s+(e?' / '+String(e.message||e):'');
       console.info('[JPT-DIAG][channel status]',{outlet:code,status:s,error:e||null,managedOutlets:managedOutlets()});
-      if(s==='SUBSCRIBED')n&&(n.textContent='LIVE • Supabase Realtime connected • '+liveCodes.length+' managed outlet(s)');
-      if(s==='CHANNEL_ERROR'||s==='TIMED_OUT')n&&(n.textContent='Realtime reconnecting • '+code+'…');
+      updateVisibleDiagnostics('CHANNEL '+code+' '+s+(e?' • '+String(e.message||e):''));
       if(e)console.warn('[JPT Unified Orders '+code+']',s,e);
     });
     channels.push(ch);
@@ -826,6 +842,7 @@ async function startAuthenticatedRuntime(){
     if(window.JPTPartnerAccess?.reload)await window.JPTPartnerAccess.reload();
     const authorized=await resolveManagedOutlets();
     console.info('[JPT-DIAG][authorized outlets ready]',{count:authorized.length,outlets:authorized});
+    updateVisibleDiagnostics('AUTHORIZED OUTLETS READY');
     await initialLoad();
     await subscribe();
     runtimeStarted=true;
