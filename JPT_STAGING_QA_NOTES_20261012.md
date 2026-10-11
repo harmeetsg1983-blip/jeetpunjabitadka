@@ -78,3 +78,10 @@ These are pending test instructions only; no live assignment, database, or physi
 - On failure the last known assignment remains visible; the UI does not infer that the assignment ended.
 - Source checks passed: thrown error handling, stale request suppression, recovery message, existing snapshot RPC and order/location RPC names retained.
 - No browser/network simulation or device test performed. Staging only.
+
+## 2026-10-12 — Ignore out-of-order offer snapshots
+- Added an independent monotonically increasing request counter to `loadOffer()`. If overlapping offer snapshot calls return out of order, only the newest response may update the offer card or trigger/stop the offer ringtone.
+- Stale failures are also ignored so an older request cannot log misleading errors after a newer result has arrived.
+- Existing `delivery_partner_offer_snapshot` and `delivery_assignment_respond` RPC contracts are unchanged; the existing ringtone transition logic remains unchanged.
+- Source checks passed: request counter, stale success suppression, stale error suppression, RPC names and ringtone logic retained.
+- This is source-level verification only. Real Realtime/polling races and ringtone behavior require controlled browser/device testing. Staging only.
