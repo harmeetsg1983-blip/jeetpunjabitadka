@@ -92,3 +92,9 @@ These are pending test instructions only; no live assignment, database, or physi
 - No status transition RPC names/arguments were changed. Existing offer response/location RPCs and ringtone constants remain present.
 - Source checks passed: explicit refresh result, status handler checks result, no false synced message on failed refresh, existing lifecycle RPC retained.
 - This closes a source-level false-confirmation path only; real RPC outcomes and Android behavior still require controlled testing. Staging only.
+
+
+## 2026-10-12 — Mobile overflow hardening and lifecycle preservation audit
+- Targeted the delivery partner V13 staging UI only: constrained the main content to viewport width, allowed flex-row children to shrink/wrap long identifiers and address text, and constrained button widths with safe text wrapping. This is intended to reduce accidental horizontal overflow on narrow phones without changing layout sections or workflow handlers.
+- Post-commit source checks passed: main width guard; flex child shrink/wrapping; button width/wrapping; Accept and Reject handlers remain; delivery status and offer snapshot RPC calls remain unchanged; both ringtone asset constants remain; failed confirmation refresh still cannot report a synced status.
+- Static source inspection only: horizontal scrolling must still be checked on a narrow Android viewport with long outlet/order/address values. No live backend or device test was run. Staging only; no production deployment.
