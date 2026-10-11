@@ -65,3 +65,9 @@ These are pending test instructions only; no live assignment, database, or physi
 - Applied it to both one-shot location acquisition and continuous watch error callbacks.
 - Source checks passed: all three error codes mapped; stale-assignment callback guard remains; `delivery_partner_record_location` RPC argument contract unchanged.
 - Browser/device permission prompts and actual timeout behavior still require controlled Android testing. Staging only.
+
+## 2026-10-12 — Active assignment refresh error recovery
+- If `delivery_partner_assignment_snapshot` returns an error, the staging UI now shows a visible message in the existing status-action area instead of silently leaving the last state without explanation.
+- The last known assignment is intentionally preserved on refresh failure; the app does not guess that the assignment ended. The next scheduled/manual refresh can retry, and a successful snapshot clears the warning.
+- Source checks passed: warning is set on snapshot error; warning clears after a successful response; request-sequence guard remains; existing assignment/response RPC names and GPS/ringtone functions remain present.
+- Source-level verification only. Polling cadence, live RPC failures and Android UI behavior require controlled device/backend tests. Staging only; no production deployment.
