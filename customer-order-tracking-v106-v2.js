@@ -133,6 +133,9 @@
 
   var outletMediaCache={};
   var outletMediaBusy={};
+  var outletMediaTimers={};
+  var outletMediaIndexes={};
+  var outletMediaKeys={};
   var OUTLET_FALLBACK_NAMES={
     'JPT-001':'Jeet Punjabi Tadka',
     'SOP-002':'Shan-e-Punjab',
@@ -152,23 +155,21 @@
           sb.from('outlets').select('code,name,banner_url').eq('code',outletCode).maybeSingle(),
           sb.from('campaigns').select('id,outlet_id,title,active,banner_url,video_url,start_at,end_at,priority,schedule_json,created_at').eq('outlet_id',outletCode).eq('active',true).order('priority',{ascending:false}).order('created_at',{ascending:false}).limit(20)
         ]);
-        var outlet=ou.error?null:ou.data;
-        var now=Date.now();
+        var outlet=ou.error?null:ou.data,now=Date.now();
         var campaigns=(ca.error?[]:(ca.data||[])).filter(function(row){
           var s=row.start_at?Date.parse(row.start_at):-Infinity,e=row.end_at?Date.parse(row.end_at):Infinity;
           if(!(s<=now&&now<=e))return false;
           var j=row.schedule_json||{};
-          return String(row.outlet_id||'')===outletCode && j.surface==='customer_outlet_showcase' && j.placement==='FIRST';
+          return String(row.outlet_id||'')===outletCode && j.surface==='customer_outlet_showcase' && j.placement==='FIRST' && !!(row.video_url||row.banner_url);
         });
-        var row=campaigns[0]||null;
+        var mediaItems=campaigns.map(function(row){return {id:String(row.id||''),url:String(row.video_url||row.banner_url||''),isVideo:!!row.video_url,title:String(row.title||'')};}).filter(function(x){return !!x.url;});
         var outletMatches=!!outlet && String(outlet.code||'')===outletCode;
-        var media=row && String(row.outlet_id||'')===outletCode ? (row.video_url||row.banner_url||'') : '';
-        if(!media && outletMatches) media=outlet.banner_url||'';
-        var data={code:outletCode,name:outlet?.name||OUTLET_FALLBACK_NAMES[outletCode]||'Restaurant Partner',url:media,isVideo:!!row?.video_url,title:row?.title||outlet?.name||OUTLET_FALLBACK_NAMES[outletCode]||'Restaurant Partner'};
+        if(!mediaItems.length && outletMatches && outlet.banner_url)mediaItems.push({id:'outlet-banner-'+outletCode,url:String(outlet.banner_url),isVideo:false,title:outlet.name||outletCode});
+        var data={code:outletCode,name:outlet?.name||OUTLET_FALLBACK_NAMES[outletCode]||'Restaurant Partner',items:mediaItems.slice(0,10),url:mediaItems[0]?.url||'',isVideo:!!mediaItems[0]?.isVideo,title:mediaItems[0]?.title||outlet?.name||OUTLET_FALLBACK_NAMES[outletCode]||'Restaurant Partner'};
         outletMediaCache[outletCode]=data;
         return data;
       }catch(e){
-        var fallback={code:outletCode,name:OUTLET_FALLBACK_NAMES[outletCode]||'Restaurant Partner',url:'',isVideo:false,title:OUTLET_FALLBACK_NAMES[outletCode]||'Restaurant Partner'};
+        var fallback={code:outletCode,name:OUTLET_FALLBACK_NAMES[outletCode]||'Restaurant Partner',items:[],url:'',isVideo:false,title:OUTLET_FALLBACK_NAMES[outletCode]||'Restaurant Partner'};
         outletMediaCache[outletCode]=fallback; return fallback;
       }finally{delete outletMediaBusy[outletCode]}
     })();
@@ -180,15 +181,35 @@
     if(!host)return;
     data=data||{};
     if(name)name.textContent=data.name||'Restaurant Partner';
-    if(!data.url){
+    var items=Array.isArray(data.items)?data.items:[];
+    var key=String(data.code||'')+':'+items.map(function(x){return x.id+'|'+x.url+'|'+x.isVideo;}).join('~');
+    if(outletMediaKeys[data.code]===key && host.getAttribute('data-jpt-playlist-key')===key)return;
+    outletMediaKeys[data.code]=key;
+    host.setAttribute('data-jpt-playlist-key',key);
+    if(outletMediaTimers[data.code]){clearTimeout(outletMediaTimers[data.code]);delete outletMediaTimers[data.code]}
+    if(!items.length){
       host.innerHTML='<div class="jpt-track-ad-empty"><b>'+esc(data.name||'Restaurant Partner')+'</b><span>Official restaurant promotion</span></div>';
       return;
     }
-    if(data.isVideo){
-      host.innerHTML='<video class="jpt-track-ad-media" autoplay muted loop playsinline preload="metadata" src="'+esc(data.url)+'"></video><div class="jpt-track-ad-label">'+esc(data.name||'Restaurant Partner')+'</div>';
-    }else{
-      host.innerHTML='<img class="jpt-track-ad-media" src="'+esc(data.url)+'" alt="'+esc(data.title||data.name||'Restaurant advertisement')+'" loading="eager"><div class="jpt-track-ad-label">'+esc(data.name||'Restaurant Partner')+'</div>';
+    var index=Number(outletMediaIndexes[data.code]||0)%items.length;
+    function showItem(){
+      if(!document.getElementById('jptOrderTracker'))return;
+      var item=items[index],url=String(item.url||'');
+      if(!url)return;
+      host.innerHTML=(item.isVideo
+        ? '<video class="jpt-track-ad-media" autoplay muted playsinline preload="metadata" src="'+esc(url)+'"></video>'
+        : '<img class="jpt-track-ad-media" src="'+esc(url)+'" alt="'+esc(item.title||data.name||'Restaurant advertisement')+'" loading="eager">')+
+        '<div class="jpt-track-ad-label">'+esc(item.title||data.name||'Restaurant Partner')+'</div>';
+      var media=host.querySelector('video,img');
+      if(item.isVideo&&media){
+        media.onended=function(){index=(index+1)%items.length;outletMediaIndexes[data.code]=index;showItem()};
+        media.onerror=function(){if(items.length>1){index=(index+1)%items.length;outletMediaIndexes[data.code]=index;showItem()}};
+        media.play().catch(function(){});
+      }else{
+        outletMediaTimers[data.code]=setTimeout(function(){index=(index+1)%items.length;outletMediaIndexes[data.code]=index;showItem()},11000);
+      }
     }
+    showItem();
   }
 
   function getReadySince(o){
