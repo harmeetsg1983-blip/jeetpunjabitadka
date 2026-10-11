@@ -365,8 +365,8 @@ function render(){
   document.querySelectorAll('[data-ready]').forEach(b=>b.textContent='MARK READY');
   document.querySelectorAll('[data-delivery]').forEach(b=>b.textContent='OUT FOR DELIVERY');
   document.querySelectorAll('[data-delivered]').forEach(b=>b.textContent='MARK DELIVERED');
-  document.querySelectorAll('[data-accept],[data-ready],[data-delivery],[data-delivered]').forEach(b=>{
-    const key=String(b.dataset.accept||b.dataset.ready||b.dataset.delivery||b.dataset.delivered||'');
+  document.querySelectorAll('[data-accept],[data-reject],[data-ready],[data-delivery],[data-delivered]').forEach(b=>{
+    const key=String(b.dataset.accept||b.dataset.reject||b.dataset.ready||b.dataset.delivery||b.dataset.delivered||'');
     const busy=actionBusy.has(key)||transitionBusy.has(key);
     b.disabled=busy;
     b.setAttribute('aria-busy',busy?'true':'false');
@@ -551,7 +551,7 @@ async function reject(id){
 const transitionBusy=new Set();
 function setActionBusyUi(key,busy,label){
   const safe=CSS.escape(String(key));
-  document.querySelectorAll('[data-accept="'+safe+'"],[data-ready="'+safe+'"],[data-delivery="'+safe+'"],[data-delivered="'+safe+'"]').forEach(b=>{
+  document.querySelectorAll('[data-accept="'+safe+'"],[data-reject="'+safe+'"],[data-ready="'+safe+'"],[data-delivery="'+safe+'"],[data-delivered="'+safe+'"]').forEach(b=>{
     b.disabled=!!busy;
     b.setAttribute('aria-busy',busy?'true':'false');
     if(busy)b.textContent=label||'UPDATING…';
