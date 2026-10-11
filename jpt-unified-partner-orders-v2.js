@@ -6,7 +6,10 @@
 (function(){
 'use strict';
 
-if(window.__JPT_UNIFIED_ORDER_RUNTIME__) return;
+if(window.__JPT_UNIFIED_ORDER_RUNTIME__){
+  console.warn('[JPT Orders V2] Unified order runtime already active; refusing to start a duplicate runtime.');
+  return;
+}
 window.__JPT_UNIFIED_ORDER_RUNTIME__=true;
 window.__JPTOrdersV3Active=true;
 
