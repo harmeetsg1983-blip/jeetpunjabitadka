@@ -59,3 +59,9 @@ These are pending test instructions only; no live assignment, database, or physi
 - Continuous watch callbacks perform the same assignment-identity check before making the location RPC, so an already-queued callback from a cleared watch is dropped.
 - Source checks passed: stale one-shot position dropped; stale watch position dropped before RPC; location RPC contract unchanged; order lifecycle and ringtone constants retained.
 - This is source-level verification only. Device/browser and backend behavior remain untested; staging only.
+
+## 2026-10-12 — More actionable GPS failure messages
+- Added a small error-to-message helper for browser geolocation errors: permission denied, position unavailable, and timeout now display separate instructions in the GPS status label.
+- Applied it to both one-shot location acquisition and continuous watch error callbacks.
+- Source checks passed: all three error codes mapped; stale-assignment callback guard remains; `delivery_partner_record_location` RPC argument contract unchanged.
+- Browser/device permission prompts and actual timeout behavior still require controlled Android testing. Staging only.
