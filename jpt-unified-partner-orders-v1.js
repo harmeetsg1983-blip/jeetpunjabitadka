@@ -373,9 +373,8 @@ async function accept(id){
   const key=String(id);
   if(actionBusy.has(key))return;
   const o=rows.get(key); if(!o)return;
-  /* Stop the single shared ringtone immediately on the operator's ACCEPT tap,
-     before the server verification round-trip. */
-  if(activeRingtoneOrderId===key)stopRingtone();
+  /* Stop the shared ringtone immediately on ACCEPT, before any server round-trip. */
+  stopRingtone();
   /* A stale NEW card must not issue ACCEPT against an already-progressed order. */
   let canonical;
   try{canonical=await read(id,o.outlet_id);}catch(e){
