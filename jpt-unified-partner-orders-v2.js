@@ -901,6 +901,9 @@ function updateTimers(){
   if(shouldRender)render();
 }
 function focusQueueForStatus(value){
+  /* The ALL workboard is the persistent chronological queue. Accept/Ready must
+     not silently switch away from ALL and make the order appear to vanish. */
+  if(selectedQueue==='all')return;
   const st=status(value);
   const target=st==='new'?'new':st==='accepted'?'preparing':st==='preparing'?'preparing':st==='ready'?'ready':st==='out_for_delivery'?'out_for_delivery':st==='delivered'?'delivered':null;
   if(!target)return;
