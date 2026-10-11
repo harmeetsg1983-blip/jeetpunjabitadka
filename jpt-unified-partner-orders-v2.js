@@ -700,22 +700,22 @@ async function initialLoad(){
     ? await window.sb.from('orders').select('*').eq('outlet_id',codes[0]).order('created_at',{ascending:false}).limit(100)
     : await window.sb.from('orders').select('*').in('outlet_id',codes).order('created_at',{ascending:false}).limit(500);
   if(r.error){
-    /* A failed/unauthorized refresh must never leave old cards presented as current NEW orders. */
-    rows.clear();
-    stopRingtone();
+    /* Transient SELECT/RLS/network failures are not proof that orders vanished.
+       Keep the last known queue; all transitions remain server-validated. */
+    console.error('[JPT Orders] bulk refresh failed; preserving last known queue',r.error);
+    toast('Orders refresh failed: '+r.error.message+' — showing last known orders. Retry Refresh Orders before relying on this view.');
     render();
-    toast('Orders load failed: '+r.error.message+' — stale cards cleared; check partner session/outlet access.');
     return;
   }
-  /* Server query is authoritative for the current board snapshot.
-     Preserve local action drafts only where possible, but never preserve a stale
-     lifecycle status over a successful fresh server response. */
+  /* A bulk snapshot may temporarily omit an active order. Keep it until the
+     per-order read below confirms the current server state. */
   const incomingIds=new Set((r.data||[]).map(o=>String(o.id)));
-  for(const [key,old] of [...rows.entries()]){
-    if(!incomingIds.has(key)&&!actionBusy.has(key)&&!transitionBusy.has(key)){
-      rows.delete(key);
-      if(activeRingtoneOrderId===key)stopRingtone();
-    }
+  const missingFromSnapshot=[...rows.entries()].filter(([key,old])=>
+    !incomingIds.has(key)&&!actionBusy.has(key)&&!transitionBusy.has(key)
+  );
+  if(missingFromSnapshot.length){
+    console.warn('[JPT Orders] retaining cards absent from bulk snapshot pending per-order verification',
+      missingFromSnapshot.map(([key,o])=>({id:key,status:status(o.status),outlet_id:o.outlet_id})));
   }
   (r.data||[]).forEach(o=>{
     const key=String(o.id);
