@@ -43,3 +43,13 @@
 - Existing RPC names/arguments, order-state lifecycle, and ringtone/audio functions were not changed.
 - Source-level checks passed: captured ID in one-shot upload; captured ID in watch upload; stale GPS UI writes suppressed; old watch stopped before assignment switch; order RPC names retained; ringtone constants retained.
 - Not yet verified on a real device/browser or against live GPS permissions, database policies, or physical assignment transitions. Staging only; no production deployment.
+
+## Controlled device test matrix — pending (do not claim passed)
+1. With test assignment A active and location permission granted, confirm the GPS label changes from acquiring to shared/error and that the location RPC receives assignment A's ID.
+2. Switch the test rider to assignment B while a location callback for A is delayed; confirm the delayed callback never updates B's GPS label and never submits B's ID for A's captured coordinates.
+3. Confirm A's location watch is cleared and stop-sharing is requested for A before B becomes current; then confirm a new watch is created for B.
+4. Deny location permission; confirm a readable permission/location-unavailable message appears and the screen remains responsive.
+5. Temporarily simulate an RPC failure; confirm the GPS label reports the error, and order Accept/Ready transitions and ringtone behavior remain unchanged.
+6. Repeat on a real Android device after a reload. Record browser/OS, assignment IDs (test IDs only), and outcomes before any deployment decision.
+
+These are pending test instructions only; no live assignment, database, or physical-device result is implied.
