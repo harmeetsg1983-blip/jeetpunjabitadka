@@ -164,7 +164,7 @@
           var legacyShowcase=j.surface==='customer_outlet_showcase' && String(j.placement||'').toUpperCase()==='FIRST';
           return String(row.outlet_id||'')===outletCode && (managedTop||legacyShowcase) && !!(row.video_url||row.banner_url);
         });
-        var mediaItems=campaigns.map(function(row){return {id:String(row.id||''),url:String(row.video_url||row.banner_url||''),isVideo:!!row.video_url,title:String(row.title||'')};}).filter(function(x){return !!x.url;});
+        var mediaItems=campaigns.map(function(row){return {id:String(row.id||''),url:String(row.video_url||row.banner_url||''),isVideo:!!row.video_url,muted:(row.schedule_json||{}).muted!==false,title:String(row.title||'')};}).filter(function(x){return !!x.url;});
         var outletMatches=!!outlet && String(outlet.code||'')===outletCode;
         if(!mediaItems.length && outletMatches && outlet.banner_url)mediaItems.push({id:'outlet-banner-'+outletCode,url:String(outlet.banner_url),isVideo:false,title:outlet.name||outletCode});
         var data={code:outletCode,name:outlet?.name||OUTLET_FALLBACK_NAMES[outletCode]||'Restaurant Partner',items:mediaItems.slice(0,10),url:mediaItems[0]?.url||'',isVideo:!!mediaItems[0]?.isVideo,title:mediaItems[0]?.title||outlet?.name||OUTLET_FALLBACK_NAMES[outletCode]||'Restaurant Partner'};
@@ -204,11 +204,11 @@
         '<div class="jpt-track-ad-label">'+esc(item.title||data.name||'Restaurant Partner')+'</div>';
       var media=host.querySelector('video,img');
       if(item.isVideo&&media){
-        media.muted=true;
+        media.muted=item.muted!==false;
         media.onended=function(){index=(index+1)%items.length;outletMediaIndexes[data.code]=index;showItem()};
         media.onerror=function(){if(items.length>1){index=(index+1)%items.length;outletMediaIndexes[data.code]=index;showItem()}};
         var sound=document.createElement('button');
-        sound.type='button';sound.className='jpt-track-ad-sound';sound.textContent='🔇 SOUND OFF';
+        sound.type='button';sound.className='jpt-track-ad-sound';sound.textContent=media.muted?'🔇 SOUND OFF':'🔊 SOUND ON';
         sound.setAttribute('aria-label','Toggle banner video sound');
         sound.style.cssText='position:absolute;right:9px;bottom:9px;z-index:4;border:1px solid #d8ae42;border-radius:99px;padding:7px 10px;background:#111e;color:#f5d477;font-weight:900;font-size:10px';
         sound.onclick=function(){media.muted=!media.muted;sound.textContent=media.muted?'🔇 SOUND OFF':'🔊 SOUND ON';media.play().catch(function(){})};
