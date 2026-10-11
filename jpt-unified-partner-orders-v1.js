@@ -82,8 +82,13 @@ function outletDisplayName(id){
   return name ? name+' ('+key+')' : (key||'—');
 }
 function managedOutlets(){
-  const list=window.JPTPartnerAccess?.getOutlets?.()||window.JPT_PARTNER_OUTLETS||[];
+  const access=window.JPTPartnerAccess;
+  const list=access?.getOutlets?.()||window.JPT_PARTNER_OUTLETS||[];
   const codes=list.map(x=>String(x?.outlet_id||x?.code||x?.id||'')).filter(Boolean);
+  /* If the access bridge is present, an empty authorization list means access
+     is still loading or unavailable. Never silently fall back to JPT-001:
+     that makes other outlets ring without their order cards being queryable. */
+  if(access && typeof access.getOutlets==='function')return [...new Set(codes)];
   const current=outlet();
   return [...new Set(codes.length?codes:[current])];
 }
@@ -578,6 +583,13 @@ async function markReady(id){return lifecycleTransition(id,'ready')}
 async function transition(id,next){return lifecycleTransition(id,next)}
 async function initialLoad(){
   const codes=managedOutlets();
+  if(!codes.length){
+    rows.clear();
+    stopRingtone();
+    render();
+    toast('Partner outlet access is not ready. Orders were not queried under a fallback outlet. Retry login/access refresh.');
+    return;
+  }
   /* Hide only old terminal/history orders. Active lifecycle orders must remain visible
      even when they were created before the board cutover. */
   const r=codes.length===1
