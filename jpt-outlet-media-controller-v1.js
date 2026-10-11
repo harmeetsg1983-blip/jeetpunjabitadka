@@ -11,7 +11,7 @@ const TABLE='campaigns',BUCKET='menu-images';
 const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const sb=()=>window.sb||window.supabaseClient;
 const toast=m=>typeof window.toast==='function'?window.toast(m):alert(m);
-const ALLOWED=['SOP-002','NME-004','PFA-003','TOP-005'];
+const ALLOWED=['JPT-001','SOP-002','NME-004','PFA-003','TOP-005'];
 const outlets=()=>{
  const rows=Array.isArray(window.JPT_PARTNER_OUTLETS)?window.JPT_PARTNER_OUTLETS:[];
  const filtered=rows.filter(o=>ALLOWED.includes(String(o.outlet_id||o.code||o.id||'')));
@@ -22,8 +22,8 @@ function mount(){
  const panel=document.getElementById('campaigns'); if(!panel||document.getElementById('jptOutletMediaV1'))return;
  const box=document.createElement('div');box.id='jptOutletMediaV1';box.innerHTML=`
  <div class="card jptmc">
- <h3>🎬 Four-Outlet Banner & Media Controller</h3>
- <div class="notice">One simple controller for Shan-e-Punjab, 99 Meal Express, Punjabi Food Adda and Taste of Punjab. Manage TOP + LOWER banners, images + videos, timing, sound, zoom/position, save, publish ON/OFF and delete.</div>
+ <h3>🎬 Five-Outlet Banner & Media Controller</h3>
+ <div class="notice">One simple controller for Jeet Punjabi Tadka, Shan-e-Punjab, 99 Meal Express, Punjabi Food Adda and Taste of Punjab. Manage TOP + LOWER banners, images + videos, timing, sound, zoom/position, save, publish ON/OFF and delete.</div>
  <div class="jptmc-grid">
   <div><label>Outlet</label><select id="jptmcOutlet" class="select"></select></div>
   <div><label>Placement</label><select id="jptmcPlace" class="select"><option value="top">TOP BANNER</option><option value="lower">LOWER BANNER</option></select></div>
