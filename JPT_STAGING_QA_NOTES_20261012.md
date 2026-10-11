@@ -34,3 +34,12 @@
 - No changes to production `main`, order-write/checkout flow, production order lifecycle, service workers, or ringtone/audio engine.
 - No database schema or RLS changes.
 - Do not merge or deploy this staging branch without explicit approval and successful controlled testing.
+
+## 2026-10-12 — GPS callbacks bound to assignment identity
+- Updated only `delivery-partner-app-v13-staging.html`.
+- One-shot location upload now captures the assignment ID before the browser geolocation callback resolves, so a delayed callback cannot write a location against whichever assignment happens to be current later.
+- Continuous watch callbacks capture the same assignment ID and only update the GPS status label if that assignment is still selected.
+- When the active assignment changes, the old location watch/sharing is stopped before `current` is replaced; the new assignment can then start its own watch.
+- Existing RPC names/arguments, order-state lifecycle, and ringtone/audio functions were not changed.
+- Source-level checks passed: captured ID in one-shot upload; captured ID in watch upload; stale GPS UI writes suppressed; old watch stopped before assignment switch; order RPC names retained; ringtone constants retained.
+- Not yet verified on a real device/browser or against live GPS permissions, database policies, or physical assignment transitions. Staging only; no production deployment.
