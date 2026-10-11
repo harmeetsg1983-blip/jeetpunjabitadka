@@ -167,6 +167,16 @@
         var mediaItems=campaigns.map(function(row){return {id:String(row.id||''),url:String(row.video_url||row.banner_url||''),isVideo:!!row.video_url,muted:(row.schedule_json||{}).muted!==false,title:String(row.title||'')};}).filter(function(x){return !!x.url;});
         var outletMatches=!!outlet && String(outlet.code||'')===outletCode;
         if(!mediaItems.length && outletMatches && outlet.banner_url)mediaItems.push({id:'outlet-banner-'+outletCode,url:String(outlet.banner_url),isVideo:false,title:outlet.name||outletCode});
+        var welcomeBannerByOutlet={
+          'JPT-001':'./assets/outlet-welcome-banners/jpt-welcome-jeet-punjabi-tadka.svg',
+          'SOP-002':'./assets/outlet-welcome-banners/jpt-welcome-shan-e-punjab.svg',
+          'PFA-003':'./assets/outlet-welcome-banners/jpt-welcome-punjabi-food-adda.svg',
+          'NME-004':'./assets/outlet-welcome-banners/jpt-welcome-99-meal-express.svg',
+          'TOP-005':'./assets/outlet-welcome-banners/jpt-welcome-taste-of-punjab.svg'
+        };
+        if(!mediaItems.length && welcomeBannerByOutlet[outletCode]){
+          mediaItems.push({id:'welcome-banner-'+outletCode,url:welcomeBannerByOutlet[outletCode],isVideo:false,title:(outlet?.name||OUTLET_FALLBACK_NAMES[outletCode]||'Restaurant Partner')+' — Welcome'});
+        }
         var data={code:outletCode,name:outlet?.name||OUTLET_FALLBACK_NAMES[outletCode]||'Restaurant Partner',items:mediaItems.slice(0,10),url:mediaItems[0]?.url||'',isVideo:!!mediaItems[0]?.isVideo,title:mediaItems[0]?.title||outlet?.name||OUTLET_FALLBACK_NAMES[outletCode]||'Restaurant Partner'};
         outletMediaCache[outletCode]=data;
         return data;
@@ -184,7 +194,7 @@
     data=data||{};
     if(name)name.textContent=data.name||'Restaurant Partner';
     var items=Array.isArray(data.items)?data.items:[];
-    var key=String(data.code||'')+':'+items.map(function(x){return x.id+'|'+x.url+'|'+x.isVideo;}).join('~');
+    var key=String(data.code||'')+':'+items.map(function(x){return x.id+'|'+x.url+'|'+x.isVideo+'|'+x.muted;}).join('~');
     if(outletMediaKeys[data.code]===key && host.getAttribute('data-jpt-playlist-key')===key)return;
     outletMediaKeys[data.code]=key;
     host.setAttribute('data-jpt-playlist-key',key);
