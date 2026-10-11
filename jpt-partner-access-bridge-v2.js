@@ -4,7 +4,7 @@
   const SELECTOR_ID = 'outletSelect';
   const OUTLET_KEY = 'jpt_admin_outlet';
   let authorized = [];
-  let loading = false;
+  let loadPromise = null;
 
   function getSelect() { return document.getElementById(SELECTOR_ID); }
 
@@ -58,22 +58,42 @@
   }
 
   async function load() {
-    if (loading) return authorized.slice();
-    loading = true;
-    try {
-      if (!window.sb || typeof window.sb.rpc !== 'function') {
-        throw new Error('Supabase client not ready');
+    /* Concurrent callers must await the same access lookup. Returning an empty
+       snapshot while the first lookup is in flight can start the order runtime
+       with only its default outlet and silently miss other outlets' orders. */
+    if (loadPromise) return loadPromise;
+    loadPromise = (async () => {
+      try {
+        if (!window.sb || typeof window.sb.rpc !== 'function') {
+          throw new Error('Supabase client not ready');
+        }
+        const { data, error } = await window.sb.rpc('partner_my_outlets');
+        if (error) throw error;
+        const rows = normalize(data || []);
+        const select = getSelect();
+        if (!rows.length) {
+          authorized = [];
+          window.JPT_PARTNER_OUTLETS = [];
+          if (select) select.replaceChildren();
+          window.JPTPartnerAccess = {
+            version: 'v2',
+            authorizedOutlets: [],
+            canAccess: () => false,
+            getOutlets: () => [],
+            reload: load
+          };
+          return [];
+        }
+        render(rows);
+        return authorized.slice();
+      } catch (error) {
+        console.warn('[JPT Partner Access] reload failed safely:', error);
+        throw error;
+      } finally {
+        loadPromise = null;
       }
-      const { data, error } = await window.sb.rpc('partner_my_outlets');
-      if (error) throw error;
-      render(data || []);
-      return authorized.slice();
-    } catch (error) {
-      console.warn('[JPT Partner Access] reload failed safely:', error);
-      return authorized.slice();
-    } finally {
-      loading = false;
-    }
+    })();
+    return loadPromise;
   }
 
   window.JPTPartnerAccess = {
