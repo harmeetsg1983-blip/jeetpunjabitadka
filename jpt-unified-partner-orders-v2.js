@@ -291,8 +291,11 @@ function actionHtml(o){
   }
   if(st==='accepted'||st==='preparing'){
     const deadline=o.deadline_at||o.__localDeadline;
-    const left=deadline?new Date(deadline).getTime()-Date.now():0;
-    if(left>0)return '<div class="muted jpt-prep-wait" data-prep-wait="'+id+'">Preparation in progress — countdown running</div>';
+    const deadlineMs=deadline?new Date(deadline).getTime():NaN;
+    if(!Number.isFinite(deadlineMs)){
+      return '<div class="muted jpt-prep-wait" data-prep-wait="'+id+'">Preparation deadline unavailable — refresh order before marking READY</div>';
+    }
+    if(deadlineMs>Date.now())return '<div class="muted jpt-prep-wait" data-prep-wait="'+id+'">Preparation in progress — countdown running</div>';
     return '<button class="btn gold" data-ready="'+id+'">MARK READY</button>';
   }
   if(st==='ready')
@@ -826,8 +829,9 @@ function updateTimers(){
     const st=status(o.status);
     if(st!=='accepted'&&st!=='preparing')return;
     const deadline=o.deadline_at||o.__localDeadline;
-    el.textContent='Order Ready ('+remaining(deadline)+')';
-    if(deadline && new Date(deadline).getTime()<=Date.now() && el.dataset.readyEnabled!=='1'){
+    const deadlineMs=deadline?new Date(deadline).getTime():NaN;
+    el.textContent=Number.isFinite(deadlineMs)?'Order Ready ('+remaining(deadline)+')':'Preparation timer unavailable — refresh order';
+    if(Number.isFinite(deadlineMs) && deadlineMs<=Date.now() && el.dataset.readyEnabled!=='1'){
       el.dataset.readyEnabled='1';shouldRender=true;
     }
   });
