@@ -121,3 +121,4 @@ These are pending test instructions only; no live assignment, database, or physi
 - Limitation: source checks do not prove behavior in a browser. Clean-profile device validation and real order/GPS tests remain pending; do not install or test from a profile showing the warning.
 
 - Follow-up safety audit: `beforeinstallprompt` now checks the runtime service-worker controller guard before showing the install CTA; if controlled, the prompt is discarded and the CTA remains hidden. Static source check only; still requires clean-profile browser verification.
+- Staging install policy tightened: the `beforeinstallprompt` event is always suppressed and the install CTA remains hidden in this staging build, regardless of controller state. Staging must be tested in a clean browser profile, not installed as a PWA. Existing service-worker control still triggers the safety warning; no worker is unregistered.
