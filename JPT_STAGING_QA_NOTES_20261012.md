@@ -179,3 +179,11 @@ These are pending test instructions only; no live assignment, database, or physi
 - Frame uses a gold-lit border, a 2:1 responsive viewport and `object-fit: contain` to avoid stretching the original artwork. Added a visible fallback message if the expected poster asset is absent; no substitute/generated artwork is used.
 - **Important: the original user-supplied poster binary is still not in the repository.** The frame currently points to `./assets/delivery-partner-welcome-original.webp`; until that exact asset is added, the fallback message will appear. This commit completes the frame/layout code only, not the image itself.
 - No customer app, restaurant partner app, production order flow, ringtone, service worker, database or storage policy was changed. Staging only.
+
+
+### 2026-10-12 — Sponsor slider broken-media recovery (staging only)
+- Updated `jpt-delivery-sponsor-slider-v3.js` on staging commit `dfb035f265cdeb435111c6e65b735b03e7a24134`.
+- The slider now listens for failed image/video loads, skips a broken slide when other media exists, and hides the sponsor surface if all loaded candidates fail. It restarts the 11-second rotation timer after skipping.
+- Refresh identity now includes `media_type`, `video_url`, `target_all_live`, and `schedule_json`, so edits to these fields can trigger a slide rebuild even when `media_url` is unchanged.
+- Source-level JavaScript syntax check: PASS.
+- Not yet tested in a real browser/device; actual storage access, authenticated publish/delete, outlet targeting, and Android timing remain pending. No production code, backend, schema, RLS, or service worker changed.
