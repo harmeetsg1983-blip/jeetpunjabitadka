@@ -272,3 +272,10 @@ These are pending test instructions only; no live assignment, database, or physi
 - Code changes committed in staging: `5e5596ba6898e40191f5573cc274ee7278ffcd22` (manager) and `c92b911c60ff1da240c808825cf45df54c9e39ab` (staging cache-bust).
 - Verification status: source-level patch and exact staging references verified. Authenticated real-session ON/OFF, upload/publish, delete/storage cleanup, and Delivery Partner display still require live device/session QA; no end-to-end success is claimed.
 - Original welcome poster binary is still not committed because the available GitHub write route here only accepts UTF-8 for file-content writes and no supported local-binary-to-GitHub upload path was available in this pass. The staging welcome image reference remains unresolved until the actual image asset is committed and verified.
+
+## Customer order tracking theme correction — 12 Oct 2026
+- User-provided live screenshot showed the customer order tracking screen still using a white page/status card and green ETA tile, inconsistent with the requested premium black-and-gold theme.
+- Updated only the additive CSS in `customer-order-tracking-v106-v2.js` on staging: dark page/header, black-and-gold status card and ETA tile, gold active timeline dots/text, dark order summary/rider panels, and matching action-button colors. Order status logic, polling, RPC calls, checkout, and audio handlers were not intentionally changed.
+- Updated `index.html` tracking script query to `v=20261012-blackgold2` to request the revised staging script.
+- Commits: `048b08cd814d1353d8b45b1f3364e88d878ea571` (tracking theme) and `37312b6cd461c21c9b7362787c16e1f309d3d9a6` (cache bust).
+- Source-level verification confirms the CSS override and new script version are present on the staging branch. Device/live verification is still required; this does not prove the screenshot/live site has updated. Production remains untouched.
