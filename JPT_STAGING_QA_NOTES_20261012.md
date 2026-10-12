@@ -224,3 +224,13 @@ These are pending test instructions only; no live assignment, database, or physi
 - Original welcome image source exists in the conversation files, but its binary asset has NOT been committed at `assets/delivery-partner-welcome-original.webp`. The welcome frame therefore displays its explicit missing-asset notice until the exact original image is added.
 - Do not call the welcome poster done or claim end-to-end sponsor tests passed. Required: add original poster asset, verify sponsor storage URL access, then test authenticated upload/publish/display/delete in clean browser and Android.
 - Production remains frozen; no order flow, ringtone, service worker, schema, or RLS edits.
+
+
+### Consolidated code audit — 2026-10-12 (staging only)
+- Re-fetched the current staging versions of `jpt-sponsor-manager-v2.js`, `jpt-delivery-sponsor-slider-v3.js`, and `jpt-delivery-sponsor-connector-v2.js`.
+- Syntax checks: PASS for all three JavaScript files.
+- Static checks: central-owner gate present in Sponsor Manager; upload media-verification warning present; deletion distinguishes database deletion from storage cleanup; slider skips broken media on rotation; connector references slider cache version `v=5`.
+- Staging HTML references connector cache version `v=5`.
+- IMPORTANT NOT COMPLETE: `assets/delivery-partner-welcome-original.webp` is still absent from repository. The exact original poster source file is available in the conversation upload, but it has not yet been committed as a repository binary asset. Do not claim the permanent poster is working until the asset is present and loaded successfully.
+- STILL REQUIRED before calling sponsor workflow complete: authenticated live upload, media URL access verification, publish/display in Delivery Partner App, toggle ON/OFF, delete DB row plus storage object, and clean-browser/Android rotation checks.
+- This was a static repository audit only; it did not access the live app or prove Supabase storage policies. No production, database schema, RLS, order flow, service-worker or ringtone code was modified.
