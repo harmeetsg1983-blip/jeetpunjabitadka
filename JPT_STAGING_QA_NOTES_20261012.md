@@ -265,3 +265,10 @@ These are pending test instructions only; no live assignment, database, or physi
 - The Delivery Sponsor Slider now hides its container when the active/scheduled/outlet-filtered result set is empty and re-applies visibility during polling. This prevents a blank sponsor frame from occupying the delivery app when no matching ad exists.
 - Verified by re-fetching the staged file and confirming the empty-state visibility guard is present.
 - Welcome poster binary remains absent; authenticated end-to-end manager upload/publish/display/toggle/delete and device tests remain unverified. Production, schema, RLS, order flow and ringtone files remain untouched.
+
+## Sponsor Manager ON/OFF reliability patch — 12 Oct 2026
+- Updated `jpt-sponsor-manager-v2.js` in staging so ON/OFF changes now show an in-progress state, check the update error, read the row back from Supabase, verify the persisted `is_active` value, and show an explicit success/failure message. This does not change schema, RLS, bucket privacy, or production order/audio handlers.
+- Updated the staging `admin.html` Sponsor Manager script query from `v=5` to `v=6` so clients request the new file rather than reuse the previous cached script.
+- Code changes committed in staging: `5e5596ba6898e40191f5573cc274ee7278ffcd22` (manager) and `c92b911c60ff1da240c808825cf45df54c9e39ab` (staging cache-bust).
+- Verification status: source-level patch and exact staging references verified. Authenticated real-session ON/OFF, upload/publish, delete/storage cleanup, and Delivery Partner display still require live device/session QA; no end-to-end success is claimed.
+- Original welcome poster binary is still not committed because the available GitHub write route here only accepts UTF-8 for file-content writes and no supported local-binary-to-GitHub upload path was available in this pass. The staging welcome image reference remains unresolved until the actual image asset is committed and verified.
