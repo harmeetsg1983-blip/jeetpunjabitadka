@@ -195,3 +195,10 @@ These are pending test instructions only; no live assignment, database, or physi
 - UI now distinguishes “media URL responded successfully” from “record saved, but media URL could not be verified”; the latter warns that storage access may still prevent display.
 - Source syntax check: PASS.
 - This does not prove storage permissions or browser playback. A failed HEAD may be network/CORS-related; authenticated live upload/display/delete and Android testing remain pending. No DB/RLS/schema or production code changed.
+
+
+### 2026-10-12 — Sponsor rotation skips broken media
+- Updated `jpt-delivery-sponsor-slider-v3.js` at commit `3a2697d18281ef49365dbc37d133cebcf307d34d`.
+- The 11-second rotation now skips slides already marked as broken; if no usable slide remains, the sponsor area hides instead of rotating through failed media.
+- JavaScript syntax check passed.
+- Browser/Android playback and authenticated publish/delete tests are still pending. Staging only; no production order/ringtone files or database policies changed.
