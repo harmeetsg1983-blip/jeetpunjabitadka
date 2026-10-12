@@ -209,3 +209,10 @@ These are pending test instructions only; no live assignment, database, or physi
 - Updated staging HTML commit `cb45cea58702db73a0c0ee642e13d60ff1f8c645` to request connector `?v=5`.
 - Verification: {"connectorSliderV5":true,"htmlConnectorV5":true,"syntax":"connector PASS"}.
 - Purpose: reduce the chance that GitHub Pages/browser cache keeps the older sponsor slider JavaScript after the broken-media rotation fix. This is cache-busting only, not proof of live Android testing. No production files, order handlers, ringtone code, database schema, or RLS policies changed.
+
+
+### 2026-10-12 — Sponsor deletion cleanup status (staging)
+- Updated `jpt-sponsor-manager-v2.js` at commit `13a79f0eec5b7c4305d386ec13887d2daee3d580`.
+- The delete flow now distinguishes verified database-row deletion from storage-object cleanup. Storage removal errors or unconfirmed removal are shown in the manager instead of only being logged to the console.
+- JavaScript syntax check passed.
+- Live authenticated deletion and bucket cleanup remain untested. No production code, database schema, or RLS policies changed.
