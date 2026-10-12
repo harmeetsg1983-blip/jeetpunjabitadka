@@ -249,3 +249,12 @@ These are pending test instructions only; no live assignment, database, or physi
 - Staging HTML cache-bust commit: `72599eba3f48586c98c367b6f6b43744c284b879` uses connector `?v=6`.
 - Static verification: {"sliderSyntax":"PASS","connectorSyntax":"PASS","queryErrorLogged":true,"connectorV6":true,"htmlV6":true,"posterAssetMention":true}.
 - This improves diagnosis but does not prove the query succeeds or media renders in a browser. Original poster asset remains pending in the repository; authenticated upload/publish/display/delete and mobile tests remain required. No production code or DB/RLS/schema changed.
+
+
+### Final static verification pass — 2026-10-12
+- Re-fetched the exact current staging versions after cache-bust v6.
+- JavaScript syntax: Sponsor Manager PASS; Delivery Sponsor Slider PASS; Sponsor Connector PASS.
+- Verified query-error logging exists, the HTML points to connector v6, connector points to slider v6, and the welcome banner frame is set to 16:9.
+- Blocking item: the referenced poster path `assets/delivery-partner-welcome-original.webp` is only present in HTML, not in the repository tree as an actual binary asset. It remains unresolved.
+- End-to-end authenticated upload/publish/display/toggle/delete, public-media URL access, and real-device tests are NOT verified. This report must not be interpreted as a launch approval.
+- Production remains untouched; no schema, RLS, live order, service worker, or ringtone changes.
