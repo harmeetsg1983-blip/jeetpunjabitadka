@@ -216,3 +216,11 @@ These are pending test instructions only; no live assignment, database, or physi
 - The delete flow now distinguishes verified database-row deletion from storage-object cleanup. Storage removal errors or unconfirmed removal are shown in the manager instead of only being logged to the console.
 - JavaScript syntax check passed.
 - Live authenticated deletion and bucket cleanup remain untested. No production code, database schema, or RLS policies changed.
+
+
+### Current continuation checkpoint — 2026-10-12
+- Latest sponsor manager fix: `13a79f0eec5b7c4305d386ec13887d2daee3d580`; latest sponsor rotation fix: `3a2697d18281ef49365dbc37d133cebcf307d34d`.
+- Cache busts are committed: connector requests slider `?v=5`; staging HTML requests connector `?v=5`.
+- Original welcome image source exists in the conversation files, but its binary asset has NOT been committed at `assets/delivery-partner-welcome-original.webp`. The welcome frame therefore displays its explicit missing-asset notice until the exact original image is added.
+- Do not call the welcome poster done or claim end-to-end sponsor tests passed. Required: add original poster asset, verify sponsor storage URL access, then test authenticated upload/publish/display/delete in clean browser and Android.
+- Production remains frozen; no order flow, ringtone, service worker, schema, or RLS edits.
