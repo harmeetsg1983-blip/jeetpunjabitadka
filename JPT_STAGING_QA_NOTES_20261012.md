@@ -241,3 +241,11 @@ These are pending test instructions only; no live assignment, database, or physi
 - The poster image remains `./assets/delivery-partner-welcome-original.webp`; the binary file is still not present in the repository, so this change prevents frame-ratio mismatch but does NOT make the poster visible yet.
 - Original source was confirmed as 1536×864 RGB. It must be committed as a real binary asset before this task is complete.
 - No production files, database policies/schema, order flow, or ringtone code changed.
+
+
+### 2026-10-12 — Sponsor query diagnostics and cache refresh
+- Slider commit: `54c1830215384ca865f225e07f4200a14700db2a`. Sponsor-table query errors are now written to the browser console instead of silently appearing as an empty ad list.
+- Connector cache-bust commit: `25429a7f7c8e0940cf0e445c63059ad479afb335` uses slider `?v=6`.
+- Staging HTML cache-bust commit: `72599eba3f48586c98c367b6f6b43744c284b879` uses connector `?v=6`.
+- Static verification: {"sliderSyntax":"PASS","connectorSyntax":"PASS","queryErrorLogged":true,"connectorV6":true,"htmlV6":true,"posterAssetMention":true}.
+- This improves diagnosis but does not prove the query succeeds or media renders in a browser. Original poster asset remains pending in the repository; authenticated upload/publish/display/delete and mobile tests remain required. No production code or DB/RLS/schema changed.
