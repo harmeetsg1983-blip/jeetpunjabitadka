@@ -258,3 +258,10 @@ These are pending test instructions only; no live assignment, database, or physi
 - Blocking item: the referenced poster path `assets/delivery-partner-welcome-original.webp` is only present in HTML, not in the repository tree as an actual binary asset. It remains unresolved.
 - End-to-end authenticated upload/publish/display/toggle/delete, public-media URL access, and real-device tests are NOT verified. This report must not be interpreted as a launch approval.
 - Production remains untouched; no schema, RLS, live order, service worker, or ringtone changes.
+
+
+### Delivery sponsor empty-state patch — 2026-10-12
+- Staging commit: 0b5524836c72551569c4358ff85972a94bc04cf4.
+- The Delivery Sponsor Slider now hides its container when the active/scheduled/outlet-filtered result set is empty and re-applies visibility during polling. This prevents a blank sponsor frame from occupying the delivery app when no matching ad exists.
+- Verified by re-fetching the staged file and confirming the empty-state visibility guard is present.
+- Welcome poster binary remains absent; authenticated end-to-end manager upload/publish/display/toggle/delete and device tests remain unverified. Production, schema, RLS, order flow and ringtone files remain untouched.
