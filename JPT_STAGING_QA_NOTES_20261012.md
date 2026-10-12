@@ -202,3 +202,10 @@ These are pending test instructions only; no live assignment, database, or physi
 - The 11-second rotation now skips slides already marked as broken; if no usable slide remains, the sponsor area hides instead of rotating through failed media.
 - JavaScript syntax check passed.
 - Browser/Android playback and authenticated publish/delete tests are still pending. Staging only; no production order/ringtone files or database policies changed.
+
+
+### 2026-10-12 — Sponsor slider cache bust
+- Updated connector commit `a3edf80796222fc5368f09ea1d2a1443ae8efeff` to request slider `?v=5`.
+- Updated staging HTML commit `cb45cea58702db73a0c0ee642e13d60ff1f8c645` to request connector `?v=5`.
+- Verification: {"connectorSliderV5":true,"htmlConnectorV5":true,"syntax":"connector PASS"}.
+- Purpose: reduce the chance that GitHub Pages/browser cache keeps the older sponsor slider JavaScript after the broken-media rotation fix. This is cache-busting only, not proof of live Android testing. No production files, order handlers, ringtone code, database schema, or RLS policies changed.
