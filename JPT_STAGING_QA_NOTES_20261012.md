@@ -187,3 +187,11 @@ These are pending test instructions only; no live assignment, database, or physi
 - Refresh identity now includes `media_type`, `video_url`, `target_all_live`, and `schedule_json`, so edits to these fields can trigger a slide rebuild even when `media_url` is unchanged.
 - Source-level JavaScript syntax check: PASS.
 - Not yet tested in a real browser/device; actual storage access, authenticated publish/delete, outlet targeting, and Android timing remain pending. No production code, backend, schema, RLS, or service worker changed.
+
+
+### 2026-10-12 — Sponsor upload verification feedback (staging only)
+- Updated `jpt-sponsor-manager-v2.js` at commit `2192d48b88c9ee4f5620f41f82b26ad716b28303`.
+- The manager no longer reports an unqualified “Banner added successfully” when the database row was saved but the media URL HEAD check failed.
+- UI now distinguishes “media URL responded successfully” from “record saved, but media URL could not be verified”; the latter warns that storage access may still prevent display.
+- Source syntax check: PASS.
+- This does not prove storage permissions or browser playback. A failed HEAD may be network/CORS-related; authenticated live upload/display/delete and Android testing remain pending. No DB/RLS/schema or production code changed.
