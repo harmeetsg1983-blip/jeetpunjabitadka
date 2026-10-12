@@ -234,3 +234,10 @@ These are pending test instructions only; no live assignment, database, or physi
 - IMPORTANT NOT COMPLETE: `assets/delivery-partner-welcome-original.webp` is still absent from repository. The exact original poster source file is available in the conversation upload, but it has not yet been committed as a repository binary asset. Do not claim the permanent poster is working until the asset is present and loaded successfully.
 - STILL REQUIRED before calling sponsor workflow complete: authenticated live upload, media URL access verification, publish/display in Delivery Partner App, toggle ON/OFF, delete DB row plus storage object, and clean-browser/Android rotation checks.
 - This was a static repository audit only; it did not access the live app or prove Supabase storage policies. No production, database schema, RLS, order flow, service-worker or ringtone code was modified.
+
+
+### 2026-10-12 — Welcome poster frame correction
+- Updated staging HTML commit `dd39179681314207293269ae67d26f471ecdb83e`: welcome frame ratio now matches the supplied original poster's 16:9 dimensions, instead of a 2:1 frame.
+- The poster image remains `./assets/delivery-partner-welcome-original.webp`; the binary file is still not present in the repository, so this change prevents frame-ratio mismatch but does NOT make the poster visible yet.
+- Original source was confirmed as 1536×864 RGB. It must be committed as a real binary asset before this task is complete.
+- No production files, database policies/schema, order flow, or ringtone code changed.
