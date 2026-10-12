@@ -125,7 +125,7 @@ function jptStagingWorkerGuard(){const notice=document.getElementById('swSafetyN
 // STAGING SAFETY: do not register the production delivery service worker here. Push is intentionally disabled until an isolated staging worker is reviewed.
 </script>
 <script id="jptWelcomeBannerGuard">(()=>{const img=document.getElementById('jptWelcomeBannerImage');const missing=document.getElementById('jptWelcomeBannerMissing');if(!img||!missing)return;img.addEventListener('error',()=>{img.style.display='none';missing.style.display='flex'});img.addEventListener('load',()=>{img.style.display='block';missing.style.display='none'});if(img.complete&&!img.naturalWidth){img.style.display='none';missing.style.display='flex';}})();</script>
-<script src="./jpt-delivery-sponsor-connector-v2.js?v=5"></script>
+<script src="./jpt-delivery-sponsor-connector-v2.js?v=6"></script>
 <script src="./jpt-delivery-approval-sync-v1.js?v=2"></script>
 </body>
 </html>
