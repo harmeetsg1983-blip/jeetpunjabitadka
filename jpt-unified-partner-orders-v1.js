@@ -797,22 +797,40 @@ async function subscribe(){
     const broadcastCh=window.sb.channel('jpt:partner:outlet:'+code,{config:{private:true}});
     const refreshFromBroadcast=(payload,eventName)=>{
       const data=payload?.payload;
-      const row=data?.record;
-      if(!row || String(row.outlet_id||'')!==code)return;
+      const o=data?.record;
+      if(!o || String(o.outlet_id||'')!==code || !liveCodes.includes(String(o.outlet_id)))return;
       lastRealtimeInsert={
-        id:row.id,
-        order_no:row.order_no,
-        outlet_id:row.outlet_id,
-        status:row.status,
+        id:o.id,
+        order_no:o.order_no,
+        outlet_id:o.outlet_id,
+        status:o.status,
         receivedAt:new Date().toISOString()
       };
       updateVisibleDiagnostics('BROADCAST '+eventName.toUpperCase()+' RECEIVED');
       console.info('[JPT-DIAG][broadcast order event]',{
-        outlet:code,event:eventName,id:String(row.id),status:status(row.status)
+        outlet:code,event:eventName,id:String(o.id),status:status(o.status)
       });
-      /* Reconcile against the database row rather than trusting a delayed
-         broadcast payload to overwrite a newer lifecycle state. */
-      initialLoad().catch(e=>console.warn('[JPT Orders] broadcast reconciliation failed',e));
+      const key=String(o.id);
+      if(actionBusy.has(key)||transitionBusy.has(key))return;
+      if(!shouldShowOnBoard(o)){
+        rows.delete(key);
+        if(activeRingtoneOrderId===key)stopRingtone();
+        render();
+        return;
+      }
+      const previous=rows.get(key);
+      const oldStatus=status(previous?.status);
+      const merged=mergeOrderMonotonic(previous,o);
+      const nextStatus=status(merged.status);
+      rows.set(key,Object.assign({},merged,{__liveNew:eventName==='order_insert'&&nextStatus==='new'}));
+      if(eventName==='order_update' && previous?.id && oldStatus!==nextStatus && selectedQueue===oldStatus){
+        focusQueueForStatus(nextStatus);
+      }
+      render();
+      console.info('[JPT-DIAG][broadcast order rendered]',{
+        id:key,status:nextStatus,cardExists:!!document.querySelector('[data-order-card="'+CSS.escape(key)+'"]'),queue:selectedQueue
+      });
+      if(eventName==='order_insert'&&nextStatus==='new')startRingtone(merged);
     };
     broadcastCh.on('broadcast',{event:'order_insert'},payload=>refreshFromBroadcast(payload,'order_insert'));
     broadcastCh.on('broadcast',{event:'order_update'},payload=>refreshFromBroadcast(payload,'order_update'));
