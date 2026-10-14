@@ -625,6 +625,10 @@ async function initialLoad(options={}){
   const verifyRows=options.verifyRows!==false;
   const codes=await resolveManagedOutlets();
   if(!codes.length){
+    if(options.preserveOnError){
+      console.warn('[JPT Orders] Fallback poll skipped: authorized outlet list temporarily unavailable; preserving current board.');
+      return;
+    }
     rows.clear();
     stopRingtone();
     render();
@@ -637,7 +641,12 @@ async function initialLoad(options={}){
     ? await window.sb.from('orders').select('*').eq('outlet_id',codes[0]).order('created_at',{ascending:false}).limit(100)
     : await window.sb.from('orders').select('*').in('outlet_id',codes).order('created_at',{ascending:false}).limit(500);
   if(r.error){
-    /* A failed/unauthorized refresh must never leave old cards presented as current NEW orders. */
+    /* Periodic safety-net polls must not blank the board or silence an alert on a transient read error. */
+    if(options.preserveOnError){
+      console.warn('[JPT Orders] Fallback poll read failed; preserving current board:',r.error.message);
+      return;
+    }
+    /* An explicit/startup refresh failure must never leave old cards presented as current NEW orders. */
     rows.clear();
     stopRingtone();
     render();
@@ -951,7 +960,7 @@ async function boot(){
     }else if(!fallbackPollBusy){
       /* Safety-net poll discovers missed INSERTs without manual dashboard refresh. */
       fallbackPollBusy=true;
-      try{ await initialLoad({verifyRows:false}); }
+      try{ await initialLoad({verifyRows:false,preserveOnError:true}); }
       catch(e){ console.warn('[JPT Orders] fallback poll failed',e); }
       finally{ fallbackPollBusy=false; }
     }
