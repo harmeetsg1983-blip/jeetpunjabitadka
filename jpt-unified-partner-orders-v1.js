@@ -788,6 +788,39 @@ async function subscribe(){
       if(e)console.warn('[JPT Unified Orders '+code+']',s,e);
     });
     channels.push(ch);
+
+    /* The database also emits private Realtime Broadcast events on
+       jpt:partner:outlet:<outlet_id>. Keep the existing Postgres Changes
+       listener above, and subscribe to the matching Broadcast topic as well.
+       This closes the gap where the DB trigger sends order_insert/order_update
+       but the dashboard listens only for postgres_changes. */
+    const broadcastCh=window.sb.channel('jpt:partner:outlet:'+code,{config:{private:true}});
+    const refreshFromBroadcast=(payload,eventName)=>{
+      const data=payload?.payload;
+      const row=data?.record;
+      if(!row || String(row.outlet_id||'')!==code)return;
+      lastRealtimeInsert={
+        id:row.id,
+        order_no:row.order_no,
+        outlet_id:row.outlet_id,
+        status:row.status,
+        receivedAt:new Date().toISOString()
+      };
+      updateVisibleDiagnostics('BROADCAST '+eventName.toUpperCase()+' RECEIVED');
+      console.info('[JPT-DIAG][broadcast order event]',{
+        outlet:code,event:eventName,id:String(row.id),status:status(row.status)
+      });
+      /* Reconcile against the database row rather than trusting a delayed
+         broadcast payload to overwrite a newer lifecycle state. */
+      initialLoad().catch(e=>console.warn('[JPT Orders] broadcast reconciliation failed',e));
+    };
+    broadcastCh.on('broadcast',{event:'order_insert'},payload=>refreshFromBroadcast(payload,'order_insert'));
+    broadcastCh.on('broadcast',{event:'order_update'},payload=>refreshFromBroadcast(payload,'order_update'));
+    broadcastCh.subscribe((s,e)=>{
+      console.info('[JPT-DIAG][broadcast channel status]',{outlet:code,status:s,error:e||null});
+      if(e)updateVisibleDiagnostics('BROADCAST '+code+' '+s+' • '+String(e.message||e));
+    });
+    channels.push(broadcastCh);
   }
   channel=channels[0]||null;
 }
