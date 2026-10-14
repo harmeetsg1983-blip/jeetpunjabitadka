@@ -20,6 +20,7 @@ let audioGeneration=0;
 let timerHandle=null;
 let selectedQueue='all';
 let managedSignature='';
+let fallbackPollBusy=false;
 const outletRealtimeState={};
 let lastRealtimeInsert=null;
 const outletSelect=document.getElementById('outletSelect');
@@ -286,9 +287,7 @@ function actionHtml(o){
       '<button type="button" class="btn red" data-reject="'+id+'">REJECT ORDER</button></div>';
   }
   if(st==='accepted'||st==='preparing'){
-    const deadline=o.deadline_at||o.__localDeadline;
-    const left=deadline?new Date(deadline).getTime()-Date.now():0;
-    if(left>0)return '<div class="muted jpt-prep-wait" data-prep-wait="'+id+'">Preparation in progress — countdown running</div>';
+    /* Keep countdown visible while allowing an early ready action when food is ready. */
     return '<button class="btn gold" data-ready="'+id+'">MARK READY</button>';
   }
   if(st==='ready')
@@ -946,6 +945,12 @@ async function boot(){
       managedSignature=sig;
       await initialLoad();
       await subscribe();
+    }else if(!fallbackPollBusy){
+      /* Safety-net poll discovers missed INSERTs without manual dashboard refresh. */
+      fallbackPollBusy=true;
+      try{ await initialLoad(); }
+      catch(e){ console.warn('[JPT Orders] fallback poll failed',e); }
+      finally{ fallbackPollBusy=false; }
     }
     const select=document.getElementById('outletSelect');
     if(select&&select.value!==outlet()){
