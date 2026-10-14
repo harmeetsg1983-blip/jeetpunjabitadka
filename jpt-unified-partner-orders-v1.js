@@ -621,7 +621,8 @@ async function lifecycleTransition(id,next){
 }
 async function markReady(id){return lifecycleTransition(id,'ready')}
 async function transition(id,next){return lifecycleTransition(id,next)}
-async function initialLoad(){
+async function initialLoad(options={}){
+  const verifyRows=options.verifyRows!==false;
   const codes=await resolveManagedOutlets();
   if(!codes.length){
     rows.clear();
@@ -667,28 +668,30 @@ async function initialLoad(){
   /* Reconcile cards against the same server lookup used by action recovery.
      Missing/unreadable rows are hidden from this in-memory queue only.
      Never delete or update database records during reconciliation. */
-  const checks=[...rows.entries()];
-  for(let i=0;i<checks.length;i+=8){
-    await Promise.all(checks.slice(i,i+8).map(async([key,o])=>{
-      if(actionBusy.has(key)||transitionBusy.has(key))return;
-      const live=await read(o.id,o.outlet_id).catch(()=>null);
-      if(actionBusy.has(key)||transitionBusy.has(key))return;
-      if(live){
-        /* This is a direct SELECT by order id: its status replaces stale UI state.
-           Do not retain __optimisticStatus when the server disagrees. */
-        const prior=rows.get(key)||o;
-        /* A lagging SELECT must not undo a later state already seen from the RPC
-           or Realtime. A confirmed server transition is monotonic in this workflow. */
-        const reconciled=mergeOrderMonotonic(prior,live);
-        if(status(prior.status)===status(live.status))delete reconciled.__optimisticStatus;
-        if(prior.__draftMinutes!==undefined)reconciled.__draftMinutes=prior.__draftMinutes;
-        rows.set(key,reconciled);
-      }else{
-        /* The bulk outlet-scoped query already returned this order. A null or failed
-           follow-up read is not proof that it disappeared; keep the bulk snapshot. */
-        console.warn('[JPT Orders] Per-order verification unavailable; retaining loaded order',key);
-      }
-    }));
+  if(verifyRows){
+    const checks=[...rows.entries()];
+    for(let i=0;i<checks.length;i+=8){
+      await Promise.all(checks.slice(i,i+8).map(async([key,o])=>{
+        if(actionBusy.has(key)||transitionBusy.has(key))return;
+        const live=await read(o.id,o.outlet_id).catch(()=>null);
+        if(actionBusy.has(key)||transitionBusy.has(key))return;
+        if(live){
+          /* This is a direct SELECT by order id: its status replaces stale UI state.
+             Do not retain __optimisticStatus when the server disagrees. */
+          const prior=rows.get(key)||o;
+          /* A lagging SELECT must not undo a later state already seen from the RPC
+             or Realtime. A confirmed server transition is monotonic in this workflow. */
+          const reconciled=mergeOrderMonotonic(prior,live);
+          if(status(prior.status)===status(live.status))delete reconciled.__optimisticStatus;
+          if(prior.__draftMinutes!==undefined)reconciled.__draftMinutes=prior.__draftMinutes;
+          rows.set(key,reconciled);
+        }else{
+          /* The bulk outlet-scoped query already returned this order. A null or failed
+             follow-up read is not proof that it disappeared; keep the bulk snapshot. */
+          console.warn('[JPT Orders] Per-order verification unavailable; retaining loaded order',key);
+        }
+      }));
+    }
   }
   render();
   /* Restore the continuous alert for any still-NEW order already present at startup/refresh. */
@@ -948,7 +951,7 @@ async function boot(){
     }else if(!fallbackPollBusy){
       /* Safety-net poll discovers missed INSERTs without manual dashboard refresh. */
       fallbackPollBusy=true;
-      try{ await initialLoad(); }
+      try{ await initialLoad({verifyRows:false}); }
       catch(e){ console.warn('[JPT Orders] fallback poll failed',e); }
       finally{ fallbackPollBusy=false; }
     }
