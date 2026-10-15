@@ -21,6 +21,7 @@ let timerHandle=null;
 let selectedQueue='all';
 let managedSignature='';
 let fallbackPollBusy=false;
+let initialLoadSequence=0;
 const outletRealtimeState={};
 let lastRealtimeInsert=null;
 const outletSelect=document.getElementById('outletSelect');
@@ -622,6 +623,7 @@ async function lifecycleTransition(id,next){
 async function markReady(id){return lifecycleTransition(id,'ready')}
 async function transition(id,next){return lifecycleTransition(id,next)}
 async function initialLoad(options={}){
+  const loadSequence=++initialLoadSequence;
   const verifyRows=options.verifyRows!==false;
   const codes=await resolveManagedOutlets();
   if(!codes.length){
@@ -640,6 +642,11 @@ async function initialLoad(options={}){
   const r=codes.length===1
     ? await window.sb.from('orders').select('*').eq('outlet_id',codes[0]).order('created_at',{ascending:false}).limit(100)
     : await window.sb.from('orders').select('*').in('outlet_id',codes).order('created_at',{ascending:false}).limit(500);
+  /* Concurrent refreshes can finish out of order. Only the newest snapshot may reconcile the board. */
+  if(loadSequence!==initialLoadSequence){
+    console.info('[JPT Orders] Ignoring stale overlapping snapshot', {loadSequence,latestLoadSequence:initialLoadSequence});
+    return;
+  }
   if(r.error){
     /* Periodic safety-net polls must not blank the board or silence an alert on a transient read error. */
     if(options.preserveOnError){
