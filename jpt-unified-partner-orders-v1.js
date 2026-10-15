@@ -26,15 +26,16 @@ const outletRealtimeState={};
 let lastRealtimeInsert=null;
 const outletSelect=document.getElementById('outletSelect');
 function updateVisibleDiagnostics(extra){
+  /* Keep technical multi-outlet diagnostics in the console, not in the partner UI.
+     The visible notice area is reserved for actionable errors and order feedback. */
   const n=document.getElementById('ordersNotice');
-  if(!n)return;
-  const codes=managedOutlets();
-  const channelSummary=codes.map(code=>String(code)+':'+String(outletRealtimeState[String(code)]||'WAITING')).join(' | ')||'NONE';
-  const last=lastRealtimeInsert
-    ? ('LAST INSERT #'+String(lastRealtimeInsert.order_no||lastRealtimeInsert.id)+' ['+String(lastRealtimeInsert.outlet_id)+']')
-    : 'NO INSERT EVENT RECEIVED';
-  n.textContent='JPT LIVE DIAGNOSTICS — ACCESS: '+(codes.length?codes.join(', '):'EMPTY')+
-    ' | CHANNELS: '+channelSummary+' | '+last+(extra?' | '+String(extra):'');
+  if(n && /^JPT LIVE DIAGNOSTICS/.test(String(n.textContent||''))) n.textContent='';
+  console.debug('[JPT LIVE DIAGNOSTICS]', {
+    outlets: managedOutlets(),
+    channels: Object.assign({}, outletRealtimeState),
+    lastInsert: lastRealtimeInsert,
+    event: extra || null
+  });
 }
 /* MULTI-OUTLET CORE FREEZE CONTRACT:
    - outletDisplayName() resolves names only from authorized partner outlet data.
