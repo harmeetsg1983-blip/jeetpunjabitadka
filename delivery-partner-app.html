@@ -155,7 +155,27 @@ const JPT_DELIVERY_ACCEPTED_AUDIO='./ringtones/1000449491.mp4';
 function toneFile(){return null}
 function startTone(){
   stopTone();
-  try{audio=new Audio(JPT_DELIVERY_OFFER_AUDIO);audio.preload='auto';audio.loop=true;audio.play().catch(()=>{})}catch(e){}
+  try{
+    audio=new Audio(JPT_DELIVERY_OFFER_AUDIO);
+    audio.preload='auto';
+    audio.loop=true;
+    audio.volume=1;
+    let usedFallback=false;
+    audio.addEventListener('error',()=>{
+      if(usedFallback)return;
+      usedFallback=true;
+      try{
+        const previous=audio;
+        audio=new Audio(JPT_DELIVERY_ACCEPTED_AUDIO);
+        audio.preload='auto';
+        audio.loop=true;
+        audio.volume=1;
+        audio.play().catch(()=>{});
+        if(previous){previous.pause();previous.removeAttribute('src');previous.load();}
+      }catch(e){console.warn('Delivery offer audio unavailable',e)}
+    },{once:true});
+    audio.play().catch(e=>console.warn('Delivery offer audio blocked or unavailable',e));
+  }catch(e){console.warn('Delivery offer audio unavailable',e)}
 }
 function stopTone(){if(audio){audio.pause();audio.currentTime=0;audio=null}}
 function playDeliveryAcceptedTone(){
