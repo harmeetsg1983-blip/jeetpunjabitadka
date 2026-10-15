@@ -42,7 +42,8 @@ class MainActivity : ComponentActivity() {
 
     private fun handleOrderIntent(intent: Intent?) {
         val orderId = intent?.getStringExtra(OrderAlarmService.EXTRA_ORDER_ID) ?: return
-        OrderAlarmService.stop(this, orderId)
+        // Opening the notification must NOT silence the alarm. The partner must
+        // explicitly ACCEPT or REJECT the order in the dashboard to stop ringing.
         val outletId = intent.getStringExtra(OrderAlarmService.EXTRA_OUTLET_ID).orEmpty()
         val safeId = org.json.JSONObject.quote(orderId)
         val safeOutlet = org.json.JSONObject.quote(outletId)
