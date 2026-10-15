@@ -10,12 +10,16 @@
 
   function normalize(rows) {
     return (Array.isArray(rows) ? rows : [])
-      .filter(row => row && row.outlet_id)
-      .map(row => ({
-        outlet_id: String(row.outlet_id),
-        outlet_name: String(row.outlet_name || row.outlet_id),
-        access_level: String(row.access_level || 'view')
-      }));
+      /* partner_my_outlets returns outlets.code and outlets.name, not outlet_id/outlet_name. */
+      .filter(row => row && (row.outlet_id || row.code))
+      .map(row => {
+        const outletId = row.outlet_id || row.code;
+        return {
+          outlet_id: String(outletId),
+          outlet_name: String(row.outlet_name || row.name || outletId),
+          access_level: String(row.access_level || 'view')
+        };
+      });
   }
 
   function render(rows) {
