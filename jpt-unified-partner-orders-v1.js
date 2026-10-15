@@ -893,13 +893,13 @@ function focusQueueForStatus(value){
   const btn=[...document.querySelectorAll('.orderQueueBtn')].find(b=>String(b.dataset.queue||'')===target);
   if(!btn)return;
   selectedQueue=target;
-  document.querySelectorAll('.orderQueueBtn').forEach(x=>x.classList.toggle('gold',x===btn));
+  document.querySelectorAll('.orderQueueBtn').forEach(x=>{x.classList.toggle('gold',x===btn);x.classList.toggle('is-active',x===btn);x.setAttribute('aria-selected',x===btn?'true':'false')});
 }
 function bindQueue(){
   document.querySelectorAll('.orderQueueBtn').forEach(b=>{
     b.onclick=async()=>{
       selectedQueue=b.dataset.queue||'all';
-      document.querySelectorAll('.orderQueueBtn').forEach(x=>x.classList.toggle('gold',x===b));
+      document.querySelectorAll('.orderQueueBtn').forEach(x=>{x.classList.toggle('gold',x===b);x.classList.toggle('is-active',x===b);x.setAttribute('aria-selected',x===b?'true':'false')});
       /* Always reconcile queue cards against Supabase before rendering. */
       try{ await initialLoad(); await subscribe(); }
       catch(e){ console.error('[JPT queue refresh]',e); toast('Queue refresh failed. Please use Refresh Orders before taking another action.'); }
