@@ -18,7 +18,7 @@ let audio=null;
 let activeRingtoneOrderId=null;
 let audioGeneration=0;
 let timerHandle=null;
-let selectedQueue='all';
+let selectedQueue='preparing';
 let managedSignature='';
 let fallbackPollBusy=false;
 let initialLoadSequence=0;
@@ -144,6 +144,14 @@ function status(v){
 function boardStatus(o){
   const st=status(o?.status);
   return st==='accepted'?'preparing':st;
+}
+function queueForStatus(value){
+  const st=status(value);
+  if(['new','accepted','preparing'].includes(st))return 'preparing';
+  if(st==='ready')return 'ready';
+  if(st==='out_for_delivery')return 'out_for_delivery';
+  if(['delivered','cancelled'].includes(st))return 'history';
+  return null;
 }
 /* Order lifecycle is monotonic: delayed Realtime/SELECT responses must not
    move a completed order back into NEW/ACCEPTED queues. */
@@ -304,9 +312,11 @@ function render(){
     .sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
   /* ALL is the active workboard only. Completed/cancelled records belong in history tabs
      and must never return to ALL or trigger active-order actions. */
-  const filtered=selectedQueue==='all'
-    ? all.filter(o=>LIVE_STATUSES.has(status(o.status)))
-    : all.filter(o=>boardStatus(o)===selectedQueue);
+  /* Four operator-facing queues: all NEW/ACCEPTED/PREPARING orders stay in
+     Preparing; terminal delivered/cancelled orders are kept in History. */
+  const filtered=selectedQueue==='history'
+    ? all.filter(o=>['delivered','cancelled'].includes(status(o.status)))
+    : all.filter(o=>queueForStatus(o.status)===selectedQueue);
   /* TEMP JPT diagnostics: report only recent NEW orders; no customer PII. */
   const diagCutoff=Date.now()-24*60*60*1000;
   const recentNew=[...rows.values()].filter(o=>status(o.status)==='new'&&new Date(o.created_at||0).getTime()>=diagCutoff);
@@ -796,7 +806,7 @@ async function subscribe(){
       /* If the active queue was showing this order's prior state, follow its
          server-confirmed lifecycle state immediately instead of leaving the
          operator on a stale NEW/ACCEPTED tab. */
-      if(old.id && oldStatus!==nextStatus && selectedQueue===oldStatus){
+      if(old.id && oldStatus!==nextStatus && selectedQueue===queueForStatus(oldStatus)){
         focusQueueForStatus(nextStatus);
       }
       render();
@@ -844,7 +854,7 @@ async function subscribe(){
       const merged=mergeOrderMonotonic(previous,o);
       const nextStatus=status(merged.status);
       rows.set(key,Object.assign({},merged,{__liveNew:eventName==='order_insert'&&nextStatus==='new',__realtimeSeenAt:Date.now()}));
-      if(eventName==='order_update' && previous?.id && oldStatus!==nextStatus && selectedQueue===oldStatus){
+      if(eventName==='order_update' && previous?.id && oldStatus!==nextStatus && selectedQueue===queueForStatus(oldStatus)){
         focusQueueForStatus(nextStatus);
       }
       render();
@@ -878,8 +888,7 @@ function updateTimers(){
   if(shouldRender)render();
 }
 function focusQueueForStatus(value){
-  const st=status(value);
-  const target=st==='new'?'new':st==='accepted'?'preparing':st==='preparing'?'preparing':st==='ready'?'ready':st==='out_for_delivery'?'out_for_delivery':st==='delivered'?'delivered':null;
+  const target=queueForStatus(value);
   if(!target)return;
   const btn=[...document.querySelectorAll('.orderQueueBtn')].find(b=>String(b.dataset.queue||'')===target);
   if(!btn)return;
