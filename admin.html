@@ -140,7 +140,7 @@ body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
  overflow-x:auto;overflow-y:hidden;scrollbar-width:none;
  background:rgba(7,7,7,.97);
  border-top:1px solid #242424;border-bottom:1px solid #2e2e2e;
- backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+ /* Android stability: solid sticky bar, no backdrop repaint */
 }
 #orderQueueBar::-webkit-scrollbar{display:none}
 .jpt-status-tab{
@@ -162,7 +162,7 @@ body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
  background:rgba(10,10,10,.98);
  border-top:1px solid #343434;
  box-shadow:0 -10px 30px #000b;
- backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+ /* Android stability: solid bottom nav, no backdrop repaint */
 }
 .jpt-bottom-item{
  appearance:none;border:0;background:transparent;color:#888;
