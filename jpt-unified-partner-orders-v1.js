@@ -658,7 +658,10 @@ async function initialLoad(options={}){
      lifecycle status over a successful fresh server response. */
   const incomingIds=new Set((r.data||[]).map(o=>String(o.id)));
   for(const [key,old] of [...rows.entries()]){
-    if(!incomingIds.has(key)&&!actionBusy.has(key)&&!transitionBusy.has(key)){
+    /* A snapshot can have started before a just-arrived Realtime event.
+       Do not let that older snapshot erase an order received during the query. */
+    const recentlyRealtimeSeen=Number(old.__realtimeSeenAt||0)>Date.now()-30000;
+    if(!incomingIds.has(key)&&!recentlyRealtimeSeen&&!actionBusy.has(key)&&!transitionBusy.has(key)){
       rows.delete(key);
       if(activeRingtoneOrderId===key)stopRingtone();
     }
@@ -760,7 +763,7 @@ async function subscribe(){
       const previous=rows.get(key);
       const merged=mergeOrderMonotonic(previous,o);
       const isNew=status(merged.status)==='new';
-      rows.set(key,Object.assign({},merged,{__liveNew:isNew}));
+      rows.set(key,Object.assign({},merged,{__liveNew:isNew,__realtimeSeenAt:Date.now()}));
       console.info('[JPT-DIAG][INSERT stored]',{id:key,order_no:merged.order_no,outlet_id:merged.outlet_id,status:status(merged.status),isNew,rowIdsAfter:[...rows.keys()]});
       updateVisibleDiagnostics('STORED '+String(merged.order_no||key)+' • '+String(merged.outlet_id));
       render();
@@ -782,7 +785,7 @@ async function subscribe(){
       if(actionBusy.has(String(o.id))||transitionBusy.has(String(o.id)))return;
       const merged=mergeOrderMonotonic(old,o);
       const nextStatus=status(merged.status);
-      rows.set(String(o.id),merged);
+      rows.set(String(o.id),Object.assign({},merged,{__realtimeSeenAt:Date.now()}));
       /* If the active queue was showing this order's prior state, follow its
          server-confirmed lifecycle state immediately instead of leaving the
          operator on a stale NEW/ACCEPTED tab. */
@@ -833,7 +836,7 @@ async function subscribe(){
       const oldStatus=status(previous?.status);
       const merged=mergeOrderMonotonic(previous,o);
       const nextStatus=status(merged.status);
-      rows.set(key,Object.assign({},merged,{__liveNew:eventName==='order_insert'&&nextStatus==='new'}));
+      rows.set(key,Object.assign({},merged,{__liveNew:eventName==='order_insert'&&nextStatus==='new',__realtimeSeenAt:Date.now()}));
       if(eventName==='order_update' && previous?.id && oldStatus!==nextStatus && selectedQueue===oldStatus){
         focusQueueForStatus(nextStatus);
       }
