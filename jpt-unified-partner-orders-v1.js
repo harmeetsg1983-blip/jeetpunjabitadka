@@ -322,8 +322,21 @@ function render(){
      and must never return to ALL or trigger active-order actions. */
   /* Four operator-facing queues: all NEW/ACCEPTED/PREPARING orders stay in
      Preparing; terminal delivered/cancelled orders are kept in History. */
+  const historyDate=selectedQueue==='history'?String(document.getElementById('orderHistoryDate')?.value||''):'';
+  const historyStart=historyDate&&/^\\d{4}-\\d{2}-\\d{2}$/.test(historyDate)
+    ? new Date(Number(historyDate.slice(0,4)),Number(historyDate.slice(5,7))-1,Number(historyDate.slice(8,10)).getTime()
+    : null;
+  const historyEnd=historyDate&&/^\\d{4}-\\d{2}-\\d{2}$/.test(historyDate)
+    ? new Date(Number(historyDate.slice(0,4)),Number(historyDate.slice(5,7))-1,Number(historyDate.slice(8,10))+1)
+    : null;
+  const historyCutoff=Date.now()-90*24*60*60*1000;
   const filtered=selectedQueue==='history'
-    ? all.filter(o=>['delivered','cancelled'].includes(status(o.status)))
+    ? all.filter(o=>{
+        if(!['delivered','cancelled'].includes(status(o.status)))return false;
+        const created=new Date(o.created_at||0).getTime();
+        if(!Number.isFinite(created)||created<historyCutoff)return false;
+        return !historyStart||!historyEnd||(created>=historyStart.getTime()&&created<historyEnd.getTime());
+      })
     : all.filter(o=>queueForStatus(o.status)===selectedQueue);
   /* TEMP JPT diagnostics: report only recent NEW orders; no customer PII. */
   const diagCutoff=Date.now()-24*60*60*1000;
@@ -723,13 +736,18 @@ async function initialLoad(options={}){
      Preserve local action drafts only where possible, but never preserve a stale
      lifecycle status over a successful fresh server response. */
   const incomingIds=new Set((r.data||[]).map(o=>String(o.id)));
-  for(const [key,old] of [...rows.entries()]){
-    /* A snapshot can have started before a just-arrived Realtime event.
-       Do not let that older snapshot erase an order received during the query. */
-    const recentlyRealtimeSeen=Number(old.__realtimeSeenAt||0)>Date.now()-30000;
-    if(!incomingIds.has(key)&&!recentlyRealtimeSeen&&!actionBusy.has(key)&&!transitionBusy.has(key)){
-      rows.delete(key);
-      if(activeRingtoneOrderId===key)stopRingtone();
+  /* History is a scoped read (90 days or one selected day), not a full-board
+     snapshot. Never delete active-queue rows merely because they are outside
+     the selected history date/window. */
+  if(!historyMode){
+    for(const [key,old] of [...rows.entries()]){
+      /* A snapshot can have started before a just-arrived Realtime event.
+         Do not let that older snapshot erase an order received during the query. */
+      const recentlyRealtimeSeen=Number(old.__realtimeSeenAt||0)>Date.now()-30000;
+      if(!incomingIds.has(key)&&!recentlyRealtimeSeen&&!actionBusy.has(key)&&!transitionBusy.has(key)){
+        rows.delete(key);
+        if(activeRingtoneOrderId===key)stopRingtone();
+      }
     }
   }
   (r.data||[]).forEach(o=>{
