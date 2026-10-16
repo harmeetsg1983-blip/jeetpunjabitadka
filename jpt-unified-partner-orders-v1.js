@@ -537,9 +537,12 @@ async function accept(id){
 }
 async function reject(id){
   const actionAuthGeneration=authGeneration;
-  /* Explicit REJECT click: this is the ONLY place the ringtone is stopped. */
+  const key=String(id);
+  if(actionBusy.has(key)||transitionBusy.has(key))return;
+  const o=rows.get(key); if(!o)return;
+  /* Reserve the order action before the RPC so repeated taps cannot issue duplicate REJECTs. */
+  actionBusy.add(key);
   stopRingtone();
-  const o=rows.get(String(id)); if(!o)return;
   try{
     const r=await window.sb.rpc('jpt_partner_transition_order',{
       p_order_id:Number(id),
@@ -550,7 +553,7 @@ async function reject(id){
     if(actionAuthGeneration!==authGeneration)return;
     if(r.error)throw r.error;
     const server=Array.isArray(r.data)?r.data[0]:r.data;
-    if(server)rows.set(String(id),Object.assign(o,server));
+    if(server)rows.set(key,Object.assign(o,server));
     else o.status='cancelled';
     toast('Order rejected.');
     render();
@@ -558,8 +561,10 @@ async function reject(id){
     if(actionAuthGeneration!==authGeneration)return;
     const fresh=await read(id,o?.outlet_id).catch(()=>null);
     if(actionAuthGeneration!==authGeneration)return;
-    if(fresh)rows.set(String(id),fresh);
+    if(fresh)rows.set(key,fresh);
     render(); toast('REJECT failed: '+(e.message||e));
+  }finally{
+    if(actionAuthGeneration===authGeneration){actionBusy.delete(key);render();}
   }
 }
 const transitionBusy=new Set();
