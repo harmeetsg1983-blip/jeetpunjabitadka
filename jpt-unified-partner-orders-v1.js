@@ -274,7 +274,7 @@ function remaining(deadline){
 }
 if(!document.getElementById('jptUnifiedPartnerOrderStyle')){
   const st=document.createElement('style');st.id='jptUnifiedPartnerOrderStyle';
-  st.textContent='.jpt-ready-countdown{display:inline-flex;align-items:center;justify-content:center;min-width:150px;margin:4px 0;padding:12px 16px;border-radius:12px;background:#111;color:#f4d77a;font-size:18px;font-weight:900;letter-spacing:.2px;box-shadow:0 3px 10px #0002}.jpt-rider-box{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px;padding:8px;border:1px solid #eee;border-radius:10px;background:#fff}.jpt-rider-box .btn{display:inline-flex;text-decoration:none;align-items:center;justify-content:center}';
+  st.textContent='.jpt-history-date{margin:18px 0 8px;padding:9px 12px;border-radius:10px;background:#171717;color:#f4d77a;font-weight:900;letter-spacing:.2px}.jpt-ready-countdown{display:inline-flex;align-items:center;justify-content:center;min-width:150px;margin:4px 0;padding:12px 16px;border-radius:12px;background:#111;color:#f4d77a;font-size:18px;font-weight:900;letter-spacing:.2px;box-shadow:0 3px 10px #0002}.jpt-rider-box{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px;padding:8px;border:1px solid #eee;border-radius:10px;background:#fff}.jpt-rider-box .btn{display:inline-flex;text-decoration:none;align-items:center;justify-content:center}';
   document.head.appendChild(st);
 }
 function riderInfo(o){
@@ -328,8 +328,12 @@ function render(){
       inAll:all.some(x=>String(x.id)===String(o.id)),inFiltered:filtered.some(x=>String(x.id)===String(o.id))})),
     rowIds:[...rows.keys()]
   });
-  body.innerHTML=filtered.map(o=>{
+  body.innerHTML=filtered.map((o,index)=>{
     const st=status(o.status);
+    const currentDay=new Date(o.created_at||0);
+    const previousDay=index>0?new Date(filtered[index-1].created_at||0):null;
+    const dayHeader=selectedQueue==='history' && (!previousDay || currentDay.toDateString()!==previousDay.toDateString())
+      ? '<h3 class="jpt-history-date">'+esc(currentDay.toLocaleDateString('en-IN',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}))+'</h3>' : '';
     const target=Math.max(15,Math.min(40,Number(o.target_minutes||o.__draftMinutes||15)));
     const deadline=o.deadline_at||o.__localDeadline;
     const timer=st==='accepted'||st==='preparing'?remaining(deadline):'—';
@@ -342,7 +346,7 @@ function render(){
       '<div class="jpt-item-line"><span>'+esc(i.name||i.item_name||'Item')+'</span><b>× '+Number(i.qty??i.quantity??1)+'</b></div>'
     ).join(''):'<div class="muted">No item details available</div>';
     const action=actionHtml(o);
-    return '<article class="jpt-order-card'+newClass+'" data-order-card="'+esc(o.id)+'">'+
+    return dayHeader+'<article class="jpt-order-card'+newClass+'" data-order-card="'+esc(o.id)+'">'+
       '<div class="jpt-order-head"><div><div class="jpt-label">ORDER ID</div><div class="jpt-order-id">#'+esc(o.order_no||o.id)+'</div></div>'+
       '<span class="tag jpt-status">'+esc(boardStatus(o).replaceAll('_',' ').toUpperCase())+'</span></div>'+
       '<div class="muted" style="margin:6px 0;font-weight:800">OUTLET: '+esc(outletDisplayName(o.outlet_id))+'</div>'+
