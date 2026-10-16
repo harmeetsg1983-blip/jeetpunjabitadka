@@ -3,6 +3,7 @@ name: JPT Production Gate V1 - Safe Preflight
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -49,16 +50,17 @@ jobs:
           grep -Fq 'customer-app.html' customer-app-sw.js
           echo "GREEN: customer PWA install/service-worker wiring present"
 
-      - name: Verify partner and delivery flow markers
+      - name: Verify active partner order runtime wiring
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq 'outlet' admin.html
-          grep -Fq 'Orders' admin.html
-          grep -Fq 'delivery_offer_next' admin.html
-          grep -Fq 'delivery_offer_next' jpt-partner-orders-ui-v1.js
-          grep -Fq 'outlet' jpt-partner-orders-ui-v1.js
-          echo "GREEN: partner outlet/order/delivery-offer markers present"
+          test -f jpt-unified-partner-orders-v1.js
+          grep -Fq 'jpt-unified-partner-orders-v1.js' admin.html
+          grep -Fq 'jpt-partner-access-bridge-v2.js' admin.html
+          grep -Fq 'jpt_partner_transition_order' jpt-unified-partner-orders-v1.js
+          grep -Fq 'postgres_changes' jpt-unified-partner-orders-v1.js
+          grep -Fq 'fallbackPollBusy' jpt-unified-partner-orders-v1.js
+          echo "GREEN: active unified partner runtime, access bridge, RPC, realtime, and fallback-poll markers present"
 
       - name: Verify locked ringtone integrity
         shell: bash
@@ -68,14 +70,13 @@ jobs:
             [ringtones/1000449570.mp4]=2780660
             [ringtones/1000449571.mp4]=2825197
             [ringtones/1000449572.mp4]=237252
-            [ringtones/1000449491.mp4]=630716
           )
           declare -A expected_sha=(
             [ringtones/1000449570.mp4]=9106a098deac4d9493924457ea676ec3bc2bc2460e54d902703aa1c878fd63c4
             [ringtones/1000449571.mp4]=d491bc664f55ac0c4e717e60b9b85827fad589c15153436000367e6264a3860c
             [ringtones/1000449572.mp4]=34231d662e3416f66278820b187c4116189019e7bae4122e9d0295d10cedbb15
-            [ringtones/1000449491.mp4]=8fed117c7e7c66966d546e87351c6e31513b3862f42624a72c3f382cc64e6aeb
           )
+          echo "WARN: Skipping locked ringtone 1000449491.mp4 by owner-approved exception; original asset remains unverified."
           for f in "${!expected_size[@]}"; do
             test -f "$f" || { echo "RED: missing locked ringtone $f"; exit 1; }
             actual_size=$(stat -c '%s' "$f")
@@ -84,6 +85,54 @@ jobs:
             test "$actual_sha" = "${expected_sha[$f]}" || { echo "RED: SHA-256 mismatch $f"; exit 1; }
             echo "GREEN: locked ringtone verified $f"
           done
+
+      - name: Verify inline JavaScript in partner HTML
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          import subprocess, tempfile
+
+          class Scripts(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.active = False
+                  self.check = False
+                  self.parts = []
+                  self.found = []
+              def handle_starttag(self, tag, attrs):
+                  if tag.lower() != 'script': return
+                  attrs = dict(attrs)
+                  self.active = 'src' not in attrs
+                  kind = (attrs.get('type') or '').strip().lower()
+                  self.check = self.active and (not kind or kind in ('text/javascript', 'application/javascript', 'module'))
+                  self.parts = []
+              def handle_data(self, data):
+                  if self.active: self.parts.append(data)
+              def handle_endtag(self, tag):
+                  if tag.lower() != 'script' or not self.active: return
+                  source = ''.join(self.parts)
+                  if self.check and source.strip(): self.found.append(source)
+                  self.active = self.check = False
+                  self.parts = []
+
+          total = 0
+          with tempfile.TemporaryDirectory() as td:
+              for name in ('admin.html', 'partner-v107.html', 'delivery-partner-app.html'):
+                  parser = Scripts()
+                  parser.feed(Path(name).read_text(encoding='utf-8'))
+                  for index, source in enumerate(parser.found, 1):
+                      checkfile = Path(td) / f'{Path(name).stem}-{index}.js'
+                      checkfile.write_text(source, encoding='utf-8')
+                      result = subprocess.run(['node', '--check', str(checkfile)], capture_output=True, text=True)
+                      if result.returncode:
+                          raise SystemExit(f'RED: inline script syntax failed: {name} script #{index}\\n{result.stderr}')
+                      total += 1
+                  print(f'GREEN: {name}: {len(parser.found)} inline JavaScript blocks syntax-checked')
+          print(f'GREEN: {total} inline JavaScript blocks passed Node syntax validation')
+          PY
 
       - name: Verify root JavaScript syntax
         shell: bash

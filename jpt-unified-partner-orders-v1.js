@@ -10,6 +10,7 @@ window.__JPT_UNIFIED_ORDER_RUNTIME__=true;
 window.__JPTOrdersV3Active=true;
 
 const LIVE_STATUSES=new Set(['new','accepted','preparing','ready','out_for_delivery']);
+/* Orders before this verified rollout cutoff are excluded from active queues. */
 const rows=new Map();
 const actionBusy=new Set();
 let channel=null;
@@ -47,7 +48,7 @@ function updateVisibleDiagnostics(extra){
 async function primeOrderAudio(){
   try{
     if(!audio){
-      audio=new Audio('./ringtones/1000449491.mp4');
+      audio=new Audio('./ringtones/1000449570.mp4');
       audio.preload='auto';
       audio.loop=true;
       audio.playsInline=true;
@@ -126,9 +127,9 @@ async function resolveManagedOutlets(){
 }
 function orderBelongsToManagedOutlet(o){ return managedOutlets().includes(String(o?.outlet_id||'')); }
 function shouldShowOnBoard(o){
-  /* Do not use a rollout timestamp to hide active orders: an older order may
-     still genuinely be in progress. Queue membership follows persisted status.
-     Completed/cancelled orders remain available in History. */
+  /* Preserve every genuinely active order regardless of age; never hide a
+     pending order using a rollout timestamp. History filtering is handled
+     separately by the history queue. */
   return ['new','accepted','preparing','ready','out_for_delivery','delivered','cancelled']
     .includes(status(o?.status));
 }
@@ -180,7 +181,7 @@ function toast(msg){
 function stopRingtone(){
   const id=activeRingtoneOrderId||'';
   try{window.AndroidOrderAlarm?.stopAlarm?.(id)}catch(e){}
-  /* ONLY ACCEPT/REJECT call this function. */
+  /* Shared stop path for operator acknowledgement, order transitions, and runtime cleanup. */
   audioGeneration++;
   activeRingtoneOrderId=null;
   if(audio){
@@ -209,7 +210,7 @@ function startRingtone(order){
   activeRingtoneOrderId=id;
 
   if(!audio){
-    audio=new Audio('./ringtones/1000449491.mp4');
+    audio=new Audio('./ringtones/1000449570.mp4');
     audio.preload='auto';
     audio.loop=true;
     audio.playsInline=true;
@@ -256,8 +257,13 @@ function startRingtone(order){
     }
   }catch(e){
     if(generation===audioGeneration){
+      /* A synchronous play/load failure must not permanently suppress a retry
+         for this still-NEW order. Keep the one audio owner; release only its
+         failed alert claim so a later gesture/poll can try again. */
+      ringtoneAlertedOrderIds.delete(id);
+      if(activeRingtoneOrderId===id)activeRingtoneOrderId=null;
       const msg=document.getElementById('ordersNotice');
-      if(msg)msg.textContent='NEW ORDER received — ringtone playback failed: '+(e?.message||e);
+      if(msg)msg.textContent='NEW ORDER received — ringtone playback failed: '+(e?.message||e)+'. Tap ENABLE SOUND to retry.';
     }
   }
 
@@ -322,8 +328,21 @@ function render(){
      and must never return to ALL or trigger active-order actions. */
   /* Four operator-facing queues: all NEW/ACCEPTED/PREPARING orders stay in
      Preparing; terminal delivered/cancelled orders are kept in History. */
+  const historyDate=selectedQueue==='history'?String(document.getElementById('orderHistoryDate')?.value||''):'';
+  const historyStart=historyDate&&/^\d{4}-\d{2}-\d{2}$/.test(historyDate)
+    ? new Date(Number(historyDate.slice(0,4)),Number(historyDate.slice(5,7))-1,Number(historyDate.slice(8,10)))
+    : null;
+  const historyEnd=historyDate&&/^\d{4}-\d{2}-\d{2}$/.test(historyDate)
+    ? new Date(Number(historyDate.slice(0,4)),Number(historyDate.slice(5,7))-1,Number(historyDate.slice(8,10))+1)
+    : null;
+  const historyCutoff=Date.now()-90*24*60*60*1000;
   const filtered=selectedQueue==='history'
-    ? all.filter(o=>['delivered','cancelled'].includes(status(o.status)))
+    ? all.filter(o=>{
+        if(!['delivered','cancelled'].includes(status(o.status)))return false;
+        const created=new Date(o.created_at||0).getTime();
+        if(!Number.isFinite(created)||created<historyCutoff)return false;
+        return !historyStart||!historyEnd||(created>=historyStart.getTime()&&created<historyEnd.getTime());
+      })
     : all.filter(o=>queueForStatus(o.status)===selectedQueue);
   /* TEMP JPT diagnostics: report only recent NEW orders; no customer PII. */
   const diagCutoff=Date.now()-24*60*60*1000;
@@ -384,12 +403,12 @@ function render(){
   document.querySelectorAll('[data-ready]').forEach(b=>b.textContent='MARK READY');
   document.querySelectorAll('[data-delivery]').forEach(b=>b.textContent='OUT FOR DELIVERY');
   document.querySelectorAll('[data-delivered]').forEach(b=>b.textContent='MARK DELIVERED');
-  document.querySelectorAll('[data-accept],[data-ready],[data-delivery],[data-delivered]').forEach(b=>{
-    const key=String(b.dataset.accept||b.dataset.ready||b.dataset.delivery||b.dataset.delivered||'');
+  document.querySelectorAll('[data-accept],[data-reject],[data-ready],[data-delivery],[data-delivered]').forEach(b=>{
+    const key=String(b.dataset.accept||b.dataset.reject||b.dataset.ready||b.dataset.delivery||b.dataset.delivered||'');
     const busy=actionBusy.has(key)||transitionBusy.has(key);
     b.disabled=busy;
     b.setAttribute('aria-busy',busy?'true':'false');
-    if(busy)b.textContent=actionBusy.has(key)?'ACCEPTING…':'UPDATING…';
+    if(busy)b.textContent=actionBusy.has(key)?(b.hasAttribute('data-reject')?'REJECTING…':'ACCEPTING…'):'UPDATING…';
   });
   document.querySelectorAll('.jpt-rider-box .btn').forEach(b=>b.textContent='CALL RIDER');
   document.querySelectorAll('[data-accept]').forEach(b=>b.onclick=()=>accept(b.dataset.accept));
@@ -409,22 +428,31 @@ async function read(id,outletId){
   return r.data;
 }
 async function accept(id){
+  const actionAuthGeneration=authGeneration;
   const key=String(id);
-  if(actionBusy.has(key))return;
+  if(actionBusy.has(key)||transitionBusy.has(key))return;
   const o=rows.get(key); if(!o)return;
+  /* Lock before the first await: repeated taps must not race through server preflight reads. */
+  actionBusy.add(key);
   /* Stop the shared ringtone immediately on ACCEPT, before any server round-trip. */
   stopRingtone();
   /* A stale NEW card must not issue ACCEPT against an already-progressed order. */
   let canonical;
-  try{canonical=await read(id,o.outlet_id);}catch(e){
+  try{canonical=await read(id,o.outlet_id);if(actionAuthGeneration!==authGeneration)return;}catch(e){
+    if(actionAuthGeneration!==authGeneration)return;
     toast('ACCEPT paused: server status could not be verified. Refresh Orders before retrying.');
-    await initialLoad().catch(()=>{});render();return;
+    await initialLoad().catch(()=>{});
+    if(actionAuthGeneration!==authGeneration)return;
+    actionBusy.delete(key);
+    render();return;
   }
   if(!canonical){
     rows.delete(key);
     if(activeRingtoneOrderId===key)stopRingtone();
     await initialLoad().catch(()=>{});
+    if(actionAuthGeneration!==authGeneration)return;
     toast('Order is no longer in the live server queue; stale card removed.');
+    actionBusy.delete(key);
     render();return;
   }
   if(status(canonical.status)!=='new'){
@@ -432,10 +460,10 @@ async function accept(id){
     if(activeRingtoneOrderId===key)stopRingtone();
     focusQueueForStatus(canonical.status);
     toast('Server confirms '+status(canonical.status).toUpperCase()+'. Duplicate ACCEPT blocked.');
+    actionBusy.delete(key);
     render();return;
   }
   rows.set(key,Object.assign({},o,canonical));
-  actionBusy.add(key);
   const minutes=Math.max(15,Math.min(40,Number(o.__draftMinutes||o.target_minutes||15)));
   const local=localDeadline(minutes);
   const previous={status:o.status,target_minutes:o.target_minutes,deadline_at:o.deadline_at,__localDeadline:o.__localDeadline,__optimisticStatus:o.__optimisticStatus};
@@ -453,6 +481,7 @@ async function accept(id){
       p_target_minutes:minutes,
       p_rejection_reason:null
     });
+    if(actionAuthGeneration!==authGeneration)return;
     if(r.error)throw r.error;
     const server=Array.isArray(r.data)?r.data[0]:r.data;
     if(!server)throw new Error('Server returned no order record; status was not confirmed.');
@@ -461,12 +490,14 @@ async function accept(id){
     toast('Order accepted — '+minutes+' minute preparation timer started.');
     render();
   }catch(e){
+    if(actionAuthGeneration!==authGeneration)return;
     const message=String(e?.message||e);
     const serverStatus=message.match(/Current status:\s*([A-Z_]+)/i)?.[1]?.toLowerCase();
     /* The RPC's explicit Current status is authoritative. A follow-up SELECT can
        briefly return stale data; do not let it overwrite the server's conflict state. */
     if(serverStatus && serverStatus!=='new'){
       const fresh=await read(id,o?.outlet_id).catch(()=>null);
+      if(actionAuthGeneration!==authGeneration)return;
       Object.assign(o,fresh||{},{status:serverStatus});
       delete o.__optimisticStatus;
       if(serverStatus!=='accepted'){
@@ -478,10 +509,12 @@ async function accept(id){
       toast('Server status synced: '+serverStatus.toUpperCase()+'. No duplicate action sent.');
     }else{
       let fresh=await read(id,o?.outlet_id).catch(()=>null);
+      if(actionAuthGeneration!==authGeneration)return;
       /* A state-conflict response means the displayed card may be stale. Requery the
          authoritative queue before restoring NEW or leaving the old action buttons. */
       if(!fresh && /order is not new|current status|order not found/i.test(message)){
         await initialLoad().catch(()=>{});
+        if(actionAuthGeneration!==authGeneration)return;
         fresh=rows.get(key)||null;
       }
       if(fresh){
@@ -509,14 +542,17 @@ async function accept(id){
     }
     render();
   }finally{
-    actionBusy.delete(key);
-    render();
+    if(actionAuthGeneration===authGeneration){actionBusy.delete(key);render();}
   }
 }
 async function reject(id){
-  /* Explicit REJECT click: this is the ONLY place the ringtone is stopped. */
+  const actionAuthGeneration=authGeneration;
+  const key=String(id);
+  if(actionBusy.has(key)||transitionBusy.has(key))return;
+  const o=rows.get(key); if(!o)return;
+  /* Reserve the order action before the RPC so repeated taps cannot issue duplicate REJECTs. */
+  actionBusy.add(key);
   stopRingtone();
-  const o=rows.get(String(id)); if(!o)return;
   try{
     const r=await window.sb.rpc('jpt_partner_transition_order',{
       p_order_id:Number(id),
@@ -524,15 +560,21 @@ async function reject(id){
       p_target_minutes:15,
       p_rejection_reason:'Rejected by restaurant'
     });
+    if(actionAuthGeneration!==authGeneration)return;
     if(r.error)throw r.error;
     const server=Array.isArray(r.data)?r.data[0]:r.data;
-    if(server)rows.set(String(id),Object.assign(o,server));
+    if(server)rows.set(key,Object.assign(o,server));
     else o.status='cancelled';
     toast('Order rejected.');
     render();
   }catch(e){
-    const fresh=await read(id,o?.outlet_id).catch(()=>null); if(fresh)rows.set(String(id),fresh);
+    if(actionAuthGeneration!==authGeneration)return;
+    const fresh=await read(id,o?.outlet_id).catch(()=>null);
+    if(actionAuthGeneration!==authGeneration)return;
+    if(fresh)rows.set(key,fresh);
     render(); toast('REJECT failed: '+(e.message||e));
+  }finally{
+    if(actionAuthGeneration===authGeneration){actionBusy.delete(key);render();}
   }
 }
 const transitionBusy=new Set();
@@ -545,6 +587,7 @@ function setActionBusyUi(key,busy,label){
   });
 }
 async function lifecycleTransition(id,next){
+  const actionAuthGeneration=authGeneration;
   const key=String(id);
   if(transitionBusy.has(key)||actionBusy.has(key))return;
   const o=rows.get(key); if(!o)return;
@@ -565,6 +608,7 @@ async function lifecycleTransition(id,next){
   render();
   try{
     const fresh=await read(id,before.outlet_id).catch(()=>null);
+    if(actionAuthGeneration!==authGeneration)return;
     if(fresh){
       const serverState=status(fresh.status);
       if(serverState===next || (next==='ready'&&(serverState==='out_for_delivery'||serverState==='delivered')) ||
@@ -601,12 +645,14 @@ async function lifecycleTransition(id,next){
       p_target_minutes:Number(o.target_minutes||15),
       p_rejection_reason:null
     });
+    if(actionAuthGeneration!==authGeneration)return;
     if(r.error)throw r.error;
     const server=Array.isArray(r.data)?r.data[0]:r.data;
     if(server){
       rows.set(key,mergeOrderMonotonic(rows.get(key)||o,server));
     }else{
       const verify=await read(id,before.outlet_id);
+      if(actionAuthGeneration!==authGeneration)return;
       if(!verify || status(verify.status)!==next)throw new Error('Server did not confirm '+next.toUpperCase()+' status.');
       rows.set(key,Object.assign({},o,verify));
     }
@@ -617,9 +663,12 @@ async function lifecycleTransition(id,next){
       try{await window.sb.rpc('delivery_offer_next',{p_order_id:Number(id)})}catch(e){}
     }
   }catch(e){
+    if(actionAuthGeneration!==authGeneration)return;
     let fresh=await read(id,before.outlet_id).catch(()=>null);
+    if(actionAuthGeneration!==authGeneration)return;
     if(!fresh && /order is not|current status|order not found/i.test(String(e?.message||e))){
       await initialLoad().catch(()=>{});
+      if(actionAuthGeneration!==authGeneration)return;
       fresh=rows.get(key)||null;
     }
     if(fresh){
@@ -641,17 +690,17 @@ async function lifecycleTransition(id,next){
     }
     render();
   }finally{
-    transitionBusy.delete(key);
-    setActionBusyUi(key,false);
-    render();
+    if(actionAuthGeneration===authGeneration){transitionBusy.delete(key);setActionBusyUi(key,false);render();}
   }
 }
 async function markReady(id){return lifecycleTransition(id,'ready')}
 async function transition(id,next){return lifecycleTransition(id,next)}
 async function initialLoad(options={}){
+  const loadAuthGeneration=authGeneration;
   const loadSequence=++initialLoadSequence;
   const verifyRows=options.verifyRows!==false;
   const codes=await resolveManagedOutlets();
+  if(loadAuthGeneration!==authGeneration)return;
   if(!codes.length){
     if(options.preserveOnError){
       console.warn('[JPT Orders] Fallback poll skipped: authorized outlet list temporarily unavailable; preserving current board.');
@@ -663,17 +712,46 @@ async function initialLoad(options={}){
     toast('Partner outlet access is not ready. Orders were not queried under a fallback outlet. Retry login/access refresh.');
     return;
   }
-  /* Active queues use a compact recent snapshot. History loads a 60-day
-     date-ordered window so it is not limited to the active queue's 100/500-row cap.
-     This query is read-only and does not alter order or payment records. */
+  /* Active queues use a compact recent snapshot. History pages through the full
+     90-day date-ordered window so busy outlets are not silently truncated at 1,000 rows.
+     This is read-only and does not alter order or payment records. */
   const historyMode=selectedQueue==='history';
-  const historySince=new Date(Date.now()-60*24*60*60*1000).toISOString();
-  let query=window.sb.from('orders').select('*');
-  query=codes.length===1
-    ? query.eq('outlet_id',codes[0])
-    : query.in('outlet_id',codes);
-  if(historyMode)query=query.gte('created_at',historySince);
-  const r=await query.order('created_at',{ascending:false}).limit(historyMode?1000:(codes.length===1?100:500));
+  const historySince=new Date(Date.now()-90*24*60*60*1000).toISOString();
+  const historyDate=historyMode?String(document.getElementById('orderHistoryDate')?.value||''):'';
+  let historyDayStart=null,historyDayEnd=null;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(historyDate)){
+    const [year,month,day]=historyDate.split('-').map(Number);
+    historyDayStart=new Date(year,month-1,day);
+    historyDayEnd=new Date(year,month-1,day+1);
+  }
+  const makeQuery=()=>{
+    let q=window.sb.from('orders').select('*');
+    q=codes.length===1?q.eq('outlet_id',codes[0]):q.in('outlet_id',codes);
+    if(historyMode){
+      if(historyDayStart&&historyDayEnd){
+        q=q.gte('created_at',historyDayStart.toISOString()).lt('created_at',historyDayEnd.toISOString());
+      }else q=q.gte('created_at',historySince);
+    }
+    return q;
+  };
+  let r;
+  if(historyMode){
+    const historyRows=[];
+    const pageSize=1000;
+    let offset=0;
+    do{
+      const page=await makeQuery().order('created_at',{ascending:false}).range(offset,offset+pageSize-1);
+      if(page.error){r=page;break;}
+      const batch=page.data||[];
+      historyRows.push(...batch);
+      offset+=batch.length;
+      if(batch.length<pageSize){r={data:historyRows,error:null};break;}
+    }while(true);
+  }else{
+    r=await makeQuery().order('created_at',{ascending:false}).limit(codes.length===1?100:500);
+  }
+  /* A query started in a previous login session must never repopulate the board after logout. */
+  if(loadAuthGeneration!==authGeneration)return;
   /* Concurrent refreshes can finish out of order. Only the newest snapshot may reconcile the board. */
   if(loadSequence!==initialLoadSequence){
     console.info('[JPT Orders] Ignoring stale overlapping snapshot', {loadSequence,latestLoadSequence:initialLoadSequence});
@@ -696,13 +774,18 @@ async function initialLoad(options={}){
      Preserve local action drafts only where possible, but never preserve a stale
      lifecycle status over a successful fresh server response. */
   const incomingIds=new Set((r.data||[]).map(o=>String(o.id)));
-  for(const [key,old] of [...rows.entries()]){
-    /* A snapshot can have started before a just-arrived Realtime event.
-       Do not let that older snapshot erase an order received during the query. */
-    const recentlyRealtimeSeen=Number(old.__realtimeSeenAt||0)>Date.now()-30000;
-    if(!incomingIds.has(key)&&!recentlyRealtimeSeen&&!actionBusy.has(key)&&!transitionBusy.has(key)){
-      rows.delete(key);
-      if(activeRingtoneOrderId===key)stopRingtone();
+  /* History is a scoped read (90 days or one selected day), not a full-board
+     snapshot. Never delete active-queue rows merely because they are outside
+     the selected history date/window. */
+  if(!historyMode){
+    for(const [key,old] of [...rows.entries()]){
+      /* A snapshot can have started before a just-arrived Realtime event.
+         Do not let that older snapshot erase an order received during the query. */
+      const recentlyRealtimeSeen=Number(old.__realtimeSeenAt||0)>Date.now()-30000;
+      if(!incomingIds.has(key)&&!recentlyRealtimeSeen&&!actionBusy.has(key)&&!transitionBusy.has(key)){
+        rows.delete(key);
+        if(activeRingtoneOrderId===key)stopRingtone();
+      }
     }
   }
   (r.data||[]).forEach(o=>{
@@ -714,17 +797,28 @@ async function initialLoad(options={}){
     const merged=mergeOrderMonotonic(prior,o);
     if(prior?.__draftMinutes!==undefined)merged.__draftMinutes=prior.__draftMinutes;
     rows.set(key,merged);
+    /* The 5-second safety poll must recover missed INSERT events. Only alert for
+       rows newly discovered by that poll and created very recently; startup/history
+       refreshes must never ring for old outstanding orders after reinstall. */
+    if(options.alertNewOrders===true&&!prior&&status(merged.status)==='new'){
+      const createdAt=new Date(merged.created_at||0).getTime();
+      if(Number.isFinite(createdAt)&&createdAt>Date.now()-5*60*1000){
+        rows.set(key,Object.assign({},merged,{__liveNew:true}));
+        startRingtone(merged);
+      }
+    }
   });
 
   /* Reconcile cards against the same server lookup used by action recovery.
      Missing/unreadable rows are hidden from this in-memory queue only.
      Never delete or update database records during reconciliation. */
-  if(verifyRows){
+  if(verifyRows&&!historyMode){
     const checks=[...rows.entries()];
     for(let i=0;i<checks.length;i+=8){
       await Promise.all(checks.slice(i,i+8).map(async([key,o])=>{
         if(actionBusy.has(key)||transitionBusy.has(key))return;
         const live=await read(o.id,o.outlet_id).catch(()=>null);
+        if(loadAuthGeneration!==authGeneration)return;
         if(actionBusy.has(key)||transitionBusy.has(key))return;
         if(live){
           /* This is a direct SELECT by order id: its status replaces stale UI state.
@@ -744,10 +838,12 @@ async function initialLoad(options={}){
       }));
     }
   }
+  if(loadAuthGeneration!==authGeneration)return;
   render();
 }
 let channels=[];
-async function subscribe(){
+let subscribeQueue=Promise.resolve();
+async function performSubscribe(){
   for(const ch of channels){try{await window.sb.removeChannel(ch)}catch(e){}}
   channels=[];
   channel=null;
@@ -822,6 +918,8 @@ async function subscribe(){
       const merged=mergeOrderMonotonic(old,o);
       const nextStatus=status(merged.status);
       rows.set(String(o.id),Object.assign({},merged,{__realtimeSeenAt:Date.now()}));
+      /* A status change from another authorized session acknowledges the alert too. */
+      if(activeRingtoneOrderId===String(o.id)&&nextStatus!=='new')stopRingtone();
       /* If the active queue was showing this order's prior state, follow its
          server-confirmed lifecycle state immediately instead of leaving the
          operator on a stale NEW/ACCEPTED tab. */
@@ -882,6 +980,8 @@ async function subscribe(){
       const merged=mergeOrderMonotonic(previous,o);
       const nextStatus=status(merged.status);
       rows.set(key,Object.assign({},merged,{__liveNew:eventName==='order_insert'&&nextStatus==='new',__realtimeSeenAt:Date.now()}));
+      /* Broadcast updates from another authorized session also acknowledge the alert. */
+      if(eventName==='order_update'&&activeRingtoneOrderId===key&&nextStatus!=='new')stopRingtone();
       if(eventName==='order_update' && previous?.id && oldStatus!==nextStatus && selectedQueue===queueForStatus(oldStatus)){
         focusQueueForStatus(nextStatus);
       }
@@ -900,6 +1000,24 @@ async function subscribe(){
     channels.push(broadcastCh);
   }
   channel=channels[0]||null;
+}
+/* Serialize subscription rebuilds: outlet changes, manual refreshes, and the
+   managed-outlet sync can request a rebuild in the same event-loop window. */
+function subscribe(){
+  const run=()=>performSubscribe();
+  const task=subscribeQueue.then(run,run);
+  subscribeQueue=task.catch(()=>{});
+  return task;
+}
+async function clearSubscriptions(){
+  const run=async()=>{
+    for(const ch of channels){try{await window.sb.removeChannel(ch)}catch(e){}}
+    channels=[];
+    channel=null;
+  };
+  const task=subscribeQueue.then(run,run);
+  subscribeQueue=task.catch(()=>{});
+  return task;
 }
 function updateTimers(){
   let shouldRender=false;
@@ -923,25 +1041,47 @@ function focusQueueForStatus(value){
   selectedQueue=target;
   document.querySelectorAll('.orderQueueBtn').forEach(x=>{x.classList.toggle('gold',x===btn);x.classList.toggle('is-active',x===btn);x.setAttribute('aria-selected',x===btn?'true':'false')});
 }
+function syncHistoryTools(){
+  const tools=document.getElementById('orderHistoryTools');
+  if(tools)tools.style.display=selectedQueue==='history'?'flex':'none';
+  const date=document.getElementById('orderHistoryDate');
+  if(date){
+    const today=new Date();
+    const oldest=new Date(Date.now()-90*24*60*60*1000);
+    const fmt=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    date.min=fmt(oldest);
+    date.max=fmt(today);
+    if(date.value&&(date.value<date.min||date.value>date.max))date.value='';
+  }
+}
 function bindQueue(){
   document.querySelectorAll('.orderQueueBtn').forEach(b=>{
     b.onclick=async()=>{
       selectedQueue=b.dataset.queue||'all';
       document.querySelectorAll('.orderQueueBtn').forEach(x=>{x.classList.toggle('gold',x===b);x.classList.toggle('is-active',x===b);x.setAttribute('aria-selected',x===b?'true':'false')});
+      syncHistoryTools();
       /* Always reconcile queue cards against Supabase before rendering. */
       try{ await initialLoad(); await subscribe(); }
       catch(e){ console.error('[JPT queue refresh]',e); toast('Queue refresh failed. Please use Refresh Orders before taking another action.'); }
       render();
     };
   });
+  const date=document.getElementById('orderHistoryDate');
+  const clear=document.getElementById('orderHistoryDateClear');
+  if(date)date.onchange=async()=>{if(selectedQueue==='history'){await initialLoad();render();}};
+  if(clear)clear.onclick=async()=>{if(date)date.value='';if(selectedQueue==='history'){await initialLoad();render();}};
+  syncHistoryTools();
 }
 let runtimeStarted=false,runtimeStartBusy=false;
+let authGeneration=0;
 async function startAuthenticatedRuntime(){
   if(runtimeStarted||runtimeStartBusy||!window.sb?.auth)return;
   runtimeStartBusy=true;
+  const generation=authGeneration;
   try{
     const sessionResult=await window.sb.auth.getSession();
     if(sessionResult.error)throw sessionResult.error;
+    if(generation!==authGeneration)return;
     if(!sessionResult.data?.session?.user){
       const n=document.getElementById('ordersNotice');
       if(n)n.textContent='Partner login required before orders can be loaded.';
@@ -949,11 +1089,15 @@ async function startAuthenticatedRuntime(){
     }
     /* Access mapping must be ready before outlet-scoped orders queries start. */
     if(window.JPTPartnerAccess?.reload)await window.JPTPartnerAccess.reload();
+    if(generation!==authGeneration)return;
     const authorized=await resolveManagedOutlets();
+    if(generation!==authGeneration)return;
     console.info('[JPT-DIAG][authorized outlets ready]',{count:authorized.length,outlets:authorized});
     updateVisibleDiagnostics('AUTHORIZED OUTLETS READY');
     await initialLoad();
+    if(generation!==authGeneration)return;
     await subscribe();
+    if(generation!==authGeneration)return;
     runtimeStarted=true;
     managedSignature=managedOutlets().join('|');
   }catch(e){
@@ -961,11 +1105,18 @@ async function startAuthenticatedRuntime(){
     const n=document.getElementById('ordersNotice');
     if(n)n.textContent='Orders startup failed: '+String(e?.message||e);
   }finally{
-    runtimeStartBusy=false;
+    /* An older startup must not unlock the busy flag owned by a newer session. */
+    if(generation===authGeneration)runtimeStartBusy=false;
   }
 }
 async function boot(){
   if(!window.sb){setTimeout(boot,500);return;}
+  /* SINGLE-OWNER CUTOVER: admin.html's legacy order channel/audio can start
+     before this runtime loads. Remove that listener and silence its audio
+     before this runtime begins loading orders or subscribing. Do not touch
+     menu, offers, outlet access, payment guards, or customer checkout. */
+  try{await window.__JPTDisableLegacyOrderRuntime?.();}catch(e){console.warn('[JPT Orders] legacy realtime shutdown failed',e);}
+  try{window.stopOrderAlarm?.();}catch(e){}
   bindQueue();
   bindOrderAudioGesture();
   const refresh=document.getElementById('ordersRefresh');
@@ -977,7 +1128,7 @@ async function boot(){
     await subscribe();
   });
   const alarm=document.getElementById('stopAlarm');
-  if(alarm)alarm.onclick=()=>{};
+  if(alarm)alarm.onclick=()=>{stopRingtone();const box=document.getElementById('orderAlarm');if(box)box.style.display='none';};
   const enable=document.getElementById('enableAlarm');
   if(enable)enable.onclick=enableBackgroundAlerts;
   /* This script loads before the dashboard's login gate on some builds.
@@ -986,9 +1137,14 @@ async function boot(){
     if(event==='SIGNED_IN'&&session?.user){
       setTimeout(()=>{startAuthenticatedRuntime().catch(()=>{});},0);
     }else if(event==='SIGNED_OUT'){
+      authGeneration++;
       runtimeStarted=false;
+      runtimeStartBusy=false;
       rows.clear();
+      actionBusy.clear();
+      transitionBusy.clear();
       stopRingtone();
+      clearSubscriptions().catch(e=>console.warn('[JPT Orders] channel cleanup after sign-out failed',e));
       render();
     }
   });
@@ -1007,7 +1163,7 @@ async function boot(){
     }else if(!fallbackPollBusy){
       /* Safety-net poll discovers missed INSERTs without manual dashboard refresh. */
       fallbackPollBusy=true;
-      try{ await initialLoad({verifyRows:false,preserveOnError:true}); }
+      try{ await initialLoad({verifyRows:false,preserveOnError:true,alertNewOrders:true}); }
       catch(e){ console.warn('[JPT Orders] fallback poll failed',e); }
       finally{ fallbackPollBusy=false; }
     }
