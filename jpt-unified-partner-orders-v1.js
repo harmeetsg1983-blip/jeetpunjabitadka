@@ -10,7 +10,6 @@ window.__JPT_UNIFIED_ORDER_RUNTIME__=true;
 window.__JPTOrdersV3Active=true;
 
 const LIVE_STATUSES=new Set(['new','accepted','preparing','ready','out_for_delivery']);
-const BOARD_CUTOVER_AT='2026-10-11T09:16:21.000Z';
 const rows=new Map();
 const actionBusy=new Set();
 let channel=null;
@@ -127,16 +126,11 @@ async function resolveManagedOutlets(){
 }
 function orderBelongsToManagedOutlet(o){ return managedOutlets().includes(String(o?.outlet_id||'')); }
 function shouldShowOnBoard(o){
-  const st=status(o?.status);
-  if(['delivered','cancelled'].includes(st)) return true;
-  if(!['new','accepted','preparing','ready','out_for_delivery'].includes(st)) return false;
-  /* Only orders created at/after the verified board cutover may enter active queues.
-     Older active records are stale pre-cutover records: never resurrect them through
-     a refresh, polling snapshot, Postgres INSERT replay, or private Broadcast replay.
-     This is display-only; it does not modify the order or payment in the database. */
-  const created=Date.parse(o?.created_at||'');
-  const cutover=Date.parse(BOARD_CUTOVER_AT);
-  return Number.isFinite(created) && created>=cutover;
+  /* Do not use a rollout timestamp to hide active orders: an older order may
+     still genuinely be in progress. Queue membership follows persisted status.
+     Completed/cancelled orders remain available in History. */
+  return ['new','accepted','preparing','ready','out_for_delivery','delivered','cancelled']
+    .includes(status(o?.status));
 }
 function esc(v){
   return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
