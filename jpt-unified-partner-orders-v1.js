@@ -662,9 +662,11 @@ async function lifecycleTransition(id,next){
 async function markReady(id){return lifecycleTransition(id,'ready')}
 async function transition(id,next){return lifecycleTransition(id,next)}
 async function initialLoad(options={}){
+  const loadAuthGeneration=authGeneration;
   const loadSequence=++initialLoadSequence;
   const verifyRows=options.verifyRows!==false;
   const codes=await resolveManagedOutlets();
+  if(loadAuthGeneration!==authGeneration)return;
   if(!codes.length){
     if(options.preserveOnError){
       console.warn('[JPT Orders] Fallback poll skipped: authorized outlet list temporarily unavailable; preserving current board.');
@@ -714,6 +716,8 @@ async function initialLoad(options={}){
   }else{
     r=await makeQuery().order('created_at',{ascending:false}).limit(codes.length===1?100:500);
   }
+  /* A query started in a previous login session must never repopulate the board after logout. */
+  if(loadAuthGeneration!==authGeneration)return;
   /* Concurrent refreshes can finish out of order. Only the newest snapshot may reconcile the board. */
   if(loadSequence!==initialLoadSequence){
     console.info('[JPT Orders] Ignoring stale overlapping snapshot', {loadSequence,latestLoadSequence:initialLoadSequence});
