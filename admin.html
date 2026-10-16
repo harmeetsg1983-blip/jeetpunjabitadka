@@ -1177,7 +1177,8 @@ showLogin();
 
 });
 
-checkSession();
+/* Let following scripts (including unified order runtime) initialize before legacy reloadAll can bind order listeners. */
+setTimeout(checkSession,0);
 
 })();
 </script>
