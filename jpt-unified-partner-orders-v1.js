@@ -532,8 +532,7 @@ async function accept(id){
     }
     render();
   }finally{
-    actionBusy.delete(key);
-    if(actionAuthGeneration===authGeneration)render();
+    if(actionAuthGeneration===authGeneration){actionBusy.delete(key);render();}
   }
 }
 async function reject(id){
@@ -676,8 +675,7 @@ async function lifecycleTransition(id,next){
     }
     render();
   }finally{
-    transitionBusy.delete(key);
-    if(actionAuthGeneration===authGeneration){setActionBusyUi(key,false);render();}
+    if(actionAuthGeneration===authGeneration){transitionBusy.delete(key);setActionBusyUi(key,false);render();}
   }
 }
 async function markReady(id){return lifecycleTransition(id,'ready')}
