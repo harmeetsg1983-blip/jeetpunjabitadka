@@ -424,8 +424,10 @@ async function read(id,outletId){
 async function accept(id){
   const actionAuthGeneration=authGeneration;
   const key=String(id);
-  if(actionBusy.has(key))return;
+  if(actionBusy.has(key)||transitionBusy.has(key))return;
   const o=rows.get(key); if(!o)return;
+  /* Lock before the first await: repeated taps must not race through server preflight reads. */
+  actionBusy.add(key);
   /* Stop the shared ringtone immediately on ACCEPT, before any server round-trip. */
   stopRingtone();
   /* A stale NEW card must not issue ACCEPT against an already-progressed order. */
@@ -435,6 +437,7 @@ async function accept(id){
     toast('ACCEPT paused: server status could not be verified. Refresh Orders before retrying.');
     await initialLoad().catch(()=>{});
     if(actionAuthGeneration!==authGeneration)return;
+    actionBusy.delete(key);
     render();return;
   }
   if(!canonical){
@@ -443,6 +446,7 @@ async function accept(id){
     await initialLoad().catch(()=>{});
     if(actionAuthGeneration!==authGeneration)return;
     toast('Order is no longer in the live server queue; stale card removed.');
+    actionBusy.delete(key);
     render();return;
   }
   if(status(canonical.status)!=='new'){
@@ -450,10 +454,10 @@ async function accept(id){
     if(activeRingtoneOrderId===key)stopRingtone();
     focusQueueForStatus(canonical.status);
     toast('Server confirms '+status(canonical.status).toUpperCase()+'. Duplicate ACCEPT blocked.');
+    actionBusy.delete(key);
     render();return;
   }
   rows.set(key,Object.assign({},o,canonical));
-  actionBusy.add(key);
   const minutes=Math.max(15,Math.min(40,Number(o.__draftMinutes||o.target_minutes||15)));
   const local=localDeadline(minutes);
   const previous={status:o.status,target_minutes:o.target_minutes,deadline_at:o.deadline_at,__localDeadline:o.__localDeadline,__optimisticStatus:o.__optimisticStatus};
