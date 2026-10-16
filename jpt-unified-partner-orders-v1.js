@@ -670,7 +670,7 @@ async function initialLoad(options={}){
   const historySince=new Date(Date.now()-90*24*60*60*1000).toISOString();
   const historyDate=historyMode?String(document.getElementById('orderHistoryDate')?.value||''):'';
   let historyDayStart=null,historyDayEnd=null;
-  if(/^\\d{4}-\\d{2}-\\d{2}$/.test(historyDate)){
+  if(/^\d{4}-\d{2}-\d{2}$/.test(historyDate)){
     const [year,month,day]=historyDate.split('-').map(Number);
     historyDayStart=new Date(year,month-1,day);
     historyDayEnd=new Date(year,month-1,day+1);
