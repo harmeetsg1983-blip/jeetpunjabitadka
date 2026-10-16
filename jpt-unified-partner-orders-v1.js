@@ -667,7 +667,7 @@ async function initialLoad(options={}){
      date-ordered window so it is not limited to the active queue's 100/500-row cap.
      This query is read-only and does not alter order or payment records. */
   const historyMode=selectedQueue==='history';
-  const historySince=new Date(Date.now()-60*24*60*60*1000).toISOString();
+  const historySince=new Date(Date.now()-90*24*60*60*1000).toISOString();
   let query=window.sb.from('orders').select('*');
   query=codes.length===1
     ? query.eq('outlet_id',codes[0])
@@ -966,6 +966,12 @@ async function startAuthenticatedRuntime(){
 }
 async function boot(){
   if(!window.sb){setTimeout(boot,500);return;}
+  /* SINGLE-OWNER CUTOVER: admin.html's legacy order channel/audio can start
+     before this runtime loads. Remove that listener and silence its audio
+     before this runtime begins loading orders or subscribing. Do not touch
+     menu, offers, outlet access, payment guards, or customer checkout. */
+  try{await window.__JPTDisableLegacyOrderRuntime?.();}catch(e){console.warn('[JPT Orders] legacy realtime shutdown failed',e);}
+  try{window.stopOrderAlarm?.();}catch(e){}
   bindQueue();
   bindOrderAudioGesture();
   const refresh=document.getElementById('ordersRefresh');
