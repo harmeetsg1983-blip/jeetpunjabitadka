@@ -784,7 +784,8 @@ async function initialLoad(options={}){
   render();
 }
 let channels=[];
-async function subscribe(){
+let subscribeQueue=Promise.resolve();
+async function performSubscribe(){
   for(const ch of channels){try{await window.sb.removeChannel(ch)}catch(e){}}
   channels=[];
   channel=null;
@@ -941,6 +942,14 @@ async function subscribe(){
     channels.push(broadcastCh);
   }
   channel=channels[0]||null;
+}
+/* Serialize subscription rebuilds: outlet changes, manual refreshes, and the
+   managed-outlet sync can request a rebuild in the same event-loop window. */
+function subscribe(){
+  const run=()=>performSubscribe();
+  const task=subscribeQueue.then(run,run);
+  subscribeQueue=task.catch(()=>{});
+  return task;
 }
 function updateTimers(){
   let shouldRender=false;
