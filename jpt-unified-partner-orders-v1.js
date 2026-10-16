@@ -180,7 +180,7 @@ function toast(msg){
 function stopRingtone(){
   const id=activeRingtoneOrderId||'';
   try{window.AndroidOrderAlarm?.stopAlarm?.(id)}catch(e){}
-  /* ONLY ACCEPT/REJECT call this function. */
+  /* Shared stop path for operator acknowledgement, order transitions, and runtime cleanup. */
   audioGeneration++;
   activeRingtoneOrderId=null;
   if(audio){
@@ -1043,7 +1043,7 @@ async function boot(){
     await subscribe();
   });
   const alarm=document.getElementById('stopAlarm');
-  if(alarm)alarm.onclick=()=>{};
+  if(alarm)alarm.onclick=()=>{stopRingtone();const box=document.getElementById('orderAlarm');if(box)box.style.display='none';};
   const enable=document.getElementById('enableAlarm');
   if(enable)enable.onclick=enableBackgroundAlerts;
   /* This script loads before the dashboard's login gate on some builds.
