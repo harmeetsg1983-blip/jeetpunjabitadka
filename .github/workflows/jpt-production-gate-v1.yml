@@ -3,6 +3,8 @@ name: JPT Production Gate V1 - Safe Preflight
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -49,16 +51,17 @@ jobs:
           grep -Fq 'customer-app.html' customer-app-sw.js
           echo "GREEN: customer PWA install/service-worker wiring present"
 
-      - name: Verify partner and delivery flow markers
+      - name: Verify active partner order runtime wiring
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq 'outlet' admin.html
-          grep -Fq 'Orders' admin.html
-          grep -Fq 'delivery_offer_next' admin.html
-          grep -Fq 'delivery_offer_next' jpt-partner-orders-ui-v1.js
-          grep -Fq 'outlet' jpt-partner-orders-ui-v1.js
-          echo "GREEN: partner outlet/order/delivery-offer markers present"
+          test -f jpt-unified-partner-orders-v1.js
+          grep -Fq 'jpt-unified-partner-orders-v1.js' admin.html
+          grep -Fq 'jpt-partner-access-bridge-v2.js' admin.html
+          grep -Fq 'jpt_partner_transition_order' jpt-unified-partner-orders-v1.js
+          grep -Fq 'postgres_changes' jpt-unified-partner-orders-v1.js
+          grep -Fq 'fallbackPollBusy' jpt-unified-partner-orders-v1.js
+          echo "GREEN: active unified partner runtime, access bridge, RPC, realtime, and fallback-poll markers present"
 
       - name: Verify locked ringtone integrity
         shell: bash
