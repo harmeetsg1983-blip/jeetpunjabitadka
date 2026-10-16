@@ -1047,7 +1047,8 @@ async function startAuthenticatedRuntime(){
     const n=document.getElementById('ordersNotice');
     if(n)n.textContent='Orders startup failed: '+String(e?.message||e);
   }finally{
-    runtimeStartBusy=false;
+    /* An older startup must not unlock the busy flag owned by a newer session. */
+    if(generation===authGeneration)runtimeStartBusy=false;
   }
 }
 async function boot(){
