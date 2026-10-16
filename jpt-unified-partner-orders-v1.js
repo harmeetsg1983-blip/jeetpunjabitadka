@@ -846,9 +846,18 @@ async function subscribe(){
        but the dashboard listens only for postgres_changes. */
     const broadcastCh=window.sb.channel('jpt:partner:outlet:'+code,{config:{private:true}});
     const refreshFromBroadcast=(payload,eventName)=>{
+      /* Supabase Broadcast wraps trigger data in an envelope. Depending on
+         the trigger/client shape, the order may be data.record, data.payload,
+         data.order, or the data object itself. Normalize only recognized order
+         objects; never treat an arbitrary envelope as an order row. */
       const data=payload?.payload;
-      const o=data?.record;
-      if(!o || String(o.outlet_id||'')!==code || !liveCodes.includes(String(o.outlet_id)))return;
+      const o=data?.record || data?.payload?.record || data?.payload?.order ||
+        data?.payload || data?.order || (data?.id!=null?data:null) ||
+        payload?.record || (payload?.id!=null?payload:null);
+      if(!o || o.id==null || String(o.outlet_id||'')!==code || !liveCodes.includes(String(o.outlet_id))) {
+        console.warn('[JPT-DIAG][broadcast payload rejected]',{outlet:code,event:eventName,hasPayload:!!payload,hasData:!!data,hasOrderId:o?.id??null,orderOutlet:o?.outlet_id??null});
+        return;
+      }
       lastRealtimeInsert={
         id:o.id,
         order_no:o.order_no,
