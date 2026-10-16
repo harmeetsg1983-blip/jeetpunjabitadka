@@ -784,6 +784,7 @@ async function initialLoad(options={}){
       await Promise.all(checks.slice(i,i+8).map(async([key,o])=>{
         if(actionBusy.has(key)||transitionBusy.has(key))return;
         const live=await read(o.id,o.outlet_id).catch(()=>null);
+        if(loadAuthGeneration!==authGeneration)return;
         if(actionBusy.has(key)||transitionBusy.has(key))return;
         if(live){
           /* This is a direct SELECT by order id: its status replaces stale UI state.
@@ -803,6 +804,7 @@ async function initialLoad(options={}){
       }));
     }
   }
+  if(loadAuthGeneration!==authGeneration)return;
   render();
 }
 let channels=[];
