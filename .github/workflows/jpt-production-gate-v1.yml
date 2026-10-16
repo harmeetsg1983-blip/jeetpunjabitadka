@@ -86,6 +86,54 @@ jobs:
             echo "GREEN: locked ringtone verified $f"
           done
 
+      - name: Verify inline JavaScript in partner HTML
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          import subprocess, tempfile
+
+          class Scripts(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.active = False
+                  self.check = False
+                  self.parts = []
+                  self.found = []
+              def handle_starttag(self, tag, attrs):
+                  if tag.lower() != 'script': return
+                  attrs = dict(attrs)
+                  self.active = 'src' not in attrs
+                  kind = (attrs.get('type') or '').strip().lower()
+                  self.check = self.active and (not kind or kind in ('text/javascript', 'application/javascript', 'module'))
+                  self.parts = []
+              def handle_data(self, data):
+                  if self.active: self.parts.append(data)
+              def handle_endtag(self, tag):
+                  if tag.lower() != 'script' or not self.active: return
+                  source = ''.join(self.parts)
+                  if self.check and source.strip(): self.found.append(source)
+                  self.active = self.check = False
+                  self.parts = []
+
+          total = 0
+          with tempfile.TemporaryDirectory() as td:
+              for name in ('admin.html', 'partner-v107.html', 'delivery-partner-app.html'):
+                  parser = Scripts()
+                  parser.feed(Path(name).read_text(encoding='utf-8'))
+                  for index, source in enumerate(parser.found, 1):
+                      checkfile = Path(td) / f'{Path(name).stem}-{index}.js'
+                      checkfile.write_text(source, encoding='utf-8')
+                      result = subprocess.run(['node', '--check', str(checkfile)], capture_output=True, text=True)
+                      if result.returncode:
+                          raise SystemExit(f'RED: inline script syntax failed: {name} script #{index}\\n{result.stderr}')
+                      total += 1
+                  print(f'GREEN: {name}: {len(parser.found)} inline JavaScript blocks syntax-checked')
+          print(f'GREEN: {total} inline JavaScript blocks passed Node syntax validation')
+          PY
+
       - name: Verify root JavaScript syntax
         shell: bash
         run: |
