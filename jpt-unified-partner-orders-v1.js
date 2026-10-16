@@ -822,6 +822,8 @@ async function subscribe(){
       const merged=mergeOrderMonotonic(old,o);
       const nextStatus=status(merged.status);
       rows.set(String(o.id),Object.assign({},merged,{__realtimeSeenAt:Date.now()}));
+      /* A status change from another authorized session acknowledges the alert too. */
+      if(activeRingtoneOrderId===String(o.id)&&nextStatus!=='new')stopRingtone();
       /* If the active queue was showing this order's prior state, follow its
          server-confirmed lifecycle state immediately instead of leaving the
          operator on a stale NEW/ACCEPTED tab. */
@@ -882,6 +884,8 @@ async function subscribe(){
       const merged=mergeOrderMonotonic(previous,o);
       const nextStatus=status(merged.status);
       rows.set(key,Object.assign({},merged,{__liveNew:eventName==='order_insert'&&nextStatus==='new',__realtimeSeenAt:Date.now()}));
+      /* Broadcast updates from another authorized session also acknowledge the alert. */
+      if(eventName==='order_update'&&activeRingtoneOrderId===key&&nextStatus!=='new')stopRingtone();
       if(eventName==='order_update' && previous?.id && oldStatus!==nextStatus && selectedQueue===queueForStatus(oldStatus)){
         focusQueueForStatus(nextStatus);
       }
