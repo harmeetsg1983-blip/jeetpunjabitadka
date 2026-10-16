@@ -1015,12 +1015,15 @@ function bindQueue(){
   syncHistoryTools();
 }
 let runtimeStarted=false,runtimeStartBusy=false;
+let authGeneration=0;
 async function startAuthenticatedRuntime(){
   if(runtimeStarted||runtimeStartBusy||!window.sb?.auth)return;
   runtimeStartBusy=true;
+  const generation=authGeneration;
   try{
     const sessionResult=await window.sb.auth.getSession();
     if(sessionResult.error)throw sessionResult.error;
+    if(generation!==authGeneration)return;
     if(!sessionResult.data?.session?.user){
       const n=document.getElementById('ordersNotice');
       if(n)n.textContent='Partner login required before orders can be loaded.';
@@ -1028,11 +1031,15 @@ async function startAuthenticatedRuntime(){
     }
     /* Access mapping must be ready before outlet-scoped orders queries start. */
     if(window.JPTPartnerAccess?.reload)await window.JPTPartnerAccess.reload();
+    if(generation!==authGeneration)return;
     const authorized=await resolveManagedOutlets();
+    if(generation!==authGeneration)return;
     console.info('[JPT-DIAG][authorized outlets ready]',{count:authorized.length,outlets:authorized});
     updateVisibleDiagnostics('AUTHORIZED OUTLETS READY');
     await initialLoad();
+    if(generation!==authGeneration)return;
     await subscribe();
+    if(generation!==authGeneration)return;
     runtimeStarted=true;
     managedSignature=managedOutlets().join('|');
   }catch(e){
@@ -1071,6 +1078,7 @@ async function boot(){
     if(event==='SIGNED_IN'&&session?.user){
       setTimeout(()=>{startAuthenticatedRuntime().catch(()=>{});},0);
     }else if(event==='SIGNED_OUT'){
+      authGeneration++;
       runtimeStarted=false;
       runtimeStartBusy=false;
       rows.clear();
