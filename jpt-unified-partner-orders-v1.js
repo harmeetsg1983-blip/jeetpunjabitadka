@@ -663,17 +663,33 @@ async function initialLoad(options={}){
     toast('Partner outlet access is not ready. Orders were not queried under a fallback outlet. Retry login/access refresh.');
     return;
   }
-  /* Active queues use a compact recent snapshot. History loads a 60-day
-     date-ordered window so it is not limited to the active queue's 100/500-row cap.
-     This query is read-only and does not alter order or payment records. */
+  /* Active queues use a compact recent snapshot. History pages through the full
+     90-day date-ordered window so busy outlets are not silently truncated at 1,000 rows.
+     This is read-only and does not alter order or payment records. */
   const historyMode=selectedQueue==='history';
   const historySince=new Date(Date.now()-90*24*60*60*1000).toISOString();
-  let query=window.sb.from('orders').select('*');
-  query=codes.length===1
-    ? query.eq('outlet_id',codes[0])
-    : query.in('outlet_id',codes);
-  if(historyMode)query=query.gte('created_at',historySince);
-  const r=await query.order('created_at',{ascending:false}).limit(historyMode?1000:(codes.length===1?100:500));
+  const makeQuery=()=>{
+    let q=window.sb.from('orders').select('*');
+    q=codes.length===1?q.eq('outlet_id',codes[0]):q.in('outlet_id',codes);
+    if(historyMode)q=q.gte('created_at',historySince);
+    return q;
+  };
+  let r;
+  if(historyMode){
+    const historyRows=[];
+    const pageSize=1000;
+    let offset=0;
+    do{
+      const page=await makeQuery().order('created_at',{ascending:false}).range(offset,offset+pageSize-1);
+      if(page.error){r=page;break;}
+      const batch=page.data||[];
+      historyRows.push(...batch);
+      offset+=batch.length;
+      if(batch.length<pageSize){r={data:historyRows,error:null};break;}
+    }while(true);
+  }else{
+    r=await makeQuery().order('created_at',{ascending:false}).limit(codes.length===1?100:500);
+  }
   /* Concurrent refreshes can finish out of order. Only the newest snapshot may reconcile the board. */
   if(loadSequence!==initialLoadSequence){
     console.info('[JPT Orders] Ignoring stale overlapping snapshot', {loadSequence,latestLoadSequence:initialLoadSequence});
@@ -714,12 +730,22 @@ async function initialLoad(options={}){
     const merged=mergeOrderMonotonic(prior,o);
     if(prior?.__draftMinutes!==undefined)merged.__draftMinutes=prior.__draftMinutes;
     rows.set(key,merged);
+    /* The 5-second safety poll must recover missed INSERT events. Only alert for
+       rows newly discovered by that poll and created very recently; startup/history
+       refreshes must never ring for old outstanding orders after reinstall. */
+    if(options.alertNewOrders===true&&!prior&&status(merged.status)==='new'){
+      const createdAt=new Date(merged.created_at||0).getTime();
+      if(Number.isFinite(createdAt)&&createdAt>Date.now()-5*60*1000){
+        rows.set(key,Object.assign({},merged,{__liveNew:true}));
+        startRingtone(merged);
+      }
+    }
   });
 
   /* Reconcile cards against the same server lookup used by action recovery.
      Missing/unreadable rows are hidden from this in-memory queue only.
      Never delete or update database records during reconciliation. */
-  if(verifyRows){
+  if(verifyRows&&!historyMode){
     const checks=[...rows.entries()];
     for(let i=0;i<checks.length;i+=8){
       await Promise.all(checks.slice(i,i+8).map(async([key,o])=>{
@@ -1017,7 +1043,7 @@ async function boot(){
     }else if(!fallbackPollBusy){
       /* Safety-net poll discovers missed INSERTs without manual dashboard refresh. */
       fallbackPollBusy=true;
-      try{ await initialLoad({verifyRows:false,preserveOnError:true}); }
+      try{ await initialLoad({verifyRows:false,preserveOnError:true,alertNewOrders:true}); }
       catch(e){ console.warn('[JPT Orders] fallback poll failed',e); }
       finally{ fallbackPollBusy=false; }
     }
