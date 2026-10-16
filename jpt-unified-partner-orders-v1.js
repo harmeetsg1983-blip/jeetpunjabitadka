@@ -422,6 +422,7 @@ async function read(id,outletId){
   return r.data;
 }
 async function accept(id){
+  const actionAuthGeneration=authGeneration;
   const key=String(id);
   if(actionBusy.has(key))return;
   const o=rows.get(key); if(!o)return;
@@ -429,7 +430,8 @@ async function accept(id){
   stopRingtone();
   /* A stale NEW card must not issue ACCEPT against an already-progressed order. */
   let canonical;
-  try{canonical=await read(id,o.outlet_id);}catch(e){
+  try{canonical=await read(id,o.outlet_id);if(actionAuthGeneration!==authGeneration)return;}catch(e){
+    if(actionAuthGeneration!==authGeneration)return;
     toast('ACCEPT paused: server status could not be verified. Refresh Orders before retrying.');
     await initialLoad().catch(()=>{});
     if(actionAuthGeneration!==authGeneration)return;
@@ -469,6 +471,7 @@ async function accept(id){
       p_target_minutes:minutes,
       p_rejection_reason:null
     });
+    if(actionAuthGeneration!==authGeneration)return;
     if(r.error)throw r.error;
     const server=Array.isArray(r.data)?r.data[0]:r.data;
     if(!server)throw new Error('Server returned no order record; status was not confirmed.');
@@ -477,12 +480,14 @@ async function accept(id){
     toast('Order accepted — '+minutes+' minute preparation timer started.');
     render();
   }catch(e){
+    if(actionAuthGeneration!==authGeneration)return;
     const message=String(e?.message||e);
     const serverStatus=message.match(/Current status:\s*([A-Z_]+)/i)?.[1]?.toLowerCase();
     /* The RPC's explicit Current status is authoritative. A follow-up SELECT can
        briefly return stale data; do not let it overwrite the server's conflict state. */
     if(serverStatus && serverStatus!=='new'){
       const fresh=await read(id,o?.outlet_id).catch(()=>null);
+      if(actionAuthGeneration!==authGeneration)return;
       Object.assign(o,fresh||{},{status:serverStatus});
       delete o.__optimisticStatus;
       if(serverStatus!=='accepted'){
@@ -494,10 +499,12 @@ async function accept(id){
       toast('Server status synced: '+serverStatus.toUpperCase()+'. No duplicate action sent.');
     }else{
       let fresh=await read(id,o?.outlet_id).catch(()=>null);
+      if(actionAuthGeneration!==authGeneration)return;
       /* A state-conflict response means the displayed card may be stale. Requery the
          authoritative queue before restoring NEW or leaving the old action buttons. */
       if(!fresh && /order is not new|current status|order not found/i.test(message)){
         await initialLoad().catch(()=>{});
+        if(actionAuthGeneration!==authGeneration)return;
         fresh=rows.get(key)||null;
       }
       if(fresh){
@@ -530,6 +537,7 @@ async function accept(id){
   }
 }
 async function reject(id){
+  const actionAuthGeneration=authGeneration;
   /* Explicit REJECT click: this is the ONLY place the ringtone is stopped. */
   stopRingtone();
   const o=rows.get(String(id)); if(!o)return;
@@ -540,6 +548,7 @@ async function reject(id){
       p_target_minutes:15,
       p_rejection_reason:'Rejected by restaurant'
     });
+    if(actionAuthGeneration!==authGeneration)return;
     if(r.error)throw r.error;
     const server=Array.isArray(r.data)?r.data[0]:r.data;
     if(server)rows.set(String(id),Object.assign(o,server));
@@ -547,7 +556,10 @@ async function reject(id){
     toast('Order rejected.');
     render();
   }catch(e){
-    const fresh=await read(id,o?.outlet_id).catch(()=>null); if(fresh)rows.set(String(id),fresh);
+    if(actionAuthGeneration!==authGeneration)return;
+    const fresh=await read(id,o?.outlet_id).catch(()=>null);
+    if(actionAuthGeneration!==authGeneration)return;
+    if(fresh)rows.set(String(id),fresh);
     render(); toast('REJECT failed: '+(e.message||e));
   }
 }
@@ -561,6 +573,7 @@ function setActionBusyUi(key,busy,label){
   });
 }
 async function lifecycleTransition(id,next){
+  const actionAuthGeneration=authGeneration;
   const key=String(id);
   if(transitionBusy.has(key)||actionBusy.has(key))return;
   const o=rows.get(key); if(!o)return;
@@ -581,6 +594,7 @@ async function lifecycleTransition(id,next){
   render();
   try{
     const fresh=await read(id,before.outlet_id).catch(()=>null);
+    if(actionAuthGeneration!==authGeneration)return;
     if(fresh){
       const serverState=status(fresh.status);
       if(serverState===next || (next==='ready'&&(serverState==='out_for_delivery'||serverState==='delivered')) ||
@@ -617,12 +631,14 @@ async function lifecycleTransition(id,next){
       p_target_minutes:Number(o.target_minutes||15),
       p_rejection_reason:null
     });
+    if(actionAuthGeneration!==authGeneration)return;
     if(r.error)throw r.error;
     const server=Array.isArray(r.data)?r.data[0]:r.data;
     if(server){
       rows.set(key,mergeOrderMonotonic(rows.get(key)||o,server));
     }else{
       const verify=await read(id,before.outlet_id);
+      if(actionAuthGeneration!==authGeneration)return;
       if(!verify || status(verify.status)!==next)throw new Error('Server did not confirm '+next.toUpperCase()+' status.');
       rows.set(key,Object.assign({},o,verify));
     }
@@ -633,9 +649,12 @@ async function lifecycleTransition(id,next){
       try{await window.sb.rpc('delivery_offer_next',{p_order_id:Number(id)})}catch(e){}
     }
   }catch(e){
+    if(actionAuthGeneration!==authGeneration)return;
     let fresh=await read(id,before.outlet_id).catch(()=>null);
+    if(actionAuthGeneration!==authGeneration)return;
     if(!fresh && /order is not|current status|order not found/i.test(String(e?.message||e))){
       await initialLoad().catch(()=>{});
+      if(actionAuthGeneration!==authGeneration)return;
       fresh=rows.get(key)||null;
     }
     if(fresh){
@@ -658,8 +677,7 @@ async function lifecycleTransition(id,next){
     render();
   }finally{
     transitionBusy.delete(key);
-    setActionBusyUi(key,false);
-    render();
+    if(actionAuthGeneration===authGeneration){setActionBusyUi(key,false);render();}
   }
 }
 async function markReady(id){return lifecycleTransition(id,'ready')}
@@ -1110,6 +1128,8 @@ async function boot(){
       runtimeStarted=false;
       runtimeStartBusy=false;
       rows.clear();
+      actionBusy.clear();
+      transitionBusy.clear();
       stopRingtone();
       clearSubscriptions().catch(e=>console.warn('[JPT Orders] channel cleanup after sign-out failed',e));
       render();
