@@ -257,8 +257,13 @@ function startRingtone(order){
     }
   }catch(e){
     if(generation===audioGeneration){
+      /* A synchronous play/load failure must not permanently suppress a retry
+         for this still-NEW order. Keep the one audio owner; release only its
+         failed alert claim so a later gesture/poll can try again. */
+      ringtoneAlertedOrderIds.delete(id);
+      if(activeRingtoneOrderId===id)activeRingtoneOrderId=null;
       const msg=document.getElementById('ordersNotice');
-      if(msg)msg.textContent='NEW ORDER received — ringtone playback failed: '+(e?.message||e);
+      if(msg)msg.textContent='NEW ORDER received — ringtone playback failed: '+(e?.message||e)+'. Tap ENABLE SOUND to retry.';
     }
   }
 
