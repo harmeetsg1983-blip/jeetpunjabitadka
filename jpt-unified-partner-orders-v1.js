@@ -431,12 +431,15 @@ async function accept(id){
   let canonical;
   try{canonical=await read(id,o.outlet_id);}catch(e){
     toast('ACCEPT paused: server status could not be verified. Refresh Orders before retrying.');
-    await initialLoad().catch(()=>{});render();return;
+    await initialLoad().catch(()=>{});
+    if(actionAuthGeneration!==authGeneration)return;
+    render();return;
   }
   if(!canonical){
     rows.delete(key);
     if(activeRingtoneOrderId===key)stopRingtone();
     await initialLoad().catch(()=>{});
+    if(actionAuthGeneration!==authGeneration)return;
     toast('Order is no longer in the live server queue; stale card removed.');
     render();return;
   }
@@ -523,7 +526,7 @@ async function accept(id){
     render();
   }finally{
     actionBusy.delete(key);
-    render();
+    if(actionAuthGeneration===authGeneration)render();
   }
 }
 async function reject(id){
