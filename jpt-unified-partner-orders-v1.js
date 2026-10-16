@@ -47,7 +47,7 @@ function updateVisibleDiagnostics(extra){
 async function primeOrderAudio(){
   try{
     if(!audio){
-      audio=new Audio('./ringtones/1000449491.mp4');
+      audio=new Audio('./ringtones/1000449570.mp4');
       audio.preload='auto';
       audio.loop=true;
       audio.playsInline=true;
@@ -209,7 +209,7 @@ function startRingtone(order){
   activeRingtoneOrderId=id;
 
   if(!audio){
-    audio=new Audio('./ringtones/1000449491.mp4');
+    audio=new Audio('./ringtones/1000449570.mp4');
     audio.preload='auto';
     audio.loop=true;
     audio.playsInline=true;
