@@ -648,11 +648,17 @@ async function initialLoad(options={}){
     toast('Partner outlet access is not ready. Orders were not queried under a fallback outlet. Retry login/access refresh.');
     return;
   }
-  /* Hide only old terminal/history orders. Active lifecycle orders must remain visible
-     even when they were created before the board cutover. */
-  const r=codes.length===1
-    ? await window.sb.from('orders').select('*').eq('outlet_id',codes[0]).order('created_at',{ascending:false}).limit(100)
-    : await window.sb.from('orders').select('*').in('outlet_id',codes).order('created_at',{ascending:false}).limit(500);
+  /* Active queues use a compact recent snapshot. History loads a 60-day
+     date-ordered window so it is not limited to the active queue's 100/500-row cap.
+     This query is read-only and does not alter order or payment records. */
+  const historyMode=selectedQueue==='history';
+  const historySince=new Date(Date.now()-60*24*60*60*1000).toISOString();
+  let query=window.sb.from('orders').select('*');
+  query=codes.length===1
+    ? query.eq('outlet_id',codes[0])
+    : query.in('outlet_id',codes);
+  if(historyMode)query=query.gte('created_at',historySince);
+  const r=await query.order('created_at',{ascending:false}).limit(historyMode?1000:(codes.length===1?100:500));
   /* Concurrent refreshes can finish out of order. Only the newest snapshot may reconcile the board. */
   if(loadSequence!==initialLoadSequence){
     console.info('[JPT Orders] Ignoring stale overlapping snapshot', {loadSequence,latestLoadSequence:initialLoadSequence});
