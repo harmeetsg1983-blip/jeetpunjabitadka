@@ -668,10 +668,21 @@ async function initialLoad(options={}){
      This is read-only and does not alter order or payment records. */
   const historyMode=selectedQueue==='history';
   const historySince=new Date(Date.now()-90*24*60*60*1000).toISOString();
+  const historyDate=historyMode?String(document.getElementById('orderHistoryDate')?.value||''):'';
+  let historyDayStart=null,historyDayEnd=null;
+  if(/^\\d{4}-\\d{2}-\\d{2}$/.test(historyDate)){
+    const [year,month,day]=historyDate.split('-').map(Number);
+    historyDayStart=new Date(year,month-1,day);
+    historyDayEnd=new Date(year,month-1,day+1);
+  }
   const makeQuery=()=>{
     let q=window.sb.from('orders').select('*');
     q=codes.length===1?q.eq('outlet_id',codes[0]):q.in('outlet_id',codes);
-    if(historyMode)q=q.gte('created_at',historySince);
+    if(historyMode){
+      if(historyDayStart&&historyDayEnd){
+        q=q.gte('created_at',historyDayStart.toISOString()).lt('created_at',historyDayEnd.toISOString());
+      }else q=q.gte('created_at',historySince);
+    }
     return q;
   };
   let r;
@@ -953,17 +964,27 @@ function focusQueueForStatus(value){
   selectedQueue=target;
   document.querySelectorAll('.orderQueueBtn').forEach(x=>{x.classList.toggle('gold',x===btn);x.classList.toggle('is-active',x===btn);x.setAttribute('aria-selected',x===btn?'true':'false')});
 }
+function syncHistoryTools(){
+  const tools=document.getElementById('orderHistoryTools');
+  if(tools)tools.style.display=selectedQueue==='history'?'flex':'none';
+}
 function bindQueue(){
   document.querySelectorAll('.orderQueueBtn').forEach(b=>{
     b.onclick=async()=>{
       selectedQueue=b.dataset.queue||'all';
       document.querySelectorAll('.orderQueueBtn').forEach(x=>{x.classList.toggle('gold',x===b);x.classList.toggle('is-active',x===b);x.setAttribute('aria-selected',x===b?'true':'false')});
+      syncHistoryTools();
       /* Always reconcile queue cards against Supabase before rendering. */
       try{ await initialLoad(); await subscribe(); }
       catch(e){ console.error('[JPT queue refresh]',e); toast('Queue refresh failed. Please use Refresh Orders before taking another action.'); }
       render();
     };
   });
+  const date=document.getElementById('orderHistoryDate');
+  const clear=document.getElementById('orderHistoryDateClear');
+  if(date)date.onchange=async()=>{if(selectedQueue==='history'){await initialLoad();render();}};
+  if(clear)clear.onclick=async()=>{if(date)date.value='';if(selectedQueue==='history'){await initialLoad();render();}};
+  syncHistoryTools();
 }
 let runtimeStarted=false,runtimeStartBusy=false;
 async function startAuthenticatedRuntime(){
