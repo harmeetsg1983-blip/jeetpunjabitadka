@@ -967,6 +967,15 @@ function focusQueueForStatus(value){
 function syncHistoryTools(){
   const tools=document.getElementById('orderHistoryTools');
   if(tools)tools.style.display=selectedQueue==='history'?'flex':'none';
+  const date=document.getElementById('orderHistoryDate');
+  if(date){
+    const today=new Date();
+    const oldest=new Date(Date.now()-90*24*60*60*1000);
+    const fmt=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    date.min=fmt(oldest);
+    date.max=fmt(today);
+    if(date.value&&(date.value<date.min||date.value>date.max))date.value='';
+  }
 }
 function bindQueue(){
   document.querySelectorAll('.orderQueueBtn').forEach(b=>{
