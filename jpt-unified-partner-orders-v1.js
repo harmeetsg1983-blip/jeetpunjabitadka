@@ -10,6 +10,7 @@ window.__JPT_UNIFIED_ORDER_RUNTIME__=true;
 window.__JPTOrdersV3Active=true;
 
 const LIVE_STATUSES=new Set(['new','accepted','preparing','ready','out_for_delivery']);
+/* Orders before this verified rollout cutoff are excluded from active queues. */
 const rows=new Map();
 const actionBusy=new Set();
 let channel=null;
@@ -125,12 +126,19 @@ async function resolveManagedOutlets(){
   return [...new Set(codes.map(String).filter(Boolean))];
 }
 function orderBelongsToManagedOutlet(o){ return managedOutlets().includes(String(o?.outlet_id||'')); }
+const BOARD_CUTOVER_AT='2026-10-11T09:16:21.000Z';
 function shouldShowOnBoard(o){
-  /* Do not use a rollout timestamp to hide active orders: an older order may
-     still genuinely be in progress. Queue membership follows persisted status.
-     Completed/cancelled orders remain available in History. */
-  return ['new','accepted','preparing','ready','out_for_delivery','delivered','cancelled']
-    .includes(status(o?.status));
+  const st=status(o?.status);
+  if(!['new','accepted','preparing','ready','out_for_delivery','delivered','cancelled'].includes(st))return false;
+  /* Cleanup rule: pre-cutover ACTIVE cards are stale dashboard backlog and
+     must not re-enter the live work queues via SELECT or Realtime. This is
+     UI-only; no order/payment database rows are deleted or modified.
+     Completed/cancelled records remain available in History. */
+  if(LIVE_STATUSES.has(st)){
+    const created=Date.parse(o?.created_at||'');
+    if(!Number.isFinite(created)||created<Date.parse(BOARD_CUTOVER_AT))return false;
+  }
+  return true;
 }
 function esc(v){
   return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
