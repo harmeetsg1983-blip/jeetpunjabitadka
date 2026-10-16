@@ -16,6 +16,7 @@ const actionBusy=new Set();
 let channel=null;
 let audio=null;
 let activeRingtoneOrderId=null;
+const ringtoneAlertedOrderIds=new Set();
 let audioGeneration=0;
 let timerHandle=null;
 let selectedQueue='preparing';
@@ -199,6 +200,10 @@ function startRingtone(order){
   const id=String(order?.id||'');
   if(!id || status(order?.status)!=='new') return;
   if(activeRingtoneOrderId===id && audio) return;
+  /* One audible alert per order ID per dashboard session. Replayed INSERT/Broadcast
+     events or a refresh after an unsuccessful action must not restart an old alarm. */
+  if(ringtoneAlertedOrderIds.has(id)) return;
+  ringtoneAlertedOrderIds.add(id);
 
   audioGeneration++;
   const generation=audioGeneration;
@@ -734,9 +739,6 @@ async function initialLoad(options={}){
     }
   }
   render();
-  /* Restore the continuous alert for any still-NEW order already present at startup/refresh. */
-  const pendingNew=[...rows.values()].find(o=>status(o.status)==='new');
-  if(pendingNew)startRingtone(pendingNew);
 }
 let channels=[];
 async function subscribe(){
