@@ -397,12 +397,12 @@ function render(){
   document.querySelectorAll('[data-ready]').forEach(b=>b.textContent='MARK READY');
   document.querySelectorAll('[data-delivery]').forEach(b=>b.textContent='OUT FOR DELIVERY');
   document.querySelectorAll('[data-delivered]').forEach(b=>b.textContent='MARK DELIVERED');
-  document.querySelectorAll('[data-accept],[data-ready],[data-delivery],[data-delivered]').forEach(b=>{
-    const key=String(b.dataset.accept||b.dataset.ready||b.dataset.delivery||b.dataset.delivered||'');
+  document.querySelectorAll('[data-accept],[data-reject],[data-ready],[data-delivery],[data-delivered]').forEach(b=>{
+    const key=String(b.dataset.accept||b.dataset.reject||b.dataset.ready||b.dataset.delivery||b.dataset.delivered||'');
     const busy=actionBusy.has(key)||transitionBusy.has(key);
     b.disabled=busy;
     b.setAttribute('aria-busy',busy?'true':'false');
-    if(busy)b.textContent=actionBusy.has(key)?'ACCEPTING…':'UPDATING…';
+    if(busy)b.textContent=actionBusy.has(key)?(b.hasAttribute('data-reject')?'REJECTING…':'ACCEPTING…'):'UPDATING…';
   });
   document.querySelectorAll('.jpt-rider-box .btn').forEach(b=>b.textContent='CALL RIDER');
   document.querySelectorAll('[data-accept]').forEach(b=>b.onclick=()=>accept(b.dataset.accept));
