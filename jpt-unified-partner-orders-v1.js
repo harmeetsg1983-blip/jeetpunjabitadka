@@ -951,6 +951,16 @@ function subscribe(){
   subscribeQueue=task.catch(()=>{});
   return task;
 }
+async function clearSubscriptions(){
+  const run=async()=>{
+    for(const ch of channels){try{await window.sb.removeChannel(ch)}catch(e){}}
+    channels=[];
+    channel=null;
+  };
+  const task=subscribeQueue.then(run,run);
+  subscribeQueue=task.catch(()=>{});
+  return task;
+}
 function updateTimers(){
   let shouldRender=false;
   document.querySelectorAll('[data-timer]').forEach(el=>{
@@ -1062,8 +1072,10 @@ async function boot(){
       setTimeout(()=>{startAuthenticatedRuntime().catch(()=>{});},0);
     }else if(event==='SIGNED_OUT'){
       runtimeStarted=false;
+      runtimeStartBusy=false;
       rows.clear();
       stopRingtone();
+      clearSubscriptions().catch(e=>console.warn('[JPT Orders] channel cleanup after sign-out failed',e));
       render();
     }
   });
