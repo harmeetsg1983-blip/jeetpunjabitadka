@@ -127,11 +127,16 @@ async function resolveManagedOutlets(){
 }
 function orderBelongsToManagedOutlet(o){ return managedOutlets().includes(String(o?.outlet_id||'')); }
 function shouldShowOnBoard(o){
-  /* The queue is lifecycle-based, not date-cutoff-based.
-     Active orders must remain visible even when created before a rollout/cutover.
-     Delivered/cancelled orders remain available in their own history tabs. */
-  return ['new','accepted','preparing','ready','out_for_delivery','delivered','cancelled']
-    .includes(status(o?.status));
+  const st=status(o?.status);
+  if(['delivered','cancelled'].includes(st)) return true;
+  if(!['new','accepted','preparing','ready','out_for_delivery'].includes(st)) return false;
+  /* Only orders created at/after the verified board cutover may enter active queues.
+     Older active records are stale pre-cutover records: never resurrect them through
+     a refresh, polling snapshot, Postgres INSERT replay, or private Broadcast replay.
+     This is display-only; it does not modify the order or payment in the database. */
+  const created=Date.parse(o?.created_at||'');
+  const cutover=Date.parse(BOARD_CUTOVER_AT);
+  return Number.isFinite(created) && created>=cutover;
 }
 function esc(v){
   return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
