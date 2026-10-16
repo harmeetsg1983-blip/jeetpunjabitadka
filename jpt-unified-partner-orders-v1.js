@@ -323,10 +323,10 @@ function render(){
   /* Four operator-facing queues: all NEW/ACCEPTED/PREPARING orders stay in
      Preparing; terminal delivered/cancelled orders are kept in History. */
   const historyDate=selectedQueue==='history'?String(document.getElementById('orderHistoryDate')?.value||''):'';
-  const historyStart=historyDate&&/^\\d{4}-\\d{2}-\\d{2}$/.test(historyDate)
+  const historyStart=historyDate&&/^\d{4}-\d{2}-\d{2}$/.test(historyDate)
     ? new Date(Number(historyDate.slice(0,4)),Number(historyDate.slice(5,7))-1,Number(historyDate.slice(8,10)))
     : null;
-  const historyEnd=historyDate&&/^\\d{4}-\\d{2}-\\d{2}$/.test(historyDate)
+  const historyEnd=historyDate&&/^\d{4}-\d{2}-\d{2}$/.test(historyDate)
     ? new Date(Number(historyDate.slice(0,4)),Number(historyDate.slice(5,7))-1,Number(historyDate.slice(8,10))+1)
     : null;
   const historyCutoff=Date.now()-90*24*60*60*1000;
