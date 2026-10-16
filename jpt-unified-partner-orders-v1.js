@@ -10,29 +10,32 @@ window.__JPT_UNIFIED_ORDER_RUNTIME__=true;
 window.__JPTOrdersV3Active=true;
 
 const LIVE_STATUSES=new Set(['new','accepted','preparing','ready','out_for_delivery']);
-const BOARD_CUTOVER_AT='2026-10-11T09:16:21.000Z';
 const rows=new Map();
 const actionBusy=new Set();
 let channel=null;
 let audio=null;
 let activeRingtoneOrderId=null;
+const ringtoneAlertedOrderIds=new Set();
 let audioGeneration=0;
 let timerHandle=null;
-let selectedQueue='all';
+let selectedQueue='preparing';
 let managedSignature='';
+let fallbackPollBusy=false;
+let initialLoadSequence=0;
 const outletRealtimeState={};
 let lastRealtimeInsert=null;
 const outletSelect=document.getElementById('outletSelect');
 function updateVisibleDiagnostics(extra){
+  /* Keep technical multi-outlet diagnostics in the console, not in the partner UI.
+     The visible notice area is reserved for actionable errors and order feedback. */
   const n=document.getElementById('ordersNotice');
-  if(!n)return;
-  const codes=managedOutlets();
-  const channelSummary=codes.map(code=>String(code)+':'+String(outletRealtimeState[String(code)]||'WAITING')).join(' | ')||'NONE';
-  const last=lastRealtimeInsert
-    ? ('LAST INSERT #'+String(lastRealtimeInsert.order_no||lastRealtimeInsert.id)+' ['+String(lastRealtimeInsert.outlet_id)+']')
-    : 'NO INSERT EVENT RECEIVED';
-  n.textContent='JPT LIVE DIAGNOSTICS — ACCESS: '+(codes.length?codes.join(', '):'EMPTY')+
-    ' | CHANNELS: '+channelSummary+' | '+last+(extra?' | '+String(extra):'');
+  if(n && /^JPT LIVE DIAGNOSTICS/.test(String(n.textContent||''))) n.textContent='';
+  console.debug('[JPT LIVE DIAGNOSTICS]', {
+    outlets: managedOutlets(),
+    channels: Object.assign({}, outletRealtimeState),
+    lastInsert: lastRealtimeInsert,
+    event: extra || null
+  });
 }
 /* MULTI-OUTLET CORE FREEZE CONTRACT:
    - outletDisplayName() resolves names only from authorized partner outlet data.
@@ -44,7 +47,7 @@ function updateVisibleDiagnostics(extra){
 async function primeOrderAudio(){
   try{
     if(!audio){
-      audio=new Audio('./ringtones/1000449570.mp4');
+      audio=new Audio('./ringtones/1000449491.mp4');
       audio.preload='auto';
       audio.loop=true;
       audio.playsInline=true;
@@ -123,9 +126,9 @@ async function resolveManagedOutlets(){
 }
 function orderBelongsToManagedOutlet(o){ return managedOutlets().includes(String(o?.outlet_id||'')); }
 function shouldShowOnBoard(o){
-  /* The queue is lifecycle-based, not date-cutoff-based.
-     Active orders must remain visible even when created before a rollout/cutover.
-     Delivered/cancelled orders remain available in their own history tabs. */
+  /* Do not use a rollout timestamp to hide active orders: an older order may
+     still genuinely be in progress. Queue membership follows persisted status.
+     Completed/cancelled orders remain available in History. */
   return ['new','accepted','preparing','ready','out_for_delivery','delivered','cancelled']
     .includes(status(o?.status));
 }
@@ -142,6 +145,14 @@ function status(v){
 function boardStatus(o){
   const st=status(o?.status);
   return st==='accepted'?'preparing':st;
+}
+function queueForStatus(value){
+  const st=status(value);
+  if(['new','accepted','preparing'].includes(st))return 'preparing';
+  if(st==='ready')return 'ready';
+  if(st==='out_for_delivery')return 'out_for_delivery';
+  if(['delivered','cancelled'].includes(st))return 'history';
+  return null;
 }
 /* Order lifecycle is monotonic: delayed Realtime/SELECT responses must not
    move a completed order back into NEW/ACCEPTED queues. */
@@ -188,13 +199,17 @@ function startRingtone(order){
   const id=String(order?.id||'');
   if(!id || status(order?.status)!=='new') return;
   if(activeRingtoneOrderId===id && audio) return;
+  /* One audible alert per order ID per dashboard session. Replayed INSERT/Broadcast
+     events or a refresh after an unsuccessful action must not restart an old alarm. */
+  if(ringtoneAlertedOrderIds.has(id)) return;
+  ringtoneAlertedOrderIds.add(id);
 
   audioGeneration++;
   const generation=audioGeneration;
   activeRingtoneOrderId=id;
 
   if(!audio){
-    audio=new Audio('./ringtones/1000449570.mp4');
+    audio=new Audio('./ringtones/1000449491.mp4');
     audio.preload='auto';
     audio.loop=true;
     audio.playsInline=true;
@@ -231,8 +246,11 @@ function startRingtone(order){
     if(playResult?.catch){
       playResult.catch(()=>{
         if(generation===audioGeneration){
+          /* Playback was rejected: allow a later user gesture or retry to attempt this order again. */
+          ringtoneAlertedOrderIds.delete(id);
+          if(activeRingtoneOrderId===id)activeRingtoneOrderId=null;
           const msg=document.getElementById('ordersNotice');
-          if(msg)msg.textContent='NEW ORDER received — browser audio could not start. Use the native alarm/notification path or tap the dashboard.';
+          if(msg)msg.textContent='NEW ORDER received — sound was blocked by the browser. Tap ENABLE SOUND and keep the dashboard open.';
         }
       });
     }
@@ -263,7 +281,7 @@ function remaining(deadline){
 }
 if(!document.getElementById('jptUnifiedPartnerOrderStyle')){
   const st=document.createElement('style');st.id='jptUnifiedPartnerOrderStyle';
-  st.textContent='.jpt-ready-countdown{display:inline-flex;align-items:center;justify-content:center;min-width:150px;margin:4px 0;padding:12px 16px;border-radius:12px;background:#111;color:#f4d77a;font-size:18px;font-weight:900;letter-spacing:.2px;box-shadow:0 3px 10px #0002}.jpt-rider-box{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px;padding:8px;border:1px solid #eee;border-radius:10px;background:#fff}.jpt-rider-box .btn{display:inline-flex;text-decoration:none;align-items:center;justify-content:center}';
+  st.textContent='.jpt-history-date{margin:18px 0 8px;padding:9px 12px;border-radius:10px;background:#171717;color:#f4d77a;font-weight:900;letter-spacing:.2px}.jpt-ready-countdown{display:inline-flex;align-items:center;justify-content:center;min-width:150px;margin:4px 0;padding:12px 16px;border-radius:12px;background:#111;color:#f4d77a;font-size:18px;font-weight:900;letter-spacing:.2px;box-shadow:0 3px 10px #0002}.jpt-rider-box{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px;padding:8px;border:1px solid #eee;border-radius:10px;background:#fff}.jpt-rider-box .btn{display:inline-flex;text-decoration:none;align-items:center;justify-content:center}';
   document.head.appendChild(st);
 }
 function riderInfo(o){
@@ -286,9 +304,7 @@ function actionHtml(o){
       '<button type="button" class="btn red" data-reject="'+id+'">REJECT ORDER</button></div>';
   }
   if(st==='accepted'||st==='preparing'){
-    const deadline=o.deadline_at||o.__localDeadline;
-    const left=deadline?new Date(deadline).getTime()-Date.now():0;
-    if(left>0)return '<div class="muted jpt-prep-wait" data-prep-wait="'+id+'">Preparation in progress — countdown running</div>';
+    /* Keep countdown visible while allowing an early ready action when food is ready. */
     return '<button class="btn gold" data-ready="'+id+'">MARK READY</button>';
   }
   if(st==='ready')
@@ -304,9 +320,11 @@ function render(){
     .sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
   /* ALL is the active workboard only. Completed/cancelled records belong in history tabs
      and must never return to ALL or trigger active-order actions. */
-  const filtered=selectedQueue==='all'
-    ? all.filter(o=>LIVE_STATUSES.has(status(o.status)))
-    : all.filter(o=>boardStatus(o)===selectedQueue);
+  /* Four operator-facing queues: all NEW/ACCEPTED/PREPARING orders stay in
+     Preparing; terminal delivered/cancelled orders are kept in History. */
+  const filtered=selectedQueue==='history'
+    ? all.filter(o=>['delivered','cancelled'].includes(status(o.status)))
+    : all.filter(o=>queueForStatus(o.status)===selectedQueue);
   /* TEMP JPT diagnostics: report only recent NEW orders; no customer PII. */
   const diagCutoff=Date.now()-24*60*60*1000;
   const recentNew=[...rows.values()].filter(o=>status(o.status)==='new'&&new Date(o.created_at||0).getTime()>=diagCutoff);
@@ -317,8 +335,12 @@ function render(){
       inAll:all.some(x=>String(x.id)===String(o.id)),inFiltered:filtered.some(x=>String(x.id)===String(o.id))})),
     rowIds:[...rows.keys()]
   });
-  body.innerHTML=filtered.map(o=>{
+  body.innerHTML=filtered.map((o,index)=>{
     const st=status(o.status);
+    const currentDay=new Date(o.created_at||0);
+    const previousDay=index>0?new Date(filtered[index-1].created_at||0):null;
+    const dayHeader=selectedQueue==='history' && (!previousDay || currentDay.toDateString()!==previousDay.toDateString())
+      ? '<h3 class="jpt-history-date">'+esc(currentDay.toLocaleDateString('en-IN',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}))+'</h3>' : '';
     const target=Math.max(15,Math.min(40,Number(o.target_minutes||o.__draftMinutes||15)));
     const deadline=o.deadline_at||o.__localDeadline;
     const timer=st==='accepted'||st==='preparing'?remaining(deadline):'—';
@@ -327,11 +349,15 @@ function render(){
     const rider=riderInfo(o);
     const its=items(o);
     const newClass=st==='new'&&o.__liveNew?' jpt-new-order':'';
+    const paymentMethod=String(o.payment||o.payment_method||'').toUpperCase();
+    const paymentUnverified=paymentMethod==='UPI' && o.payment_verified!==true;
+    const paymentHtml='<div class="jpt-order-meta"><div><span class="jpt-label">PAYMENT</span><b>'+esc(paymentMethod||'—')+'</b></div><div><span class="jpt-label">PAYMENT STATUS</span><b>'+esc(paymentUnverified?'NOT VERIFIED':(o.payment_verified===true?'VERIFIED':(paymentMethod==='COD'?'PAY ON DELIVERY':'—')) )+'</b></div></div>'+
+      (paymentUnverified?'<div class="muted" style="margin:8px 0;padding:10px;border:1px solid #9a6b24;border-radius:8px;color:#f3ce75">UPI payment is not verified. This order cannot be accepted or marked ready until payment confirmation is received.</div>':'');
     const itemHtml=its.length?its.map(i=>
       '<div class="jpt-item-line"><span>'+esc(i.name||i.item_name||'Item')+'</span><b>× '+Number(i.qty??i.quantity??1)+'</b></div>'
     ).join(''):'<div class="muted">No item details available</div>';
     const action=actionHtml(o);
-    return '<article class="jpt-order-card'+newClass+'" data-order-card="'+esc(o.id)+'">'+
+    return dayHeader+'<article class="jpt-order-card'+newClass+'" data-order-card="'+esc(o.id)+'">'+
       '<div class="jpt-order-head"><div><div class="jpt-label">ORDER ID</div><div class="jpt-order-id">#'+esc(o.order_no||o.id)+'</div></div>'+
       '<span class="tag jpt-status">'+esc(boardStatus(o).replaceAll('_',' ').toUpperCase())+'</span></div>'+
       '<div class="muted" style="margin:6px 0;font-weight:800">OUTLET: '+esc(outletDisplayName(o.outlet_id))+'</div>'+
@@ -340,7 +366,7 @@ function render(){
       '<div class="jpt-items"><div class="jpt-label">ITEMS</div>'+itemHtml+'</div>'+
       '<div class="jpt-order-meta"><div><span class="jpt-label">ORDER VALUE</span><b>'+money(o.total??o.grand_total??0)+'</b></div>'+
       '<div><span class="jpt-label">ORDER TIME</span><span>'+esc(o.created_at?new Date(o.created_at).toLocaleString('en-IN'):'—')+'</span></div></div>'+
-      '<div class="jpt-prep">'+timerButton+rider+'</div>'+
+      paymentHtml+'<div class="jpt-prep">'+timerButton+rider+'</div>'+
       '<div class="jpt-actions"><div class="jpt-label">ACTIONS</div>'+action+'</div>'+
       '</article>';
   }).join('')||'<div class="jpt-no-orders">No orders in this queue.</div>';
@@ -622,22 +648,44 @@ async function lifecycleTransition(id,next){
 }
 async function markReady(id){return lifecycleTransition(id,'ready')}
 async function transition(id,next){return lifecycleTransition(id,next)}
-async function initialLoad(){
+async function initialLoad(options={}){
+  const loadSequence=++initialLoadSequence;
+  const verifyRows=options.verifyRows!==false;
   const codes=await resolveManagedOutlets();
   if(!codes.length){
+    if(options.preserveOnError){
+      console.warn('[JPT Orders] Fallback poll skipped: authorized outlet list temporarily unavailable; preserving current board.');
+      return;
+    }
     rows.clear();
     stopRingtone();
     render();
     toast('Partner outlet access is not ready. Orders were not queried under a fallback outlet. Retry login/access refresh.');
     return;
   }
-  /* Hide only old terminal/history orders. Active lifecycle orders must remain visible
-     even when they were created before the board cutover. */
-  const r=codes.length===1
-    ? await window.sb.from('orders').select('*').eq('outlet_id',codes[0]).order('created_at',{ascending:false}).limit(100)
-    : await window.sb.from('orders').select('*').in('outlet_id',codes).order('created_at',{ascending:false}).limit(500);
+  /* Active queues use a compact recent snapshot. History loads a 60-day
+     date-ordered window so it is not limited to the active queue's 100/500-row cap.
+     This query is read-only and does not alter order or payment records. */
+  const historyMode=selectedQueue==='history';
+  const historySince=new Date(Date.now()-60*24*60*60*1000).toISOString();
+  let query=window.sb.from('orders').select('*');
+  query=codes.length===1
+    ? query.eq('outlet_id',codes[0])
+    : query.in('outlet_id',codes);
+  if(historyMode)query=query.gte('created_at',historySince);
+  const r=await query.order('created_at',{ascending:false}).limit(historyMode?1000:(codes.length===1?100:500));
+  /* Concurrent refreshes can finish out of order. Only the newest snapshot may reconcile the board. */
+  if(loadSequence!==initialLoadSequence){
+    console.info('[JPT Orders] Ignoring stale overlapping snapshot', {loadSequence,latestLoadSequence:initialLoadSequence});
+    return;
+  }
   if(r.error){
-    /* A failed/unauthorized refresh must never leave old cards presented as current NEW orders. */
+    /* Periodic safety-net polls must not blank the board or silence an alert on a transient read error. */
+    if(options.preserveOnError){
+      console.warn('[JPT Orders] Fallback poll read failed; preserving current board:',r.error.message);
+      return;
+    }
+    /* An explicit/startup refresh failure must never leave old cards presented as current NEW orders. */
     rows.clear();
     stopRingtone();
     render();
@@ -649,7 +697,10 @@ async function initialLoad(){
      lifecycle status over a successful fresh server response. */
   const incomingIds=new Set((r.data||[]).map(o=>String(o.id)));
   for(const [key,old] of [...rows.entries()]){
-    if(!incomingIds.has(key)&&!actionBusy.has(key)&&!transitionBusy.has(key)){
+    /* A snapshot can have started before a just-arrived Realtime event.
+       Do not let that older snapshot erase an order received during the query. */
+    const recentlyRealtimeSeen=Number(old.__realtimeSeenAt||0)>Date.now()-30000;
+    if(!incomingIds.has(key)&&!recentlyRealtimeSeen&&!actionBusy.has(key)&&!transitionBusy.has(key)){
       rows.delete(key);
       if(activeRingtoneOrderId===key)stopRingtone();
     }
@@ -668,33 +719,32 @@ async function initialLoad(){
   /* Reconcile cards against the same server lookup used by action recovery.
      Missing/unreadable rows are hidden from this in-memory queue only.
      Never delete or update database records during reconciliation. */
-  const checks=[...rows.entries()];
-  for(let i=0;i<checks.length;i+=8){
-    await Promise.all(checks.slice(i,i+8).map(async([key,o])=>{
-      if(actionBusy.has(key)||transitionBusy.has(key))return;
-      const live=await read(o.id,o.outlet_id).catch(()=>null);
-      if(actionBusy.has(key)||transitionBusy.has(key))return;
-      if(live){
-        /* This is a direct SELECT by order id: its status replaces stale UI state.
-           Do not retain __optimisticStatus when the server disagrees. */
-        const prior=rows.get(key)||o;
-        /* A lagging SELECT must not undo a later state already seen from the RPC
-           or Realtime. A confirmed server transition is monotonic in this workflow. */
-        const reconciled=mergeOrderMonotonic(prior,live);
-        if(status(prior.status)===status(live.status))delete reconciled.__optimisticStatus;
-        if(prior.__draftMinutes!==undefined)reconciled.__draftMinutes=prior.__draftMinutes;
-        rows.set(key,reconciled);
-      }else{
-        /* The bulk outlet-scoped query already returned this order. A null or failed
-           follow-up read is not proof that it disappeared; keep the bulk snapshot. */
-        console.warn('[JPT Orders] Per-order verification unavailable; retaining loaded order',key);
-      }
-    }));
+  if(verifyRows){
+    const checks=[...rows.entries()];
+    for(let i=0;i<checks.length;i+=8){
+      await Promise.all(checks.slice(i,i+8).map(async([key,o])=>{
+        if(actionBusy.has(key)||transitionBusy.has(key))return;
+        const live=await read(o.id,o.outlet_id).catch(()=>null);
+        if(actionBusy.has(key)||transitionBusy.has(key))return;
+        if(live){
+          /* This is a direct SELECT by order id: its status replaces stale UI state.
+             Do not retain __optimisticStatus when the server disagrees. */
+          const prior=rows.get(key)||o;
+          /* A lagging SELECT must not undo a later state already seen from the RPC
+             or Realtime. A confirmed server transition is monotonic in this workflow. */
+          const reconciled=mergeOrderMonotonic(prior,live);
+          if(status(prior.status)===status(live.status))delete reconciled.__optimisticStatus;
+          if(prior.__draftMinutes!==undefined)reconciled.__draftMinutes=prior.__draftMinutes;
+          rows.set(key,reconciled);
+        }else{
+          /* The bulk outlet-scoped query already returned this order. A null or failed
+             follow-up read is not proof that it disappeared; keep the bulk snapshot. */
+          console.warn('[JPT Orders] Per-order verification unavailable; retaining loaded order',key);
+        }
+      }));
+    }
   }
   render();
-  /* Restore the continuous alert for any still-NEW order already present at startup/refresh. */
-  const pendingNew=[...rows.values()].find(o=>status(o.status)==='new');
-  if(pendingNew)startRingtone(pendingNew);
 }
 let channels=[];
 async function subscribe(){
@@ -749,7 +799,7 @@ async function subscribe(){
       const previous=rows.get(key);
       const merged=mergeOrderMonotonic(previous,o);
       const isNew=status(merged.status)==='new';
-      rows.set(key,Object.assign({},merged,{__liveNew:isNew}));
+      rows.set(key,Object.assign({},merged,{__liveNew:isNew,__realtimeSeenAt:Date.now()}));
       console.info('[JPT-DIAG][INSERT stored]',{id:key,order_no:merged.order_no,outlet_id:merged.outlet_id,status:status(merged.status),isNew,rowIdsAfter:[...rows.keys()]});
       updateVisibleDiagnostics('STORED '+String(merged.order_no||key)+' • '+String(merged.outlet_id));
       render();
@@ -771,11 +821,11 @@ async function subscribe(){
       if(actionBusy.has(String(o.id))||transitionBusy.has(String(o.id)))return;
       const merged=mergeOrderMonotonic(old,o);
       const nextStatus=status(merged.status);
-      rows.set(String(o.id),merged);
+      rows.set(String(o.id),Object.assign({},merged,{__realtimeSeenAt:Date.now()}));
       /* If the active queue was showing this order's prior state, follow its
          server-confirmed lifecycle state immediately instead of leaving the
          operator on a stale NEW/ACCEPTED tab. */
-      if(old.id && oldStatus!==nextStatus && selectedQueue===oldStatus){
+      if(old.id && oldStatus!==nextStatus && selectedQueue===queueForStatus(oldStatus)){
         focusQueueForStatus(nextStatus);
       }
       render();
@@ -788,6 +838,66 @@ async function subscribe(){
       if(e)console.warn('[JPT Unified Orders '+code+']',s,e);
     });
     channels.push(ch);
+
+    /* The database also emits private Realtime Broadcast events on
+       jpt:partner:outlet:<outlet_id>. Keep the existing Postgres Changes
+       listener above, and subscribe to the matching Broadcast topic as well.
+       This closes the gap where the DB trigger sends order_insert/order_update
+       but the dashboard listens only for postgres_changes. */
+    const broadcastCh=window.sb.channel('jpt:partner:outlet:'+code,{config:{private:true}});
+    const refreshFromBroadcast=(payload,eventName)=>{
+      /* Supabase Broadcast wraps trigger data in an envelope. Depending on
+         the trigger/client shape, the order may be data.record, data.payload,
+         data.order, or the data object itself. Normalize only recognized order
+         objects; never treat an arbitrary envelope as an order row. */
+      const data=payload?.payload;
+      const o=data?.record || data?.payload?.record || data?.payload?.order ||
+        data?.payload || data?.order || (data?.id!=null?data:null) ||
+        payload?.record || (payload?.id!=null?payload:null);
+      if(!o || o.id==null || String(o.outlet_id||'')!==code || !liveCodes.includes(String(o.outlet_id))) {
+        console.warn('[JPT-DIAG][broadcast payload rejected]',{outlet:code,event:eventName,hasPayload:!!payload,hasData:!!data,hasOrderId:o?.id??null,orderOutlet:o?.outlet_id??null});
+        return;
+      }
+      lastRealtimeInsert={
+        id:o.id,
+        order_no:o.order_no,
+        outlet_id:o.outlet_id,
+        status:o.status,
+        receivedAt:new Date().toISOString()
+      };
+      updateVisibleDiagnostics('BROADCAST '+eventName.toUpperCase()+' RECEIVED');
+      console.info('[JPT-DIAG][broadcast order event]',{
+        outlet:code,event:eventName,id:String(o.id),status:status(o.status)
+      });
+      const key=String(o.id);
+      if(actionBusy.has(key)||transitionBusy.has(key))return;
+      if(!shouldShowOnBoard(o)){
+        rows.delete(key);
+        if(activeRingtoneOrderId===key)stopRingtone();
+        render();
+        return;
+      }
+      const previous=rows.get(key);
+      const oldStatus=status(previous?.status);
+      const merged=mergeOrderMonotonic(previous,o);
+      const nextStatus=status(merged.status);
+      rows.set(key,Object.assign({},merged,{__liveNew:eventName==='order_insert'&&nextStatus==='new',__realtimeSeenAt:Date.now()}));
+      if(eventName==='order_update' && previous?.id && oldStatus!==nextStatus && selectedQueue===queueForStatus(oldStatus)){
+        focusQueueForStatus(nextStatus);
+      }
+      render();
+      console.info('[JPT-DIAG][broadcast order rendered]',{
+        id:key,status:nextStatus,cardExists:!!document.querySelector('[data-order-card="'+CSS.escape(key)+'"]'),queue:selectedQueue
+      });
+      if(eventName==='order_insert'&&nextStatus==='new')startRingtone(merged);
+    };
+    broadcastCh.on('broadcast',{event:'order_insert'},payload=>refreshFromBroadcast(payload,'order_insert'));
+    broadcastCh.on('broadcast',{event:'order_update'},payload=>refreshFromBroadcast(payload,'order_update'));
+    broadcastCh.subscribe((s,e)=>{
+      console.info('[JPT-DIAG][broadcast channel status]',{outlet:code,status:s,error:e||null});
+      if(e)updateVisibleDiagnostics('BROADCAST '+code+' '+s+' • '+String(e.message||e));
+    });
+    channels.push(broadcastCh);
   }
   channel=channels[0]||null;
 }
@@ -806,19 +916,18 @@ function updateTimers(){
   if(shouldRender)render();
 }
 function focusQueueForStatus(value){
-  const st=status(value);
-  const target=st==='new'?'new':st==='accepted'?'preparing':st==='preparing'?'preparing':st==='ready'?'ready':st==='out_for_delivery'?'out_for_delivery':st==='delivered'?'delivered':null;
+  const target=queueForStatus(value);
   if(!target)return;
   const btn=[...document.querySelectorAll('.orderQueueBtn')].find(b=>String(b.dataset.queue||'')===target);
   if(!btn)return;
   selectedQueue=target;
-  document.querySelectorAll('.orderQueueBtn').forEach(x=>x.classList.toggle('gold',x===btn));
+  document.querySelectorAll('.orderQueueBtn').forEach(x=>{x.classList.toggle('gold',x===btn);x.classList.toggle('is-active',x===btn);x.setAttribute('aria-selected',x===btn?'true':'false')});
 }
 function bindQueue(){
   document.querySelectorAll('.orderQueueBtn').forEach(b=>{
     b.onclick=async()=>{
       selectedQueue=b.dataset.queue||'all';
-      document.querySelectorAll('.orderQueueBtn').forEach(x=>x.classList.toggle('gold',x===b));
+      document.querySelectorAll('.orderQueueBtn').forEach(x=>{x.classList.toggle('gold',x===b);x.classList.toggle('is-active',x===b);x.setAttribute('aria-selected',x===b?'true':'false')});
       /* Always reconcile queue cards against Supabase before rendering. */
       try{ await initialLoad(); await subscribe(); }
       catch(e){ console.error('[JPT queue refresh]',e); toast('Queue refresh failed. Please use Refresh Orders before taking another action.'); }
@@ -895,6 +1004,12 @@ async function boot(){
       managedSignature=sig;
       await initialLoad();
       await subscribe();
+    }else if(!fallbackPollBusy){
+      /* Safety-net poll discovers missed INSERTs without manual dashboard refresh. */
+      fallbackPollBusy=true;
+      try{ await initialLoad({verifyRows:false,preserveOnError:true}); }
+      catch(e){ console.warn('[JPT Orders] fallback poll failed',e); }
+      finally{ fallbackPollBusy=false; }
     }
     const select=document.getElementById('outletSelect');
     if(select&&select.value!==outlet()){

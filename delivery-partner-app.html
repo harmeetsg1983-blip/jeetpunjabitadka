@@ -138,9 +138,9 @@ async function startDeliveryPrivateBroadcast(){
       .subscribe();
   }catch(e){console.warn('Delivery private live unavailable',e)}
 }
-async function startOfferPolling(){stopOfferPolling();offerTimer=setInterval(async()=>{await loadOffer();await loadActive()},5000);await loadOffer();await loadActive()}function stopOfferPolling(){if(offerTimer){clearInterval(offerTimer);offerTimer=null}}async function loadOffer(){try{let {data,error}=await sb.rpc('delivery_partner_offer_snapshot');if(error)throw error;if(data&&((Array.isArray(data)&&data.length)||data.id)){let x=Array.isArray(data)?data[0]:data;if(!offer||offer.id!==x.id){offer=x;showOffer(x);startTone()}}else{if(!$('offer').classList.contains('hidden')&&!current)$('offer').classList.add('hidden')}}catch(e){console.warn(e)}}function showOffer(x){$('offer').classList.remove('hidden');$('offerText').textContent='Order #'+(x.order_id||'—');$('offerDetails').textContent=(x.outlet_id||'')+' • '+(x.status||'offered')+' • '+(x.customer_address||'Delivery details after acceptance')}
+async function startOfferPolling(){stopOfferPolling();offerTimer=setInterval(async()=>{await loadOffer();await loadActive()},5000);await loadOffer();await loadActive()}function stopOfferPolling(){if(offerTimer){clearInterval(offerTimer);offerTimer=null}}async function loadOffer(){try{let {data,error}=await sb.rpc('delivery_partner_offer_snapshot');if(error)throw error;const raw=Array.isArray(data)?data[0]:data;const offered=raw&&raw.status==='offer'&&raw.assignment_id; if(offered){let x={...raw,id:raw.assignment_id,order_id:raw.order?.id||raw.order_id,outlet_id:raw.order?.outlet_id||raw.outlet_id,customer_address:raw.order?.customer_address||raw.customer_address,status:'offered'};if(!offer||offer.id!==x.id){offer=x;showOffer(x);startTone()}}else{if(offer||!$('offer').classList.contains('hidden'))stopTone();offer=null;$('offer').classList.add('hidden')}}catch(e){console.warn(e)}}function showOffer(x){$('offer').classList.remove('hidden');$('offerText').textContent='Order #'+(x.order_id||'—');$('offerDetails').textContent=(x.outlet_id||'')+' • '+(x.status||'offered')+' • '+(x.customer_address||'Delivery details after acceptance')}
 async function respondOffer(accept){if(!offer)return;stopTone();try{let r=await sb.rpc('delivery_assignment_respond',{p_assignment_id:offer.id,p_accept:accept,p_reason:accept?null:'rider_rejected'});if(r.error)throw r.error;$('offer').classList.add('hidden');offer=null;if(accept)playDeliveryAcceptedTone();await loadActive()}catch(e){alert(e.message)}}
-async function loadActive(){let {data,error}=await sb.rpc('delivery_partner_assignment_snapshot');if(error)return;let x=Array.isArray(data)?data.find(a=>['accepted','picked_up','out_for_delivery'].includes(a.status)):data;if(!x)return;current=x;$('current').classList.remove('hidden');$('currentOrder').textContent='Order #'+x.order_id;$('currentStatus').textContent=(x.status||'accepted').replace(/_/g,' ').toUpperCase();updateNextButton(x.status);await checkRestaurantReady(x.order_id);startLocation()}
+async function loadActive(){let {data,error}=await sb.rpc('delivery_partner_assignment_snapshot');if(error)return;let raw=Array.isArray(data)?data.find(a=>['accepted','picked_up','out_for_delivery'].includes(a.status)):data;if(!raw){current=null;$('current').classList.add('hidden');stopLocation();return}let x={...raw,id:raw.id||raw.assignment_id,order_id:raw.order_id||raw.order?.id,outlet_id:raw.outlet_id||raw.order?.outlet_id,customer_address:raw.customer_address||raw.order?.customer_address};if(!x.id||!x.order_id){console.warn('Delivery assignment response missing assignment_id/order_id',raw);return}current=x;$('current').classList.remove('hidden');$('currentOrder').textContent='Order #'+x.order_id;$('currentStatus').textContent=(x.status||'accepted').replace(/_/g,' ').toUpperCase();updateNextButton(x.status);await checkRestaurantReady(x.order_id);startLocation()}
 async function checkRestaurantReady(orderId){try{const r=await sb.from('orders').select('status').eq('id',orderId).maybeSingle();if(r.error||!r.data)return;const st=String(r.data.status||'').toLowerCase();if(st==='ready'&&lastOrderStatus!=='ready'){playDeliveryReadyTone();}lastOrderStatus=st;}catch(e){}}
 function playDeliveryReadyTone(){try{const a=new Audio(JPT_DELIVERY_OFFER_AUDIO);a.preload='auto';a.loop=false;a.volume=1;const p=a.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}}
 function updateNextButton(s){$('nextBtn').textContent=s==='accepted'?'PICK UP':s==='picked_up'?'OUT FOR DELIVERY':s==='out_for_delivery'?'MARK DELIVERED':'DONE'}
@@ -150,12 +150,32 @@ async function sendCurrentLocation(){if(!current||!navigator.geolocation)return 
 function startLocation(){if(locationWatchId!==null)return;if(!current||!navigator.geolocation)return;$('gpsState').textContent='GPS: acquiring location…';sendCurrentLocation();locationWatchId=navigator.geolocation.watchPosition(async pos=>{try{let r=await sb.rpc('delivery_partner_record_location',{p_assignment_id:current.id,p_lat:pos.coords.latitude,p_lng:pos.coords.longitude,p_accuracy_m:pos.coords.accuracy});$('gpsState').textContent=r.error?'GPS: '+r.error.message:'GPS: shared securely';}catch(e){$('gpsState').textContent='GPS: '+(e.message||'location upload failed')}},()=>{$('gpsState').textContent='GPS: permission/location unavailable'},{enableHighAccuracy:true,maximumAge:10000,timeout:15000});}
 function stopLocation(){if(locationWatchId!==null&&navigator.geolocation){navigator.geolocation.clearWatch(locationWatchId);locationWatchId=null}if(locationTimer){clearInterval(locationTimer);locationTimer=null}if(current)sb.rpc('delivery_partner_stop_location_sharing',{p_assignment_id:current.id}).catch(()=>{})}
 async function loadEarnings(){try{let {data,error}=await sb.rpc('delivery_partner_earnings_summary',{p_days:30});if(error)throw error;let rows=Array.isArray(data)?data:[];let delivered=rows.reduce((a,x)=>a+Number(x.delivered_count||0),0),earn=rows.reduce((a,x)=>a+Number(x.earnings||0),0);$('earnings').textContent='Last 30 days: '+delivered+' delivered × ₹50 = ₹'+earn}catch(e){$('earnings').textContent='Earnings unavailable until a verified rider has deliveries.'}}
-const JPT_DELIVERY_OFFER_AUDIO='./ringtones/1000449571.mp4';
+const JPT_DELIVERY_OFFER_AUDIO='./ringtones/1000449491.mp4';
 const JPT_DELIVERY_ACCEPTED_AUDIO='./ringtones/1000449491.mp4';
 function toneFile(){return null}
 function startTone(){
   stopTone();
-  try{audio=new Audio(JPT_DELIVERY_OFFER_AUDIO);audio.preload='auto';audio.loop=true;audio.play().catch(()=>{})}catch(e){}
+  try{
+    audio=new Audio(JPT_DELIVERY_OFFER_AUDIO);
+    audio.preload='auto';
+    audio.loop=true;
+    audio.volume=1;
+    let usedFallback=false;
+    audio.addEventListener('error',()=>{
+      if(usedFallback)return;
+      usedFallback=true;
+      try{
+        const previous=audio;
+        audio=new Audio(JPT_DELIVERY_ACCEPTED_AUDIO);
+        audio.preload='auto';
+        audio.loop=true;
+        audio.volume=1;
+        audio.play().catch(()=>{});
+        if(previous){previous.pause();previous.removeAttribute('src');previous.load();}
+      }catch(e){console.warn('Delivery offer audio unavailable',e)}
+    },{once:true});
+    audio.play().catch(e=>console.warn('Delivery offer audio blocked or unavailable',e));
+  }catch(e){console.warn('Delivery offer audio unavailable',e)}
 }
 function stopTone(){if(audio){audio.pause();audio.currentTime=0;audio=null}}
 function playDeliveryAcceptedTone(){

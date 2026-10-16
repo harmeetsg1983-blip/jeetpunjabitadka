@@ -140,7 +140,7 @@ body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
  overflow-x:auto;overflow-y:hidden;scrollbar-width:none;
  background:rgba(7,7,7,.97);
  border-top:1px solid #242424;border-bottom:1px solid #2e2e2e;
- backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+ /* Android stability: solid sticky bar, no backdrop repaint */
 }
 #orderQueueBar::-webkit-scrollbar{display:none}
 .jpt-status-tab{
@@ -162,7 +162,7 @@ body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
  background:rgba(10,10,10,.98);
  border-top:1px solid #343434;
  box-shadow:0 -10px 30px #000b;
- backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+ /* Android stability: solid bottom nav, no backdrop repaint */
 }
 .jpt-bottom-item{
  appearance:none;border:0;background:transparent;color:#888;
@@ -221,6 +221,31 @@ body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
 @media(min-width:700px){.jpt-menu-pro-card{grid-template-columns:100px 1fr auto;align-items:center}.jpt-menu-image-wrap,.jpt-menu-pro-image{width:100px;height:100px}.jpt-menu-pro-actions{grid-column:auto;grid-template-columns:repeat(2,92px);width:190px}}
 @media(max-width:480px){.brand{font-size:15px}.jpt-header-tools{gap:4px}.jpt-icon-btn{width:39px;height:39px}.jpt-menu-pro-title-row h2{font-size:19px}.jpt-menu-pro-title-row{align-items:flex-start}.jpt-add-item{padding:10px;font-size:11px}.jpt-menu-pro-actions{grid-template-columns:repeat(2,1fr)}}
 </style>
+<style id="jpt-four-queue-mobile-fit">
+/* Four order queues share the available row width; History must not be pushed off-screen. */
+#orderQueueBar.jpt-status-tabs{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  align-items:stretch!important;
+  gap:5px!important;
+  overflow:hidden!important;
+}
+#orderQueueBar .orderQueueBtn{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:0!important;
+  width:100%!important;
+  max-width:none!important;
+  flex:initial!important;
+  padding:8px 3px!important;
+  font-size:10px!important;
+  line-height:1.2!important;
+  text-align:center!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere!important;
+}
+</style>
 </head>
 <body>
 <div class="app">
@@ -277,14 +302,10 @@ body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
 
 <section id="orders" class="panel">
  <div class="card"><div class="rowactions"><button class="btn" id="ordersRefresh">↻ Refresh Orders</button><button class="btn gold" id="enableAlarm">🔔 Order Alarm Active</button></div><div id="ordersNotice" class="notice">Loading…</div><div id="orderQueueBar" class="jpt-status-tabs" role="tablist" aria-label="Order status filters">
- <button type="button" class="jpt-status-tab is-active orderQueueBtn" data-queue="all" role="tab">ALL</button>
- <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="new" role="tab">NEW</button>
- <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="accepted" role="tab">ACCEPTED</button>
- <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="preparing" role="tab">PREPARING</button>
+ <button type="button" class="jpt-status-tab is-active orderQueueBtn" data-queue="preparing" role="tab" aria-selected="true">PREPARING</button>
  <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="ready" role="tab">READY</button>
  <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="out_for_delivery" role="tab">OUT FOR DELIVERY</button>
- <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="delivered" role="tab">DELIVERED</button>
- <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="cancelled" role="tab">CANCELLED</button>
+ <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="history" role="tab" aria-selected="false">HISTORY ORDERS</button>
 </div><div id="orderAlarm" class="notice" style="display:none;border-color:#d8ae42;background:#211706"><b>🔔 NEW ORDER</b><div id="orderAlarmText" class="muted" style="color:#fff;margin-top:4px"></div><button class="btn gold" id="stopAlarm" style="margin-top:8px">Acknowledge</button></div><div class="jpt-orders-vertical" id="ordersTableWrap"><div id="ordersBody" class="jpt-orders-list"></div></div></div>
 </section>
 
@@ -795,7 +816,7 @@ window.__JPTDisableLegacyOrderRuntime=async function(){
   try{if(orderChannel){await sb.removeChannel(orderChannel);orderChannel=null;}}catch(e){}
 };
 let jptNewOrderAudio=null;
-const JPT_NEW_ORDER_AUDIO='./ringtones/1000449570.mp4';
+const JPT_NEW_ORDER_AUDIO='./ringtones/1000449491.mp4';
 function ensureNewOrderAudio(){
   if(!jptNewOrderAudio){
     jptNewOrderAudio=new Audio(JPT_NEW_ORDER_AUDIO);
@@ -1184,7 +1205,7 @@ checkSession();
 <script src="./jpt-partner-outlet-context-v1.js"></script>
 
 <script src="./jpt-partner-permission-ui-v1.js"></script>
-<script src="./jpt-partner-outlet-header-v1.js"></script>
+<!-- Outlet name/code banner below the notification area intentionally omitted; outlet identity remains on each order card. -->
 <script src="./jpt-partner-branding-form-guard-v1.js"></script>
 <script src="./jpt-partner-onboarding-status-badge-v1.js"></script>
 <script src="./jpt-partner-safe-cache-v1.js"></script>
@@ -1194,10 +1215,10 @@ checkSession();
 <script src="./jpt-partner-final-touch-v12.js?v=13"></script>
 <script src="./JPT_Delivery_Partner_Admin_Approval_Bridge_V2.js?v=107"></script>
 <script>
-try{if("serviceWorker" in navigator){navigator.serviceWorker.register("./jpt-partner-sw.js?v=20",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});}}catch(e){}
+try{if("serviceWorker" in navigator){navigator.serviceWorker.register("./jpt-partner-sw.js?v=21",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});}}catch(e){}
 </script>
 
-<script src="./jpt-unified-partner-orders-v1.js?v=20261012-visible-multi-outlet-diag-4"></script>
+<script src="./jpt-unified-partner-orders-v1.js?v=20261016-stale-order-cutoff-7"></script>
 <script src="./jpt-partner-dual-bar-nav-v1.js?v=20261007-1"></script>
 <script src="./jpt-partner-pro-menu-ui-v1.js?v=20261007-1"></script>
 <script src="./jpt-partner-timing-manager-v1.js?v=1"></script>
