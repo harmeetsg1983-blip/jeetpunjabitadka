@@ -1116,7 +1116,22 @@ async function boot(){
      before this runtime begins loading orders or subscribing. Do not touch
      menu, offers, outlet access, payment guards, or customer checkout. */
   try{await window.__JPTDisableLegacyOrderRuntime?.();}catch(e){console.warn('[JPT Orders] legacy realtime shutdown failed',e);}
+  /* Stop the legacy alarm once, then route every later caller to this single owner. */
   try{window.stopOrderAlarm?.();}catch(e){}
+  const stopUnifiedAlarm=function(){
+    stopRingtone();
+    const box=document.getElementById('orderAlarm');
+    if(box){box.style.display='none';box.classList.remove('alarmPulse');}
+    try{navigator.vibrate?.(0)}catch(e){}
+  };
+  window.JPTUnifiedOrderRuntime=Object.freeze({
+    stopRingtone:stopUnifiedAlarm,
+    enableBackgroundAlerts,
+    refresh:()=>initialLoad(),
+    getActiveOrderId:()=>activeRingtoneOrderId
+  });
+  window.stopOrderAlarm=stopUnifiedAlarm;
+  window.enableOrderAlarm=enableBackgroundAlerts;
   bindQueue();
   bindOrderAudioGesture();
   const refresh=document.getElementById('ordersRefresh');
