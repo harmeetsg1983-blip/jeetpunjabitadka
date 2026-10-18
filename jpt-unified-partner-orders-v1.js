@@ -18,6 +18,7 @@ let audio=null;
 let activeRingtoneOrderId=null;
 const ringtoneAlertedOrderIds=new Set();
 const pendingRingtoneOrderIds=[];
+const failedRingtoneOrderIds=new Set();
 let audioGeneration=0;
 let timerHandle=null;
 let selectedQueue='preparing';
@@ -79,6 +80,16 @@ async function enableBackgroundAlerts(){
     if('Notification' in window && Notification.permission==='default') await Notification.requestPermission();
   }catch(e){}
   const primed=await primeOrderAudio();
+  if(primed){
+    /* Retry only orders whose sound was explicitly blocked by the browser.
+       Do not ring old outstanding orders merely because sound was enabled. */
+    const retryIds=[...failedRingtoneOrderIds];
+    for(const id of retryIds){
+      failedRingtoneOrderIds.delete(id);
+      const order=rows.get(String(id));
+      if(order&&status(order.status)==='new')startRingtone(order);
+    }
+  }
   toast(primed
     ? 'Order sound enabled. New orders will ring automatically while this dashboard is open.'
     : 'Order sound could not be enabled. Check phone media volume and browser sound permission.');
@@ -188,6 +199,7 @@ function stopRingtone(options={}){
   if(options.clearQueue){
     pendingRingtoneOrderIds.length=0;
     ringtoneAlertedOrderIds.clear();
+    failedRingtoneOrderIds.clear();
   }
   if(audio){
     try{
@@ -202,6 +214,7 @@ function acknowledgeRingtone(orderId){
   for(let i=pendingRingtoneOrderIds.length-1;i>=0;i--){
     if(pendingRingtoneOrderIds[i]===key)pendingRingtoneOrderIds.splice(i,1);
   }
+  failedRingtoneOrderIds.delete(key);
   if(activeRingtoneOrderId===key){
     stopRingtone();
     playNextPendingRingtone();
@@ -218,6 +231,7 @@ function startRingtone(order){
   /* Queue distinct NEW orders. One shared ringtone plays at a time, and accepting
      one outlet's order must not silence a different outlet's still-pending order. */
   ringtoneAlertedOrderIds.add(id);
+  failedRingtoneOrderIds.delete(id);
   if(activeRingtoneOrderId){
     if(!pendingRingtoneOrderIds.includes(id))pendingRingtoneOrderIds.push(id);
     return;
@@ -254,6 +268,7 @@ function playRingtone(order){
     try{
       if(window.AndroidOrderAlarm && typeof window.AndroidOrderAlarm.startAlarm==='function'){
         window.AndroidOrderAlarm.startAlarm(id,String(order?.outlet_id||''),String(order?.order_no||id));
+        failedRingtoneOrderIds.delete(id);
         return;
       }
     }catch(e){}
@@ -263,10 +278,13 @@ function playRingtone(order){
     audio.currentTime=0;
     audio.load();
     const playResult=audio.play();
-    if(playResult?.catch){
-      playResult.catch(()=>{
+    if(playResult?.then){
+      playResult.then(()=>{
+        if(generation===audioGeneration)failedRingtoneOrderIds.delete(id);
+      }).catch(()=>{
         if(generation!==audioGeneration)return;
         ringtoneAlertedOrderIds.delete(id);
+        failedRingtoneOrderIds.add(id);
         if(activeRingtoneOrderId===id)activeRingtoneOrderId=null;
         const msg=document.getElementById('ordersNotice');
         if(msg)msg.textContent='NEW ORDER received — sound was blocked by the browser. Tap ENABLE SOUND and keep the dashboard open.';
@@ -276,6 +294,7 @@ function playRingtone(order){
   }catch(e){
     if(generation===audioGeneration){
       ringtoneAlertedOrderIds.delete(id);
+      failedRingtoneOrderIds.add(id);
       if(activeRingtoneOrderId===id)activeRingtoneOrderId=null;
       const msg=document.getElementById('ordersNotice');
       if(msg)msg.textContent='NEW ORDER received — ringtone playback failed: '+(e?.message||e)+'. Tap ENABLE SOUND to retry.';
