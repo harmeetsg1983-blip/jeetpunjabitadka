@@ -3,17 +3,27 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 
 const source = fs.readFileSync('jpt-unified-partner-orders-v1.js', 'utf8');
-const start = source.indexOf('function status(v){');
-const end = source.indexOf('\nfunction items(x){', start);
-assert.notEqual(start, -1, 'status() helper must exist');
-assert.notEqual(end, -1, 'order helper block must end before items()');
+function between(startMarker, endMarker) {
+  const start = source.indexOf(startMarker);
+  const end = source.indexOf(endMarker, start);
+  assert.notEqual(start, -1, 'missing source anchor: ' + startMarker);
+  assert.notEqual(end, -1, 'missing source anchor: ' + endMarker);
+  return source.slice(start, end);
+}
+
+const helpers = [
+  between('function status(v){', '\nfunction items(x){'),
+  between('function esc(v){', '\nfunction money(v){'),
+  between('function actionHtml(o){', '\nfunction render(){')
+].join('\n');
 
 const api = vm.runInNewContext(
-  source.slice(start, end) + '\n;({status, lifecycleRank, mergeOrderMonotonic})',
+  helpers + '\n;({status, lifecycleRank, mergeOrderMonotonic, actionHtml})',
   {},
   { timeout: 1000 }
 );
 
+// Realtime/SELECT ordering must not regress a known lifecycle state.
 assert.equal(
   api.mergeOrderMonotonic({ id: 1, status: 'delivered' }, { id: 1, status: 'cancelled' }).status,
   'delivered',
@@ -35,4 +45,15 @@ assert.equal(
   'a forward lifecycle update must still be applied'
 );
 
-console.log('GREEN: 4 order lifecycle monotonicity regression tests passed');
+// UPI verification must be enforced by rendered controls for NEW and ACCEPTED.
+const unverifiedNew = api.actionHtml({ id: 2, status: 'new', payment: 'UPI', payment_verified: false });
+assert.match(unverifiedNew, /data-accept="2" disabled/, 'unverified UPI NEW order must disable ACCEPT');
+const unverifiedAccepted = api.actionHtml({ id: 3, status: 'accepted', payment: 'UPI', payment_verified: false });
+assert.match(unverifiedAccepted, /data-ready="3" disabled/, 'unverified UPI ACCEPTED order must disable READY');
+
+const verifiedNew = api.actionHtml({ id: 4, status: 'new', payment: 'UPI', payment_verified: true });
+assert.doesNotMatch(verifiedNew, /data-accept="4" disabled/, 'verified UPI order must retain ACCEPT');
+const verifiedAccepted = api.actionHtml({ id: 5, status: 'accepted', payment: 'UPI', payment_verified: true });
+assert.doesNotMatch(verifiedAccepted, /data-ready="5" disabled/, 'verified UPI order must retain READY');
+
+console.log('GREEN: 8 order lifecycle and UPI-control regression tests passed');
