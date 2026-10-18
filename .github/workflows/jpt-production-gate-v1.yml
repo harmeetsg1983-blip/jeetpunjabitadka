@@ -83,7 +83,7 @@ jobs:
           grep -Fq 'PERFORM realtime.send(' "$migration"
           grep -Fq "'jpt:delivery:rider:'" "$migration"
           grep -Fq 'DROP TRIGGER IF EXISTS trg_delivery_auto_offer_when_ready ON public.orders;' "$migration"
-          if grep -Fq 'realtime.broadcast_changes(' "$migration"; then
+          if grep -Eiq '^[[:space:]]*PERFORM[[:space:]]+realtime\.broadcast_changes\(' "$migration"; then
             echo "RED: unsupported broadcast_changes call returned to delivery migration"
             exit 1
           fi
