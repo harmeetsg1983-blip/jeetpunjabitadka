@@ -492,8 +492,7 @@ async function accept(id){
   }
   /* Lock before the first await: repeated taps must not race through server preflight reads. */
   actionBusy.add(key);
-  /* Acknowledge only this order; other NEW orders remain queued for their own alert. */
-  acknowledgeRingtone(key);
+  /* Keep this NEW order's alert active until the server confirms a transition. */
   /* A stale NEW card must not issue ACCEPT against an already-progressed order. */
   let canonical;
   try{canonical=await read(id,o.outlet_id);if(actionAuthGeneration!==authGeneration)return;}catch(e){
@@ -525,7 +524,6 @@ async function accept(id){
   const minutes=Math.max(15,Math.min(40,Number(o.__draftMinutes||o.target_minutes||15)));
   const local=localDeadline(minutes);
   const previous={status:o.status,target_minutes:o.target_minutes,deadline_at:o.deadline_at,__localDeadline:o.__localDeadline,__optimisticStatus:o.__optimisticStatus};
-  acknowledgeRingtone(key);
   o.__localDeadline=local;
   o.__optimisticStatus='accepted';
   o.status='accepted';
@@ -544,6 +542,7 @@ async function accept(id){
     const server=Array.isArray(r.data)?r.data[0]:r.data;
     if(!server)throw new Error('Server returned no order record; status was not confirmed.');
     rows.set(key,Object.assign(o,server));
+    acknowledgeRingtone(key);
     focusQueueForStatus(rows.get(key)?.status||'accepted');
     toast('Order accepted — '+minutes+' minute preparation timer started.');
     render();
@@ -557,6 +556,7 @@ async function accept(id){
       const fresh=await read(id,o?.outlet_id).catch(()=>null);
       if(actionAuthGeneration!==authGeneration)return;
       Object.assign(o,fresh||{},{status:serverStatus});
+      if(serverStatus!=='new')acknowledgeRingtone(key);
       delete o.__optimisticStatus;
       if(serverStatus!=='accepted'){
         if(previous.__localDeadline===undefined)delete o.__localDeadline;
@@ -579,6 +579,7 @@ async function accept(id){
         rows.set(key,Object.assign(o,fresh));
         const current=status(fresh.status);
         if(current!=='new'){
+          acknowledgeRingtone(key);
           focusQueueForStatus(current);
           toast('Server status synced: '+current.toUpperCase()+'. Duplicate accept stopped.');
         }else{
@@ -608,9 +609,9 @@ async function reject(id){
   const key=String(id);
   if(actionBusy.has(key)||transitionBusy.has(key))return;
   const o=rows.get(key); if(!o)return;
-  /* Reserve the order action before the RPC so repeated taps cannot issue duplicate REJECTs. */
+  /* Reserve the order action before the RPC so repeated taps cannot issue duplicate REJECTs.
+     Keep the NEW-order alert active until the server confirms cancellation. */
   actionBusy.add(key);
-  acknowledgeRingtone(key);
   try{
     const r=await window.sb.rpc('jpt_partner_transition_order',{
       p_order_id:Number(id),
@@ -623,13 +624,17 @@ async function reject(id){
     const server=Array.isArray(r.data)?r.data[0]:r.data;
     if(server)rows.set(key,Object.assign(o,server));
     else o.status='cancelled';
+    acknowledgeRingtone(key);
     toast('Order rejected.');
     render();
   }catch(e){
     if(actionAuthGeneration!==authGeneration)return;
     const fresh=await read(id,o?.outlet_id).catch(()=>null);
     if(actionAuthGeneration!==authGeneration)return;
-    if(fresh)rows.set(key,fresh);
+    if(fresh){
+      rows.set(key,fresh);
+      if(status(fresh.status)!=='new')acknowledgeRingtone(key);
+    }
     render(); toast('REJECT failed: '+(e.message||e));
   }finally{
     if(actionAuthGeneration===authGeneration){actionBusy.delete(key);render();}
