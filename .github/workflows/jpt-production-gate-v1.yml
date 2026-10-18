@@ -65,7 +65,7 @@ jobs:
           grep -Fq 'failedRingtoneOrderIds' jpt-unified-partner-orders-v1.js
           grep -Fq 'function acknowledgeRingtone(orderId)' jpt-unified-partner-orders-v1.js
           grep -Fq 'function hideOrderAlarmCard()' jpt-unified-partner-orders-v1.js
-          grep -Fq "orderAlarmText.textContent='Order #'" jpt-unified-partner-orders-v1.js
+          grep -Fq "alarmText.textContent='Order #'" jpt-unified-partner-orders-v1.js
           grep -Fq 'UPI payment must be verified before accepting this order.' jpt-unified-partner-orders-v1.js
           grep -Fq 'UPI payment must be verified before marking this order ready.' jpt-unified-partner-orders-v1.js
           ! grep -Fq '1000449491.mp4' admin.html
