@@ -857,7 +857,7 @@ $('outletSelect').onchange=async function(){activeOutlet=this.value;localStorage
 $('reloadBtn').onclick=reloadAll;
 
 
-setInterval(()=>{ if(document.visibilityState!=='hidden') loadOrders().catch(()=>{}); },15000);
+/* Legacy 15-second order poll removed; unified order runtime owns the 5-second recovery poll. */
 </script>
  <style>
 #jptAuthGate{
