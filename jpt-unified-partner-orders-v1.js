@@ -748,7 +748,23 @@ async function initialLoad(options={}){
       if(batch.length<pageSize){r={data:historyRows,error:null};break;}
     }while(true);
   }else{
-    r=await makeQuery().order('created_at',{ascending:false}).limit(codes.length===1?100:500);
+    /* Only live lifecycle states belong in the active-workboard snapshot.
+       Do not let recent delivered/cancelled records consume the page limit.
+       Page the complete live queue so older still-active orders are never hidden. */
+    const activeRows=[];
+    const pageSize=1000;
+    let offset=0;
+    do{
+      const page=await makeQuery()
+        .in('status',['new','accepted','preparing','ready','out_for_delivery'])
+        .order('created_at',{ascending:false})
+        .range(offset,offset+pageSize-1);
+      if(page.error){r=page;break;}
+      const batch=page.data||[];
+      activeRows.push(...batch);
+      offset+=batch.length;
+      if(batch.length<pageSize){r={data:activeRows,error:null};break;}
+    }while(true);
   }
   /* A query started in a previous login session must never repopulate the board after logout. */
   if(loadAuthGeneration!==authGeneration)return;
