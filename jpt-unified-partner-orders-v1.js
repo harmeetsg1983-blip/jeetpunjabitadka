@@ -190,12 +190,17 @@ function toast(msg){
   const n=document.getElementById('ordersNotice');
   if(n)n.textContent=String(msg||'');
 }
+function hideOrderAlarmCard(){
+  const box=document.getElementById('orderAlarm');
+  if(box){box.style.display='none';box.classList.remove('alarmPulse');}
+}
 function stopRingtone(options={}){
   const id=activeRingtoneOrderId||'';
   try{window.AndroidOrderAlarm?.stopAlarm?.(id)}catch(e){}
   /* One shared audio owner. Global cleanup never silently starts another alert. */
   audioGeneration++;
   activeRingtoneOrderId=null;
+  hideOrderAlarmCard();
   if(options.clearQueue){
     pendingRingtoneOrderIds.length=0;
     ringtoneAlertedOrderIds.clear();
@@ -254,6 +259,10 @@ function playRingtone(order){
   audioGeneration++;
   const generation=audioGeneration;
   activeRingtoneOrderId=id;
+  const alarm=document.getElementById('orderAlarm');
+  const alarmText=document.getElementById('orderAlarmText');
+  if(alarmText)alarmText.textContent='Order #'+String(order.order_no||id)+' • '+outletDisplayName(order.outlet_id);
+  if(alarm){alarm.style.display='block';alarm.classList.add('alarmPulse');}
   if(!audio){
     audio=new Audio('./ringtones/1000449570.mp4');
     audio.preload='auto';
@@ -288,6 +297,7 @@ function playRingtone(order){
         if(activeRingtoneOrderId===id)activeRingtoneOrderId=null;
         const msg=document.getElementById('ordersNotice');
         if(msg)msg.textContent='NEW ORDER received — sound was blocked by the browser. Tap ENABLE SOUND and keep the dashboard open.';
+        hideOrderAlarmCard();
         playNextPendingRingtone();
       });
     }
@@ -298,6 +308,7 @@ function playRingtone(order){
       if(activeRingtoneOrderId===id)activeRingtoneOrderId=null;
       const msg=document.getElementById('ordersNotice');
       if(msg)msg.textContent='NEW ORDER received — ringtone playback failed: '+(e?.message||e)+'. Tap ENABLE SOUND to retry.';
+      hideOrderAlarmCard();
       playNextPendingRingtone();
     }
   }
