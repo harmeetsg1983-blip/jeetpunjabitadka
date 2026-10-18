@@ -91,6 +91,12 @@ jobs:
           grep -Fq "const CACHE='jpt-partner-pwa-v27-history-queue-separation';" jpt-partner-sw.js
           echo "GREEN: delivery broadcasts use realtime.send, duplicate READY trigger is removed, and partner cache generation is explicit"
 
+      - name: Run order lifecycle regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tests/jpt-order-monotonicity.test.cjs
+
       - name: Verify locked ringtone integrity
         shell: bash
         run: |
