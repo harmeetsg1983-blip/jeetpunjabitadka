@@ -371,30 +371,7 @@ body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./jpt-partner-access-bridge-v2.js?v=20261011-access-await-5"></script>
 <script src="./jpt-live-platform-bridge-v1.js?v=1"></script>
-<script>
-/* JPT Partner Dynamic Outlet Access Bridge V2 — RPC column compatible */
-(function(){
-  'use strict';
-  const SELECTOR_ID='outletSelect';
-  const OUTLET_KEY='jpt_admin_outlet';
-  let authorized=[]; let loading=false;
-  function getSelect(){return document.getElementById(SELECTOR_ID)}
-  function normalize(rows){return (Array.isArray(rows)?rows:[]).filter(r=>r&&(r.outlet_id||r.code)).map(r=>({
-    outlet_id:String(r.outlet_id||r.code),
-    outlet_name:String(r.outlet_name||r.name||r.outlet_id||r.code),
-    access_level:String(r.access_level||'view')
-  }))}
-  function render(rows){const select=getSelect(); if(!select)return false; authorized=normalize(rows); if(!authorized.length)return false;
-    const saved=localStorage.getItem(OUTLET_KEY)||'', current=select.value||'';
-    const selected=authorized.some(x=>x.outlet_id===saved)?saved:authorized.some(x=>x.outlet_id===current)?current:authorized[0].outlet_id;
-    select.replaceChildren(); authorized.forEach(o=>{const op=document.createElement('option');op.value=o.outlet_id;op.textContent=o.outlet_name+' ('+o.outlet_id+')'+(o.access_level==='view'?' — VIEW':'');op.dataset.accessLevel=o.access_level;select.appendChild(op)});
-    select.value=selected; if(typeof select.onchange==='function')select.dispatchEvent(new Event('change',{bubbles:true}));
-    window.JPT_PARTNER_OUTLETS=authorized.slice(); window.JPTPartnerAccess={version:'v2.1',authorizedOutlets:authorized.slice(),canAccess:id=>authorized.some(x=>x.outlet_id===id),getOutlets:()=>authorized.slice(),reload:load}; return true}
-  async function load(){if(loading)return authorized.slice(); loading=true; try{if(!window.sb||typeof window.sb.rpc!=='function')throw new Error('Supabase client not ready'); const {data,error}=await window.sb.rpc('partner_my_outlets'); if(error)throw error; render(data||[]); return authorized.slice()}catch(e){console.warn('[JPT Partner Access] reload failed safely:',e);return authorized.slice()}finally{loading=false}}
-  window.JPTPartnerAccess={version:'v2.1',authorizedOutlets:[],canAccess:()=>false,getOutlets:()=>[],reload:load};
-})();
-
-</script>
+<!-- Duplicate inline access bridge removed: use jpt-partner-access-bridge-v2.js single-flight reload implementation. -->
 <script>
 'use strict';
 const sb=window.supabase.createClient(window.JPT_SUPABASE_URL,window.JPT_SUPABASE_PUBLISHABLE_KEY);
