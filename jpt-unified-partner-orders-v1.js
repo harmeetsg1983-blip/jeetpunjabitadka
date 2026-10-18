@@ -175,7 +175,14 @@ function lifecycleRank(v){
 function mergeOrderMonotonic(oldRow,incoming){
   const merged=Object.assign({},oldRow||{},incoming||{});
   const oldStatus=status(oldRow?.status), nextStatus=status(incoming?.status);
-  if(oldRow?.status && lifecycleRank(oldStatus)>lifecycleRank(nextStatus)){
+  const oldTerminal=['delivered','cancelled'].includes(oldStatus);
+  const nextTerminal=['delivered','cancelled'].includes(nextStatus);
+  /* Terminal outcomes are mutually exclusive. A delayed cancellation UPDATE
+     must not overwrite a delivered order, and vice versa. */
+  if(oldRow?.status && (
+    (oldTerminal && nextTerminal && oldStatus!==nextStatus) ||
+    lifecycleRank(oldStatus)>lifecycleRank(nextStatus)
+  )){
     merged.status=oldRow.status;
   }
   return merged;
