@@ -88,7 +88,7 @@ jobs:
             echo "RED: unsupported broadcast_changes call returned to delivery migration"
             exit 1
           fi
-          grep -Fq "const CACHE='jpt-partner-pwa-v28-alert-ack-confirmation';" jpt-partner-sw.js
+          grep -Fq "const CACHE='jpt-partner-pwa-v29-order-confirmation';" jpt-partner-sw.js
           echo "GREEN: delivery broadcasts use realtime.send, duplicate READY trigger is removed, and partner cache generation is explicit"
 
       - name: Run order lifecycle regression tests
