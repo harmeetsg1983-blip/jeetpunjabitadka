@@ -669,6 +669,7 @@ async function lifecycleTransition(id,next){
       if(serverState===next || (next==='ready'&&(serverState==='out_for_delivery'||serverState==='delivered')) ||
          (next==='out_for_delivery'&&serverState==='delivered')){
         rows.set(key,Object.assign({},o,fresh));
+        focusQueueForStatus(serverState);
         toast('Order state synced: '+serverState.toUpperCase()+'.');
         render();
         return;
