@@ -315,18 +315,20 @@ function riderInfo(o){
 }
 function actionHtml(o){
   const st=status(o.status),id=esc(o.id);
+  const paymentMethod=String(o.payment||o.payment_method||'').toUpperCase();
+  const paymentUnverified=paymentMethod==='UPI'&&o.payment_verified!==true;
   if(st==='new'){
     const m=Math.max(15,Math.min(40,Number(o.__draftMinutes||o.target_minutes||15)));
     return '<div class="jpt-unified-actions" data-id="'+id+'">'+
       '<button type="button" class="btn" data-minus="'+id+'" aria-label="Decrease preparation time">LESS 1 MIN</button>'+
       '<b class="jpt-unified-minutes" aria-label="Preparation time">'+m+' MIN</b>'+
       '<button type="button" class="btn" data-plus="'+id+'" aria-label="Increase preparation time">ADD 1 MIN</button>'+
-      '<button type="button" class="btn gold" data-accept="'+id+'">ACCEPT ORDER</button>'+
+      '<button type="button" class="btn gold" data-accept="'+id+'"'+(paymentUnverified?' disabled title="UPI payment must be verified before accepting this order"':'')+'>ACCEPT ORDER</button>'+
       '<button type="button" class="btn red" data-reject="'+id+'">REJECT ORDER</button></div>';
   }
   if(st==='accepted'||st==='preparing'){
     /* Keep countdown visible while allowing an early ready action when food is ready. */
-    return '<button class="btn gold" data-ready="'+id+'">MARK READY</button>';
+    return '<button class="btn gold" data-ready="'+id+'"'+(paymentUnverified?' disabled title="UPI payment must be verified before marking this order ready"':'')+'>MARK READY</button>';
   }
   if(st==='ready')
     return '<button class="btn gold" data-delivery="'+id+'">OUT FOR DELIVERY</button>';
@@ -447,6 +449,10 @@ async function accept(id){
   const key=String(id);
   if(actionBusy.has(key)||transitionBusy.has(key))return;
   const o=rows.get(key); if(!o)return;
+  if(String(o.payment||o.payment_method||'').toUpperCase()==='UPI'&&o.payment_verified!==true){
+    toast('UPI payment must be verified before accepting this order.');
+    return;
+  }
   /* Lock before the first await: repeated taps must not race through server preflight reads. */
   actionBusy.add(key);
   /* Acknowledge only this order; other NEW orders remain queued for their own alert. */
@@ -606,6 +612,10 @@ async function lifecycleTransition(id,next){
   const key=String(id);
   if(transitionBusy.has(key)||actionBusy.has(key))return;
   const o=rows.get(key); if(!o)return;
+  if(next==='ready'&&String(o.payment||o.payment_method||'').toUpperCase()==='UPI'&&o.payment_verified!==true){
+    toast('UPI payment must be verified before marking this order ready.');
+    return;
+  }
   const before={...o};
   const allowed={
     ready:['accepted','preparing'],
