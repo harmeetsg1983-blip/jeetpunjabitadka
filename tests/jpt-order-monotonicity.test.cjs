@@ -83,33 +83,33 @@ assert.ok(
  
 // Ringtone acknowledgement must follow server-confirmed order transitions.
 // A failed ACCEPT/REJECT must not silently silence a still-NEW order.
-const acceptHandler = between('async function accept(id){', '\\nasync function reject(id){');
+const acceptHandler = between('async function accept(id){', '\nasync function reject(id){');
 const acceptPreflight = acceptHandler.slice(0, acceptHandler.indexOf('let canonical;'));
 assert.doesNotMatch(
   acceptPreflight,
-  /acknowledgeRingtone\\(key\\)/,
+  /acknowledgeRingtone\(key\)/,
   'ACCEPT must not acknowledge/silence the alert before server preflight succeeds'
 );
 assert.match(
   acceptHandler,
-  /rows\\.set\\(key,Object\\.assign\\(o,server\\)\\);\\s*acknowledgeRingtone\\(key\\);/,
+  /rows\.set\(key,Object\.assign\(o,server\)\);\s*acknowledgeRingtone\(key\);/,
   'successful ACCEPT must acknowledge the ringtone only after the server returns a row'
 );
-const rejectHandler = between('async function reject(id){', '\\nconst transitionBusy=new Set();');
+const rejectHandler = between('async function reject(id){', '\nconst transitionBusy=new Set();');
 const rejectPreflight = rejectHandler.slice(0, rejectHandler.indexOf('try{'));
 assert.doesNotMatch(
   rejectPreflight,
-  /acknowledgeRingtone\\(key\\)/,
+  /acknowledgeRingtone\(key\)/,
   'REJECT must keep the NEW-order alert active until the server confirms cancellation'
 );
 assert.match(
   rejectHandler,
-  /else o\\.status='cancelled';\\s*acknowledgeRingtone\\(key\\);/,
+  /else o\.status='cancelled';\s*acknowledgeRingtone\(key\);/,
   'successful REJECT must acknowledge after confirmed cancellation'
 );
 assert.match(
   rejectHandler,
-  /if\\(status\\(fresh\\.status\\)!=='new'\\)acknowledgeRingtone\\(key\\);/,
+  /if\(status\(fresh\.status\)!=='new'\)acknowledgeRingtone\(key\);/,
   'failed REJECT must not silence an order that remains NEW'
 );
 
