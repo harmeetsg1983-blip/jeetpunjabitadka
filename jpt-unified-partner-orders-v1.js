@@ -482,7 +482,7 @@ async function accept(id){
   const minutes=Math.max(15,Math.min(40,Number(o.__draftMinutes||o.target_minutes||15)));
   const local=localDeadline(minutes);
   const previous={status:o.status,target_minutes:o.target_minutes,deadline_at:o.deadline_at,__localDeadline:o.__localDeadline,__optimisticStatus:o.__optimisticStatus};
-  stopRingtone();
+  acknowledgeRingtone(key);
   o.__localDeadline=local;
   o.__optimisticStatus='accepted';
   o.status='accepted';
@@ -545,7 +545,7 @@ async function accept(id){
         }
       }else if(/order not found/i.test(message)){
       rows.delete(key);
-      if(activeRingtoneOrderId===key)stopRingtone();
+      acknowledgeRingtone(key);
       toast('Order not present in refreshed server queue; stale UI card removed only.');
     }else{
       Object.assign(o,previous);
@@ -722,7 +722,7 @@ async function initialLoad(options={}){
       return;
     }
     rows.clear();
-    stopRingtone();
+    stopRingtone({clearQueue:true});
     render();
     toast('Partner outlet access is not ready. Orders were not queried under a fallback outlet. Retry login/access refresh.');
     return;
@@ -828,6 +828,7 @@ async function initialLoad(options={}){
     const merged=mergeOrderMonotonic(prior,o);
     if(prior?.__draftMinutes!==undefined)merged.__draftMinutes=prior.__draftMinutes;
     rows.set(key,merged);
+    if(status(merged.status)!=='new')acknowledgeRingtone(key);
     /* The 5-second safety poll must recover missed INSERT events. Only alert for
        rows newly discovered by that poll and created very recently; startup/history
        refreshes must never ring for old outstanding orders after reinstall. */
@@ -861,6 +862,7 @@ async function initialLoad(options={}){
           if(status(prior.status)===status(live.status))delete reconciled.__optimisticStatus;
           if(prior.__draftMinutes!==undefined)reconciled.__draftMinutes=prior.__draftMinutes;
           rows.set(key,reconciled);
+          if(status(reconciled.status)!=='new')acknowledgeRingtone(key);
         }else{
           /* The bulk outlet-scoped query already returned this order. A null or failed
              follow-up read is not proof that it disappeared; keep the bulk snapshot. */
@@ -939,7 +941,7 @@ async function performSubscribe(){
       /* Updates for historical orders must not reinsert them into the board. */
       if(!shouldShowOnBoard(o)){
         rows.delete(String(o.id));
-        if(activeRingtoneOrderId===String(o.id))stopRingtone();
+        acknowledgeRingtone(String(o.id));
         render();
         return;
       }
