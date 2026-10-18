@@ -63,6 +63,8 @@ jobs:
           grep -Fq ".in('status',['new','accepted','preparing','ready','out_for_delivery'])" jpt-unified-partner-orders-v1.js
           grep -Fq 'pendingRingtoneOrderIds' jpt-unified-partner-orders-v1.js
           grep -Fq 'function acknowledgeRingtone(orderId)' jpt-unified-partner-orders-v1.js
+          grep -Fq 'UPI payment must be verified before accepting this order.' jpt-unified-partner-orders-v1.js
+          grep -Fq 'UPI payment must be verified before marking this order ready.' jpt-unified-partner-orders-v1.js
           ! grep -Fq '1000449491.mp4' admin.html
           ! grep -Fq '},15000)' admin.html
           echo "GREEN: live-status queue pagination, one queued alert owner, no legacy ringtone or 15-second order poll"
