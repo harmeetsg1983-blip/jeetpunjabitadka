@@ -796,7 +796,7 @@ async function initialLoad(options={}){
     }
     /* An explicit/startup refresh failure must never leave old cards presented as current NEW orders. */
     rows.clear();
-    stopRingtone();
+    stopRingtone({clearQueue:true});
     render();
     toast('Orders load failed: '+r.error.message+' — stale cards cleared; check partner session/outlet access.');
     return;
@@ -815,7 +815,7 @@ async function initialLoad(options={}){
       const recentlyRealtimeSeen=Number(old.__realtimeSeenAt||0)>Date.now()-30000;
       if(!incomingIds.has(key)&&!recentlyRealtimeSeen&&!actionBusy.has(key)&&!transitionBusy.has(key)){
         rows.delete(key);
-        if(activeRingtoneOrderId===key)stopRingtone();
+        acknowledgeRingtone(key);
       }
     }
   }
@@ -1004,7 +1004,7 @@ async function performSubscribe(){
       if(actionBusy.has(key)||transitionBusy.has(key))return;
       if(!shouldShowOnBoard(o)){
         rows.delete(key);
-        if(activeRingtoneOrderId===key)stopRingtone();
+        acknowledgeRingtone(key);
         render();
         return;
       }
