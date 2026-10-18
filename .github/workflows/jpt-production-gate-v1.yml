@@ -74,6 +74,22 @@ jobs:
           ! grep -Fq '},15000)' admin.html
           echo "GREEN: live-status queue pagination, one queued alert owner, no legacy ringtone or 15-second order poll"
 
+      - name: Verify delivery-event migration safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          migration="supabase/migrations/20261019_jpt_order_flow_delivery_event_hardening.sql"
+          test -f "$migration"
+          grep -Fq 'PERFORM realtime.send(' "$migration"
+          grep -Fq "'jpt:delivery:rider:'" "$migration"
+          grep -Fq 'DROP TRIGGER IF EXISTS trg_delivery_auto_offer_when_ready ON public.orders;' "$migration"
+          if grep -Fq 'realtime.broadcast_changes(' "$migration"; then
+            echo "RED: unsupported broadcast_changes call returned to delivery migration"
+            exit 1
+          fi
+          grep -Fq "const CACHE='jpt-partner-pwa-v27-history-queue-separation';" jpt-partner-sw.js
+          echo "GREEN: delivery broadcasts use realtime.send, duplicate READY trigger is removed, and partner cache generation is explicit"
+
       - name: Verify locked ringtone integrity
         shell: bash
         run: |
