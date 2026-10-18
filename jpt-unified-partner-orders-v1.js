@@ -621,9 +621,17 @@ async function reject(id){
     });
     if(actionAuthGeneration!==authGeneration)return;
     if(r.error)throw r.error;
-    const server=Array.isArray(r.data)?r.data[0]:r.data;
-    if(server)rows.set(key,Object.assign(o,server));
-    else o.status='cancelled';
+    let server=Array.isArray(r.data)?r.data[0]:r.data;
+    if(!server){
+      server=await read(id,o?.outlet_id);
+      if(actionAuthGeneration!==authGeneration)return;
+      if(!server)throw new Error('Server returned no order record; cancellation was not confirmed.');
+    }
+    rows.set(key,Object.assign(o,server));
+    if(status(server.status)!=='cancelled'){
+      if(status(server.status)!=='new')acknowledgeRingtone(key);
+      throw new Error('Server did not confirm cancellation; current status is '+status(server.status).toUpperCase()+'.');
+    }
     acknowledgeRingtone(key);
     toast('Order rejected.');
     render();
