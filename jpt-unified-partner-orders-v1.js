@@ -17,6 +17,7 @@ let channel=null;
 let audio=null;
 let activeRingtoneOrderId=null;
 const ringtoneAlertedOrderIds=new Set();
+const pendingRingtoneOrderIds=[];
 let audioGeneration=0;
 let timerHandle=null;
 let selectedQueue='preparing';
@@ -178,12 +179,16 @@ function toast(msg){
   const n=document.getElementById('ordersNotice');
   if(n)n.textContent=String(msg||'');
 }
-function stopRingtone(){
+function stopRingtone(options={}){
   const id=activeRingtoneOrderId||'';
   try{window.AndroidOrderAlarm?.stopAlarm?.(id)}catch(e){}
-  /* Shared stop path for operator acknowledgement, order transitions, and runtime cleanup. */
+  /* One shared audio owner. Global cleanup never silently starts another alert. */
   audioGeneration++;
   activeRingtoneOrderId=null;
+  if(options.clearQueue){
+    pendingRingtoneOrderIds.length=0;
+    ringtoneAlertedOrderIds.clear();
+  }
   if(audio){
     try{
       audio.pause();
@@ -191,24 +196,50 @@ function stopRingtone(){
     }catch(e){}
   }
 }
+function acknowledgeRingtone(orderId){
+  const key=String(orderId||activeRingtoneOrderId||'');
+  if(!key)return;
+  for(let i=pendingRingtoneOrderIds.length-1;i>=0;i--){
+    if(pendingRingtoneOrderIds[i]===key)pendingRingtoneOrderIds.splice(i,1);
+  }
+  if(activeRingtoneOrderId===key){
+    stopRingtone();
+    playNextPendingRingtone();
+  }
+}
 function handleNewIncomingOrder(orderData){
   console.log("New order received in background/open state:", orderData?.id);
   startRingtone(orderData);
 }
-
 function startRingtone(order){
   const id=String(order?.id||'');
-  if(!id || status(order?.status)!=='new') return;
-  if(activeRingtoneOrderId===id && audio) return;
-  /* One audible alert per order ID per dashboard session. Replayed INSERT/Broadcast
-     events or a refresh after an unsuccessful action must not restart an old alarm. */
-  if(ringtoneAlertedOrderIds.has(id)) return;
+  if(!id || status(order?.status)!=='new')return;
+  if(activeRingtoneOrderId===id || ringtoneAlertedOrderIds.has(id))return;
+  /* Queue distinct NEW orders. One shared ringtone plays at a time, and accepting
+     one outlet's order must not silence a different outlet's still-pending order. */
   ringtoneAlertedOrderIds.add(id);
-
+  if(activeRingtoneOrderId){
+    if(!pendingRingtoneOrderIds.includes(id))pendingRingtoneOrderIds.push(id);
+    return;
+  }
+  playRingtone(order);
+}
+function playNextPendingRingtone(){
+  if(activeRingtoneOrderId)return;
+  while(pendingRingtoneOrderIds.length){
+    const id=pendingRingtoneOrderIds.shift();
+    const order=rows.get(String(id));
+    if(!order || status(order.status)!=='new' || !orderBelongsToManagedOutlet(order))continue;
+    playRingtone(order);
+    return;
+  }
+}
+function playRingtone(order){
+  const id=String(order?.id||'');
+  if(!id || status(order?.status)!=='new' || activeRingtoneOrderId)return;
   audioGeneration++;
   const generation=audioGeneration;
   activeRingtoneOrderId=id;
-
   if(!audio){
     audio=new Audio('./ringtones/1000449570.mp4');
     audio.preload='auto';
@@ -216,57 +247,41 @@ function startRingtone(order){
     audio.playsInline=true;
     audio.volume=1;
   }
-
-  /* Keep ONE reusable audio owner. Never create a second ringtone system. */
   audio.loop=true;
   audio.playsInline=true;
   audio.muted=false;
-
-  /* Jamini minimum-merge: keep the existing audio/path/instance.
-     Visible dashboard -> existing HTML audio.
-     Background/hidden WebView -> existing native Android alarm bridge. */
   if(document.visibilityState!=='visible'){
     try{
       if(window.AndroidOrderAlarm && typeof window.AndroidOrderAlarm.startAlarm==='function'){
-        window.AndroidOrderAlarm.startAlarm(
-          String(order?.id||''),
-          String(order?.outlet_id||''),
-          String(order?.order_no||order?.id||'')
-        );
+        window.AndroidOrderAlarm.startAlarm(id,String(order?.outlet_id||''),String(order?.order_no||id));
         return;
       }
     }catch(e){}
   }
-
   try{
     audio.pause();
     audio.currentTime=0;
     audio.load();
     const playResult=audio.play();
-
     if(playResult?.catch){
       playResult.catch(()=>{
-        if(generation===audioGeneration){
-          /* Playback was rejected: allow a later user gesture or retry to attempt this order again. */
-          ringtoneAlertedOrderIds.delete(id);
-          if(activeRingtoneOrderId===id)activeRingtoneOrderId=null;
-          const msg=document.getElementById('ordersNotice');
-          if(msg)msg.textContent='NEW ORDER received — sound was blocked by the browser. Tap ENABLE SOUND and keep the dashboard open.';
-        }
+        if(generation!==audioGeneration)return;
+        ringtoneAlertedOrderIds.delete(id);
+        if(activeRingtoneOrderId===id)activeRingtoneOrderId=null;
+        const msg=document.getElementById('ordersNotice');
+        if(msg)msg.textContent='NEW ORDER received — sound was blocked by the browser. Tap ENABLE SOUND and keep the dashboard open.';
+        playNextPendingRingtone();
       });
     }
   }catch(e){
     if(generation===audioGeneration){
-      /* A synchronous play/load failure must not permanently suppress a retry
-         for this still-NEW order. Keep the one audio owner; release only its
-         failed alert claim so a later gesture/poll can try again. */
       ringtoneAlertedOrderIds.delete(id);
       if(activeRingtoneOrderId===id)activeRingtoneOrderId=null;
       const msg=document.getElementById('ordersNotice');
       if(msg)msg.textContent='NEW ORDER received — ringtone playback failed: '+(e?.message||e)+'. Tap ENABLE SOUND to retry.';
+      playNextPendingRingtone();
     }
   }
-
   try{
     if('Notification' in window && Notification.permission==='granted'){
       new Notification('NEW JPT ORDER',{
@@ -434,8 +449,8 @@ async function accept(id){
   const o=rows.get(key); if(!o)return;
   /* Lock before the first await: repeated taps must not race through server preflight reads. */
   actionBusy.add(key);
-  /* Stop the shared ringtone immediately on ACCEPT, before any server round-trip. */
-  stopRingtone();
+  /* Acknowledge only this order; other NEW orders remain queued for their own alert. */
+  acknowledgeRingtone(key);
   /* A stale NEW card must not issue ACCEPT against an already-progressed order. */
   let canonical;
   try{canonical=await read(id,o.outlet_id);if(actionAuthGeneration!==authGeneration)return;}catch(e){
@@ -448,7 +463,7 @@ async function accept(id){
   }
   if(!canonical){
     rows.delete(key);
-    if(activeRingtoneOrderId===key)stopRingtone();
+    acknowledgeRingtone(key);
     await initialLoad().catch(()=>{});
     if(actionAuthGeneration!==authGeneration)return;
     toast('Order is no longer in the live server queue; stale card removed.');
@@ -457,7 +472,7 @@ async function accept(id){
   }
   if(status(canonical.status)!=='new'){
     rows.set(key,mergeOrderMonotonic(o,canonical));
-    if(activeRingtoneOrderId===key)stopRingtone();
+    acknowledgeRingtone(key);
     focusQueueForStatus(canonical.status);
     toast('Server confirms '+status(canonical.status).toUpperCase()+'. Duplicate ACCEPT blocked.');
     actionBusy.delete(key);
@@ -552,7 +567,7 @@ async function reject(id){
   const o=rows.get(key); if(!o)return;
   /* Reserve the order action before the RPC so repeated taps cannot issue duplicate REJECTs. */
   actionBusy.add(key);
-  stopRingtone();
+  acknowledgeRingtone(key);
   try{
     const r=await window.sb.rpc('jpt_partner_transition_order',{
       p_order_id:Number(id),
@@ -896,7 +911,7 @@ async function performSubscribe(){
          can reappear after initialLoad correctly hides them. */
       if(!shouldShowOnBoard(o)){
         rows.delete(String(o.id));
-        if(activeRingtoneOrderId===String(o.id))stopRingtone();
+        acknowledgeRingtone(String(o.id));
         render();
         return;
       }
@@ -935,7 +950,7 @@ async function performSubscribe(){
       const nextStatus=status(merged.status);
       rows.set(String(o.id),Object.assign({},merged,{__realtimeSeenAt:Date.now()}));
       /* A status change from another authorized session acknowledges the alert too. */
-      if(activeRingtoneOrderId===String(o.id)&&nextStatus!=='new')stopRingtone();
+      if(nextStatus!=='new')acknowledgeRingtone(String(o.id));
       /* If the active queue was showing this order's prior state, follow its
          server-confirmed lifecycle state immediately instead of leaving the
          operator on a stale NEW/ACCEPTED tab. */
@@ -997,7 +1012,7 @@ async function performSubscribe(){
       const nextStatus=status(merged.status);
       rows.set(key,Object.assign({},merged,{__liveNew:eventName==='order_insert'&&nextStatus==='new',__realtimeSeenAt:Date.now()}));
       /* Broadcast updates from another authorized session also acknowledge the alert. */
-      if(eventName==='order_update'&&activeRingtoneOrderId===key&&nextStatus!=='new')stopRingtone();
+      if(eventName==='order_update'&&nextStatus!=='new')acknowledgeRingtone(key);
       if(eventName==='order_update' && previous?.id && oldStatus!==nextStatus && selectedQueue===queueForStatus(oldStatus)){
         focusQueueForStatus(nextStatus);
       }
@@ -1135,7 +1150,7 @@ async function boot(){
   /* Stop the legacy alarm once, then route every later caller to this single owner. */
   try{window.stopOrderAlarm?.();}catch(e){}
   const stopUnifiedAlarm=function(){
-    stopRingtone();
+    acknowledgeRingtone(activeRingtoneOrderId);
     const box=document.getElementById('orderAlarm');
     if(box){box.style.display='none';box.classList.remove('alarmPulse');}
     try{navigator.vibrate?.(0)}catch(e){}
@@ -1159,7 +1174,7 @@ async function boot(){
     await subscribe();
   });
   const alarm=document.getElementById('stopAlarm');
-  if(alarm)alarm.onclick=()=>{stopRingtone();const box=document.getElementById('orderAlarm');if(box)box.style.display='none';};
+  if(alarm)alarm.onclick=()=>{acknowledgeRingtone(activeRingtoneOrderId);const box=document.getElementById('orderAlarm');if(box)box.style.display='none';};
   const enable=document.getElementById('enableAlarm');
   if(enable)enable.onclick=enableBackgroundAlerts;
   /* This script loads before the dashboard's login gate on some builds.
@@ -1174,7 +1189,7 @@ async function boot(){
       rows.clear();
       actionBusy.clear();
       transitionBusy.clear();
-      stopRingtone();
+      stopRingtone({clearQueue:true});
       clearSubscriptions().catch(e=>console.warn('[JPT Orders] channel cleanup after sign-out failed',e));
       render();
     }
