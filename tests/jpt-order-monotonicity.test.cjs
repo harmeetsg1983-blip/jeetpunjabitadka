@@ -102,10 +102,20 @@ assert.doesNotMatch(
   /acknowledgeRingtone\(key\)/,
   'REJECT must keep the NEW-order alert active until the server confirms cancellation'
 );
+assert.doesNotMatch(
+  rejectHandler,
+  /else o\.status='cancelled'/,
+  'REJECT must never fabricate cancellation when the RPC returns no row'
+);
 assert.match(
   rejectHandler,
-  /else o\.status='cancelled';\s*acknowledgeRingtone\(key\);/,
-  'successful REJECT must acknowledge after confirmed cancellation'
+  /if\(status\(server\.status\)!=='cancelled'\)[\s\S]*?throw new Error\('Server did not confirm cancellation/,
+  'REJECT must validate the server-returned lifecycle state before reporting success'
+);
+assert.match(
+  rejectHandler,
+  /if\(status\(server\.status\)!=='cancelled'\)[\s\S]*?acknowledgeRingtone\(key\);\s*toast\('Order rejected\.'\);/,
+  'REJECT success feedback must follow server-confirmed cancellation'
 );
 assert.match(
   rejectHandler,
@@ -113,4 +123,4 @@ assert.match(
   'failed REJECT must not silence an order that remains NEW'
 );
 
-console.log('GREEN: 18 order lifecycle, UPI, realtime-wiring and alert-acknowledgement regression assertions passed');
+console.log('GREEN: 20 order lifecycle, UPI, realtime-wiring and alert-acknowledgement regression assertions passed');
