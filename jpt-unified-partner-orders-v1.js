@@ -784,6 +784,7 @@ async function initialLoad(options={}){
     let q=window.sb.from('orders').select('*');
     q=codes.length===1?q.eq('outlet_id',codes[0]):q.in('outlet_id',codes);
     if(historyMode){
+      q=q.in('status',['delivered','cancelled']);
       if(historyDayStart&&historyDayEnd){
         q=q.gte('created_at',historyDayStart.toISOString()).lt('created_at',historyDayEnd.toISOString());
       }else q=q.gte('created_at',historySince);
