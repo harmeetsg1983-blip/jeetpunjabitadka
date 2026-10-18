@@ -56,4 +56,28 @@ assert.doesNotMatch(verifiedNew, /data-accept="4" disabled/, 'verified UPI order
 const verifiedAccepted = api.actionHtml({ id: 5, status: 'accepted', payment: 'UPI', payment_verified: true });
 assert.doesNotMatch(verifiedAccepted, /data-ready="5" disabled/, 'verified UPI order must retain READY');
 
-console.log('GREEN: 8 order lifecycle and UPI-control regression tests passed');
+// Defense in depth: the runtime handlers must guard UPI even if controls are bypassed.
+assert.ok(
+  source.includes("UPI payment must be verified before accepting this order."),
+  'ACCEPT handler must retain its UPI verification guard'
+);
+assert.ok(
+  source.includes("UPI payment must be verified before marking this order ready."),
+  'READY handler must retain its UPI verification guard'
+);
+
+// Realtime recovery contract: keep both Postgres Changes and private Broadcast paths.
+assert.ok(
+  source.includes("window.sb.channel('jpt:partner:outlet:'+code,{config:{private:true}})"),
+  'partner must subscribe to the private per-outlet broadcast topic'
+);
+assert.ok(
+  source.includes("broadcastCh.on('broadcast',{event:'order_insert'}"),
+  'partner must handle order_insert broadcast events'
+);
+assert.ok(
+  source.includes("broadcastCh.on('broadcast',{event:'order_update'}"),
+  'partner must handle order_update broadcast events'
+);
+
+console.log('GREEN: 13 order lifecycle, UPI-control and realtime-wiring regression assertions passed');
