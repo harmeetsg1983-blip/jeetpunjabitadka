@@ -56,7 +56,7 @@ jobs:
           set -euo pipefail
           test -f jpt-unified-partner-orders-v1.js
           grep -Fq 'jpt-unified-partner-orders-v1.js' admin.html
-          grep -Fq 'admin.html?v=20261019-order-runtime-5' partner-v107.html
+          grep -Fq 'admin.html?v=20261019-alert-ack-confirm-6' partner-v107.html
           grep -Fq 'jpt-partner-access-bridge-v2.js' admin.html
           grep -Fq 'jpt_partner_transition_order' jpt-unified-partner-orders-v1.js
           grep -Fq 'postgres_changes' jpt-unified-partner-orders-v1.js
