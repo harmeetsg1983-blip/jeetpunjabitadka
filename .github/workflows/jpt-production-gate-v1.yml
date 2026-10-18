@@ -62,6 +62,7 @@ jobs:
           grep -Fq 'fallbackPollBusy' jpt-unified-partner-orders-v1.js
           grep -Fq ".in('status',['new','accepted','preparing','ready','out_for_delivery'])" jpt-unified-partner-orders-v1.js
           grep -Fq 'pendingRingtoneOrderIds' jpt-unified-partner-orders-v1.js
+          grep -Fq 'failedRingtoneOrderIds' jpt-unified-partner-orders-v1.js
           grep -Fq 'function acknowledgeRingtone(orderId)' jpt-unified-partner-orders-v1.js
           grep -Fq 'UPI payment must be verified before accepting this order.' jpt-unified-partner-orders-v1.js
           grep -Fq 'UPI payment must be verified before marking this order ready.' jpt-unified-partner-orders-v1.js
