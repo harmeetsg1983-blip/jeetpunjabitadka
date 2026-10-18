@@ -60,7 +60,12 @@ jobs:
           grep -Fq 'jpt_partner_transition_order' jpt-unified-partner-orders-v1.js
           grep -Fq 'postgres_changes' jpt-unified-partner-orders-v1.js
           grep -Fq 'fallbackPollBusy' jpt-unified-partner-orders-v1.js
-          echo "GREEN: active unified partner runtime, access bridge, RPC, realtime, and fallback-poll markers present"
+          grep -Fq ".in('status',['new','accepted','preparing','ready','out_for_delivery'])" jpt-unified-partner-orders-v1.js
+          grep -Fq 'pendingRingtoneOrderIds' jpt-unified-partner-orders-v1.js
+          grep -Fq 'function acknowledgeRingtone(orderId)' jpt-unified-partner-orders-v1.js
+          ! grep -Fq '1000449491.mp4' admin.html
+          ! grep -Fq '},15000)' admin.html
+          echo "GREEN: live-status queue pagination, one queued alert owner, no legacy ringtone or 15-second order poll"
 
       - name: Verify locked ringtone integrity
         shell: bash
@@ -76,7 +81,7 @@ jobs:
             [ringtones/1000449571.mp4]=d491bc664f55ac0c4e717e60b9b85827fad589c15153436000367e6264a3860c
             [ringtones/1000449572.mp4]=34231d662e3416f66278820b187c4116189019e7bae4122e9d0295d10cedbb15
           )
-          echo "WARN: Skipping locked ringtone 1000449491.mp4 by owner-approved exception; original asset remains unverified."
+          echo "INFO: Legacy 1000449491.mp4 asset is left untouched but is no longer referenced by the active partner order runtime."
           for f in "${!expected_size[@]}"; do
             test -f "$f" || { echo "RED: missing locked ringtone $f"; exit 1; }
             actual_size=$(stat -c '%s' "$f")
