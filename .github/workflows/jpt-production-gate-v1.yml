@@ -61,6 +61,7 @@ jobs:
           grep -Fq 'postgres_changes' jpt-unified-partner-orders-v1.js
           grep -Fq 'fallbackPollBusy' jpt-unified-partner-orders-v1.js
           grep -Fq ".in('status',['new','accepted','preparing','ready','out_for_delivery'])" jpt-unified-partner-orders-v1.js
+          grep -Fq "q=q.in('status',['delivered','cancelled'])" jpt-unified-partner-orders-v1.js
           grep -Fq 'pendingRingtoneOrderIds' jpt-unified-partner-orders-v1.js
           grep -Fq 'failedRingtoneOrderIds' jpt-unified-partner-orders-v1.js
           grep -Fq 'function acknowledgeRingtone(orderId)' jpt-unified-partner-orders-v1.js
