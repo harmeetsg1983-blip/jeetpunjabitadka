@@ -56,7 +56,7 @@ jobs:
           set -euo pipefail
           test -f jpt-unified-partner-orders-v1.js
           grep -Fq 'jpt-unified-partner-orders-v1.js' admin.html
-          grep -Fq 'jpt-unified-partner-orders-v1.js?v=20261019-order-runtime-reject-monotonic-11' admin.html
+          grep -Fq 'jpt-unified-partner-orders-v1.js?v=20261020-stable-queues-history-outlet-1' admin.html
           grep -Fq 'admin.html?v=20261019-order-runtime-reject-monotonic-11' partner-v107.html
           grep -Fq 'jpt-partner-access-bridge-v2.js' admin.html
           grep -Fq 'jpt-partner-final-touch-v10.js?v=20261019-header-clean-1' admin.html
@@ -79,6 +79,9 @@ jobs:
           grep -Fq 'oldTerminal && nextTerminal && oldStatus!==nextStatus' jpt-unified-partner-orders-v1.js
           grep -Fq ".in('status',['new','accepted','preparing','ready','out_for_delivery'])" jpt-unified-partner-orders-v1.js
           grep -Fq "q=q.in('status',['delivered','cancelled'])" jpt-unified-partner-orders-v1.js
+          grep -Fq 'Deliberately keep the operator on the chosen queue.' jpt-unified-partner-orders-v1.js
+          grep -Fq 'const historyOutlet=String(document.getElementById(\'orderHistoryOutlet\')?.value||\'ALL\')' jpt-unified-partner-orders-v1.js
+          grep -Fq 'id="orderHistoryOutlet"' admin.html
           grep -Fq 'pendingRingtoneOrderIds' jpt-unified-partner-orders-v1.js
           grep -Fq 'failedRingtoneOrderIds' jpt-unified-partner-orders-v1.js
           grep -Fq 'function acknowledgeRingtone(orderId)' jpt-unified-partner-orders-v1.js
