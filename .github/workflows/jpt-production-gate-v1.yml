@@ -62,6 +62,7 @@ jobs:
           grep -Fq 'jpt-partner-final-touch-v10.js?v=20261019-header-clean-1' admin.html
           grep -Fq 'jpt-partner-final-touch-v12.js?v=20261019-all-outlet-picker-1' admin.html
           grep -Fq 'jpt-partner-sw.js?v=20261020-stable-queues-history-outlet-1' partner-app.html
+          grep -Fq 'jpt-partner-sw.js?v=20261020-stable-queues-history-outlet-1' admin.html
           grep -Fq "const ORDER_SCOPE_KEY='jpt_partner_order_scope';" jpt-unified-partner-orders-v1.js
           grep -Fq 'const codes=selectedOutletCodes(authorizedCodes);' jpt-unified-partner-orders-v1.js
           grep -Fq 'body.dataset.jptRenderKey===renderKey&&body.children.length' jpt-unified-partner-orders-v1.js
