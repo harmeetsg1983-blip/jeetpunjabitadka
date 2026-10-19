@@ -215,10 +215,10 @@
         <div class="jpt-v9-headrow">
           <div class="jpt-v9-menu">☰</div>
           <img class="jpt-v9-logo" src="${LOGO}" alt="Punjabi Sardar logo">
-          <div class="jpt-v9-brand"><b>${esc(name)}</b><span>RESTAURANT PARTNER APP • ${esc(code)}</span></div>
+          <div class="jpt-v9-brand"><b>${esc(name)}</b><span>RESTAURANT PARTNER APP</span></div>
           <button class="jpt-v9-bell" id="jptV9Bell">🔔</button>
         </div>
-        <div class="jpt-v9-context">${esc(name)} • ${esc(code)}</div><div class="jpt-v10-outlet-wrap" id="jptV10OutletWrap"><select id="jptV10OutletSelect" aria-label="Change outlet"></select></div>
+        <div class="jpt-v10-outlet-wrap" id="jptV10OutletWrap"><select id="jptV10OutletSelect" aria-label="Change outlet"></select></div>
       </div>
 
       <div class="jpt-v9-poster">
