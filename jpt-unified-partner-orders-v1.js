@@ -466,7 +466,7 @@ function render(){
     const deadline=o.deadline_at||o.__localDeadline;
     const timer=st==='accepted'||st==='preparing'?remaining(deadline):'—';
     const timerButton=(st==='accepted'||st==='preparing')?
-      '<div class="jpt-ready-countdown" data-timer="'+esc(o.id)+'">ORDER READY ('+timer+')</div>':'';
+      '<div class="jpt-ready-countdown" data-timer="'+esc(o.id)+'" aria-label="Preparation time remaining">PREP TIME LEFT · '+timer+'</div>':'';
     const rider=riderInfo(o);
     const its=items(o);
     const newClass=st==='new'&&o.__liveNew?' jpt-new-order':'';
@@ -1213,7 +1213,7 @@ function updateTimers(){
     const st=status(o.status);
     if(st!=='accepted'&&st!=='preparing')return;
     const deadline=o.deadline_at||o.__localDeadline;
-    el.textContent='Order Ready ('+remaining(deadline)+')';
+    el.textContent='PREP TIME LEFT · '+remaining(deadline);
     if(deadline && new Date(deadline).getTime()<=Date.now() && el.dataset.readyEnabled!=='1'){
       el.dataset.readyEnabled='1';shouldRender=true;
     }
