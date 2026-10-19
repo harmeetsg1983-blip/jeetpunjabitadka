@@ -123,4 +123,27 @@ assert.match(
   'failed REJECT must not silence an order that remains NEW'
 );
 
-console.log('GREEN: 20 order lifecycle, UPI, realtime-wiring and alert-acknowledgement regression assertions passed');
+
+// The preparation timer must never replace or hide the actionable READY control.
+const acceptedAction = api.actionHtml({ id: 6, status: 'accepted' });
+assert.match(acceptedAction, /data-ready="6"/, 'ACCEPTED order must render a MARK READY action');
+assert.match(acceptedAction, /MARK READY/, 'READY action label must be visible in the generated markup');
+
+// All Outlet Select scopes queries/cards/realtime to the user's explicit scope;
+// the default and invalid/stale scope both safely fall back to all authorized outlets.
+assert.ok(source.includes("const ORDER_SCOPE_KEY='jpt_partner_order_scope';"), 'order scope must use its dedicated preference key');
+assert.ok(source.includes('const codes=selectedOutletCodes(authorizedCodes);'), 'initial order queries must honor selected outlet scope');
+assert.ok(source.includes('orderMatchesSelectedScope(o)'), 'order cards and realtime events must honor selected outlet scope');
+assert.ok(source.includes('await initialLoad({alertNewOrders:true});'), 'startup/scope refresh must ring recent NEW orders already placed while app was closed');
+
+// Avoid full card DOM replacement on every five-second safety poll; this prevents scroll jumps.
+assert.ok(source.includes('body.dataset.jptRenderKey===renderKey&&body.children.length'), 'unchanged order snapshots must preserve the current order-card DOM');
+
+// Header must not repeat outlet identity under the bell; outlet list remains in the picker.
+const finalTouch = fs.readFileSync('jpt-partner-final-touch-v10.js', 'utf8');
+assert.doesNotMatch(finalTouch, /<div class="jpt-v9-context">/, 'redundant outlet-name row under the bell must not render');
+const outletPicker = fs.readFileSync('jpt-partner-final-touch-v12.js', 'utf8');
+assert.ok(outletPicker.includes("allButton.textContent='All Outlet Select';"), 'outlet picker must offer All Outlet Select');
+assert.ok(outletPicker.includes("localStorage.setItem('jpt_partner_order_scope','ALL')"), 'All Outlet Select must set all-outlet order scope');
+
+console.log('GREEN: 29 order lifecycle, UPI, realtime, ringtone, All Outlet Select and UI-stability regression assertions passed');
