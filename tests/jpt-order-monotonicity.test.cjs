@@ -45,6 +45,12 @@ assert.equal(
   'a forward lifecycle update must still be applied'
 );
 
+// Failed lifecycle transitions must not leave the optimistic UI state behind.
+const failedTransitionReconcile = between('async function lifecycleTransition(id,next){', '\nasync function markReady(id)');
+assert.ok(failedTransitionReconcile.includes('const priorForMerge=prior.__optimisticStatus===next?before:prior;'), 'failed transition recovery must discard only the optimistic status before reconciling');
+assert.ok(failedTransitionReconcile.includes('mergeOrderMonotonic(priorForMerge,fresh)'), 'failed transition recovery must preserve later confirmed lifecycle states against stale SELECT responses');
+assert.ok(!failedTransitionReconcile.includes('const reconciled=Object.assign({},prior,fresh);'), 'failed transition recovery must not blindly overwrite lifecycle state from a possibly stale SELECT');
+
 // UPI verification must be enforced by rendered controls for NEW and ACCEPTED.
 const unverifiedNew = api.actionHtml({ id: 2, status: 'new', payment: 'UPI', payment_verified: false });
 assert.match(unverifiedNew, /data-accept="2" disabled/, 'unverified UPI NEW order must disable ACCEPT');
