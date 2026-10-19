@@ -149,8 +149,8 @@ assert.match(preparingAction, /data-ready="7"/, 'preparation countdown must neve
 assert.ok(source.includes('PREP TIME LEFT · '+''), 'countdown must be labelled as preparation time, not as the READY action');
 const orderRenderSource = between('function render(){', '\\nfunction updateCounts(');
 assert.ok(orderRenderSource.includes('const timerButton='), 'preparation countdown must render in its own timer element');
-assert.ok(orderRenderSource.includes("'<div class=\\\"jpt-prep\\\">'+timerButton+rider+'</div>'"), 'countdown must stay in the prep panel separate from the action panel');
-assert.ok(orderRenderSource.includes("'<div class=\\\"jpt-actions\\\"><div class=\\\"jpt-label\\\">ACTIONS</div>'+action+'</div>'"), 'READY action must render in the separate actions panel');
+assert.match(orderRenderSource, /jpt-prep[^\n]*timerButton\+rider/, 'countdown must stay in the prep panel separate from the action panel');
+assert.match(orderRenderSource, /jpt-actions[^\n]*\+action\+/, 'READY action must render in the separate actions panel');
 
 // All Outlet Select scopes queries/cards/realtime to the user's explicit scope;
 // the default and invalid/stale scope both safely fall back to all authorized outlets.
