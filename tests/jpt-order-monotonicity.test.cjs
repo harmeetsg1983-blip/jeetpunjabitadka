@@ -176,4 +176,6 @@ scopeStore.value = 'NOT_AUTHORIZED';
 assert.equal([...scopeApi.selectedOutletCodes(['JPT-001','NME-001'])].join(','), 'JPT-001,NME-001', 'stale unauthorized scope must fail open to authorized all-outlet view');
 assert.equal(scopeStore.value, 'ALL', 'stale scope must be reset to All Outlet Select');
 
-console.log('GREEN: 37 order lifecycle, UPI, realtime, ringtone, All Outlet Select and UI-stability regression assertions passed');
+assert.ok(source.includes('primeOrderAudio().then(primed=>{if(primed)retryBlockedRingtones()})'), 'first user gesture must retry a browser-blocked new-order ringtone automatically');
+
+console.log('GREEN: 38 order lifecycle, UPI, realtime, ringtone, All Outlet Select and UI-stability regression assertions passed');
