@@ -610,16 +610,19 @@ async function accept(id){
     if(serverStatus && serverStatus!=='new'){
       const fresh=await read(id,o?.outlet_id).catch(()=>null);
       if(actionAuthGeneration!==authGeneration)return;
-      Object.assign(o,fresh||{},{status:serverStatus});
-      if(serverStatus!=='new')acknowledgeRingtone(key);
-      delete o.__optimisticStatus;
+      /* Keep the RPC conflict status, but never regress a newer confirmed row. */
+      const latest=rows.get(key)||o;
+      const reconciled=mergeOrderMonotonic(latest,fresh||{},{status:serverStatus});
+      const conflictRow=mergeOrderMonotonic(reconciled,{status:serverStatus});
+      delete conflictRow.__optimisticStatus;
       if(serverStatus!=='accepted'){
-        if(previous.__localDeadline===undefined)delete o.__localDeadline;
-        else o.__localDeadline=previous.__localDeadline;
+        if(previous.__localDeadline===undefined)delete conflictRow.__localDeadline;
+        else conflictRow.__localDeadline=previous.__localDeadline;
       }
-      rows.set(key,o);
-      focusQueueForStatus(serverStatus);
-      toast('Server status synced: '+serverStatus.toUpperCase()+'. No duplicate action sent.');
+      rows.set(key,conflictRow);
+      if(status(conflictRow.status)!=='new')acknowledgeRingtone(key);
+      focusQueueForStatus(conflictRow.status||serverStatus);
+      toast('Server status synced: '+status(conflictRow.status||serverStatus).toUpperCase()+'. No duplicate action sent.');
     }else{
       let fresh=await read(id,o?.outlet_id).catch(()=>null);
       if(actionAuthGeneration!==authGeneration)return;
