@@ -178,6 +178,7 @@ assert.equal(scopeStore.value, 'ALL', 'stale scope must be reset to All Outlet S
 
 assert.ok(source.includes('primeOrderAudio().then(primed=>{if(primed)retryBlockedRingtones()})'), 'first user gesture must retry a browser-blocked new-order ringtone automatically');
 assert.ok(source.includes('async function enableBackgroundAlerts(){'), 'order sound permission flow must be declared async before awaiting browser permission/audio priming');
+assert.ok(!source.includes('async async function enableBackgroundAlerts(){'), 'order sound permission function must not have a duplicated async keyword that breaks script parsing');
 
 
 // Order accessibility regression checks: explicit tap-to-speak only, with outlet scope enforced.
