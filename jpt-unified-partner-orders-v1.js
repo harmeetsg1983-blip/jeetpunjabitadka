@@ -413,7 +413,10 @@ function actionHtml(o){
 function render(){
   const body=document.getElementById('ordersBody');
   if(!body)return;
-  const all=[...rows.values()].filter(o=>orderBelongsToManagedOutlet(o)&&orderMatchesSelectedScope(o)&&shouldShowOnBoard(o))
+  const all=[...rows.values()].filter(o=>
+    orderBelongsToManagedOutlet(o)&&
+    (selectedQueue==='history'||orderMatchesSelectedScope(o))&&
+    shouldShowOnBoard(o))
     .sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
   /* ALL is the active workboard only. Completed/cancelled records belong in history tabs
      and must never return to ALL or trigger active-order actions. */
@@ -427,9 +430,11 @@ function render(){
     ? new Date(Number(historyDate.slice(0,4)),Number(historyDate.slice(5,7))-1,Number(historyDate.slice(8,10))+1)
     : null;
   const historyCutoff=Date.now()-90*24*60*60*1000;
+  const historyOutlet=String(document.getElementById('orderHistoryOutlet')?.value||'ALL');
   const filtered=selectedQueue==='history'
     ? all.filter(o=>{
         if(!['delivered','cancelled'].includes(status(o.status)))return false;
+        if(historyOutlet!=='ALL'&&String(o.outlet_id||'')!==historyOutlet)return false;
         const created=new Date(o.created_at||0).getTime();
         if(!Number.isFinite(created)||created<historyCutoff)return false;
         return !historyStart||!historyEnd||(created>=historyStart.getTime()&&created<historyEnd.getTime());
@@ -438,7 +443,7 @@ function render(){
   /* Avoid replacing every order card on each five-second safety poll.
      Unchanged snapshots now leave the DOM/scroll anchor untouched. */
   const renderKey=JSON.stringify({
-    queue:selectedQueue,historyDate,
+    queue:selectedQueue,historyDate,historyOutlet,
     orders:filtered.map(o=>Object.assign({},o,{
       __realtimeSeenAt:undefined,
       __renderBusy:actionBusy.has(String(o.id))||transitionBusy.has(String(o.id))
@@ -1221,12 +1226,10 @@ function updateTimers(){
   if(shouldRender)render();
 }
 function focusQueueForStatus(value){
-  const target=queueForStatus(value);
-  if(!target)return;
-  const btn=[...document.querySelectorAll('.orderQueueBtn')].find(b=>String(b.dataset.queue||'')===target);
-  if(!btn)return;
-  selectedQueue=target;
-  document.querySelectorAll('.orderQueueBtn').forEach(x=>{x.classList.toggle('gold',x===btn);x.classList.toggle('is-active',x===btn);x.setAttribute('aria-selected',x===btn?'true':'false')});
+  /* Deliberately keep the operator on the chosen queue.
+     Status changes remove the card from its old queue and render it in its
+     new queue; they must not switch the entire screen behind the operator. */
+  return;
 }
 function syncHistoryTools(){
   const tools=document.getElementById('orderHistoryTools');
@@ -1239,6 +1242,23 @@ function syncHistoryTools(){
     date.min=fmt(oldest);
     date.max=fmt(today);
     if(date.value&&(date.value<date.min||date.value>date.max))date.value='';
+  }
+  const outletFilter=document.getElementById('orderHistoryOutlet');
+  if(outletFilter){
+    const codes=managedOutlets();
+    const saved=String(localStorage.getItem('jpt_partner_history_outlet')||'');
+    const current=selectedOrderScope();
+    const preferred=saved||(current==='ALL'?'ALL':current);
+    const options=[{value:'ALL',label:'All Authorized Outlets'},...codes.map(code=>({value:code,label:outletDisplayName(code)}))];
+    outletFilter.innerHTML=options.map(x=>'<option value="'+esc(x.value)+'">'+esc(x.label)+'</option>').join('');
+    outletFilter.value=options.some(x=>x.value===preferred)?preferred:'ALL';
+    if(outletFilter.dataset.bound!=='1'){
+      outletFilter.dataset.bound='1';
+      outletFilter.addEventListener('change',()=>{
+        localStorage.setItem('jpt_partner_history_outlet',String(outletFilter.value||'ALL'));
+        render();
+      });
+    }
   }
 }
 function bindQueue(){
