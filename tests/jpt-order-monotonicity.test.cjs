@@ -151,4 +151,29 @@ assert.ok(adminUi.includes('#orderQueueBar.jpt-status-tabs{position:relative!imp
 const navUi = fs.readFileSync('jpt-partner-dual-bar-nav-v1.js', 'utf8');
 assert.ok(navUi.includes("window.scrollTo({top:0,behavior:'auto'});"), 'partner navigation must avoid animated scroll jumps');
 
-console.log('GREEN: 32 order lifecycle, UPI, realtime, ringtone, All Outlet Select and UI-stability regression assertions passed');
+
+// Exercise outlet-scope selection with a local-only storage stub (no Supabase writes).
+const scopeSource = between('function managedOutlets(){', 'function orderBelongsToManagedOutlet(o){');
+const scopeStore = {
+  value: null,
+  getItem(key) { return key === 'jpt_partner_order_scope' ? this.value : null; },
+  setItem(key, value) { if (key === 'jpt_partner_order_scope') this.value = value; }
+};
+const scopeApi = vm.runInNewContext(
+  scopeSource + '\\n;({selectedOutletCodes, orderMatchesSelectedScope})',
+  {
+    window: { JPTPartnerAccess: { getOutlets: () => [{outlet_id:'JPT-001'},{outlet_id:'NME-001'}] } },
+    localStorage: scopeStore,
+    outletSelect: { value: 'JPT-001' }
+  },
+  { timeout: 1000 }
+);
+assert.equal([...scopeApi.selectedOutletCodes(['JPT-001','NME-001'])].join(','), 'JPT-001,NME-001', 'default order scope must include every authorized outlet');
+scopeStore.value = 'NME-001';
+assert.equal([...scopeApi.selectedOutletCodes(['JPT-001','NME-001'])].join(','), 'NME-001', 'a specific outlet scope must filter the query');
+assert.equal(scopeApi.orderMatchesSelectedScope({outlet_id:'JPT-001'}), false, 'events from another outlet must not enter a specific outlet scope');
+scopeStore.value = 'NOT_AUTHORIZED';
+assert.equal([...scopeApi.selectedOutletCodes(['JPT-001','NME-001'])].join(','), 'JPT-001,NME-001', 'stale unauthorized scope must fail open to authorized all-outlet view');
+assert.equal(scopeStore.value, 'ALL', 'stale scope must be reset to All Outlet Select');
+
+console.log('GREEN: 37 order lifecycle, UPI, realtime, ringtone, All Outlet Select and UI-stability regression assertions passed');
