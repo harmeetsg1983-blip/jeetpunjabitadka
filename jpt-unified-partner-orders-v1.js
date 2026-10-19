@@ -75,21 +75,22 @@ async function primeOrderAudio(){
     return false;
   }
 }
+function retryBlockedRingtones(){
+  /* Retry only NEW orders whose sound was explicitly blocked by the browser.
+     A generic user gesture may unlock audio without requiring a second button tap. */
+  const retryIds=[...failedRingtoneOrderIds];
+  for(const id of retryIds){
+    failedRingtoneOrderIds.delete(id);
+    const order=rows.get(String(id));
+    if(order&&status(order.status)==='new')startRingtone(order);
+  }
+}
 async function enableBackgroundAlerts(){
   try{
     if('Notification' in window && Notification.permission==='default') await Notification.requestPermission();
   }catch(e){}
   const primed=await primeOrderAudio();
-  if(primed){
-    /* Retry only orders whose sound was explicitly blocked by the browser.
-       Do not ring old outstanding orders merely because sound was enabled. */
-    const retryIds=[...failedRingtoneOrderIds];
-    for(const id of retryIds){
-      failedRingtoneOrderIds.delete(id);
-      const order=rows.get(String(id));
-      if(order&&status(order.status)==='new')startRingtone(order);
-    }
-  }
+  if(primed)retryBlockedRingtones();
   toast(primed
     ? 'Order sound enabled. New orders will ring automatically while this dashboard is open.'
     : 'Order sound could not be enabled. Check phone media volume and browser sound permission.');
@@ -97,7 +98,10 @@ async function enableBackgroundAlerts(){
 function bindOrderAudioGesture(){
   if(window.__JPT_ORDER_AUDIO_GESTURE_BOUND__) return;
   window.__JPT_ORDER_AUDIO_GESTURE_BOUND__=true;
-  const prime=()=>{ if(!window.__JPT_ORDER_AUDIO_PRIMED__) primeOrderAudio().catch(()=>{}); };
+  const prime=()=>{
+    if(window.__JPT_ORDER_AUDIO_PRIMED__)return;
+    primeOrderAudio().then(primed=>{if(primed)retryBlockedRingtones()}).catch(()=>{});
+  };
   ['pointerdown','touchstart','click'].forEach(ev=>document.addEventListener(ev,prime,{passive:true,capture:true}));
 }
 function outlet(){
