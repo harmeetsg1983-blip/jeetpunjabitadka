@@ -572,7 +572,7 @@ async function accept(id){
     actionBusy.delete(key);
     render();return;
   }
-  rows.set(key,Object.assign({},o,canonical));
+  rows.set(key,mergeOrderMonotonic(rows.get(key)||o,canonical));
   const minutes=Math.max(15,Math.min(40,Number(o.__draftMinutes||o.target_minutes||15)));
   const local=localDeadline(minutes);
   const previous={status:o.status,target_minutes:o.target_minutes,deadline_at:o.deadline_at,__localDeadline:o.__localDeadline,__optimisticStatus:o.__optimisticStatus};
@@ -757,7 +757,7 @@ async function lifecycleTransition(id,next){
       const serverState=status(fresh.status);
       if(serverState===next || (next==='ready'&&(serverState==='out_for_delivery'||serverState==='delivered')) ||
          (next==='out_for_delivery'&&serverState==='delivered')){
-        rows.set(key,Object.assign({},o,fresh));
+        rows.set(key,mergeOrderMonotonic(rows.get(key)||o,fresh));
         focusQueueForStatus(serverState);
         toast('Order state synced: '+serverState.toUpperCase()+'.');
         render();
@@ -770,13 +770,13 @@ async function lifecycleTransition(id,next){
       const uiState=status(before.status);
       const readLooksStale=(serverState==='new' && ['accepted','preparing'].includes(uiState));
       if(!allowed[next]?.includes(serverState) && !readLooksStale){
-        rows.set(key,Object.assign({},o,fresh));
+        rows.set(key,mergeOrderMonotonic(rows.get(key)||o,fresh));
         toast('Order update blocked: server status is '+serverState.toUpperCase()+'.');
         render();
         return;
       }
       if(!readLooksStale){
-        rows.set(key,Object.assign({},o,fresh));
+        rows.set(key,mergeOrderMonotonic(rows.get(key)||o,fresh));
         o.status=serverState;
       }
     }else if(!allowed[next]?.includes(status(before.status))){
@@ -799,7 +799,7 @@ async function lifecycleTransition(id,next){
       const verify=await read(id,before.outlet_id);
       if(actionAuthGeneration!==authGeneration)return;
       if(!verify || status(verify.status)!==next)throw new Error('Server did not confirm '+next.toUpperCase()+' status.');
-      rows.set(key,Object.assign({},o,verify));
+      rows.set(key,mergeOrderMonotonic(rows.get(key)||o,verify));
     }
     focusQueueForStatus(rows.get(key)?.status||next);
     toast('Order status updated: '+status(rows.get(key)?.status||next).toUpperCase()+'.');
