@@ -487,7 +487,7 @@ function render(){
       '<div class="muted" style="margin:6px 0;font-weight:800">OUTLET: '+esc(outletDisplayName(o.outlet_id))+'</div>'+
       '<div class="jpt-customer"><div class="jpt-label">CUSTOMER</div><div class="jpt-customer-name">'+esc(o.customer_name||'Customer')+'</div>'+
       (o.customer_phone?'<div class="muted">'+esc(o.customer_phone)+'</div>':'')+'</div>'+
-      '<div class="jpt-items"><div class="jpt-label">ITEMS</div>'+itemHtml+speechHtml+'</div>'+instructionHtml+noteHtml+voiceHtml+
+      '<div class="jpt-items"><div class="jpt-label">ITEMS</div>'+itemHtml+speechHtml+'</div>'+instructionHtml+
       '<div class="jpt-order-meta"><div><span class="jpt-label">ORDER VALUE</span><b>'+money(o.total??o.grand_total??0)+'</b></div>'+
       '<div><span class="jpt-label">ORDER TIME</span><span>'+esc(o.created_at?new Date(o.created_at).toLocaleString('en-IN'):'—')+'</span></div></div>'+
       paymentHtml+'<div class="jpt-prep">'+timerButton+rider+'</div>'+
@@ -497,7 +497,6 @@ function render(){
   body.dataset.jptRenderKey=renderKey;
 
   body.querySelectorAll('[data-speak-order]').forEach(b=>b.onclick=()=>{const o=rows.get(String(b.dataset.speakOrder));if(o&&orderBelongsToManagedOutlet(o)&&orderMatchesSelectedScope(o))speakOrder(o);});
-  document.querySelectorAll('[data-speak-order]').forEach(b=>b.onclick=()=>speakOrder(b.dataset.speakOrder));
   document.querySelectorAll('[data-minus]').forEach(b=>b.onclick=()=>{
     const o=rows.get(String(b.dataset.minus)); if(!o)return;
     o.__draftMinutes=Math.max(15,Number(o.__draftMinutes||o.target_minutes||15)-1); render();
