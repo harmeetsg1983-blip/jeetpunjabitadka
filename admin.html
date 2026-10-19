@@ -307,7 +307,7 @@ body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
  <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="ready" role="tab">READY</button>
  <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="out_for_delivery" role="tab">OUT FOR DELIVERY</button>
  <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="history" role="tab" aria-selected="false">HISTORY ORDERS</button>
-</div><div id="orderHistoryTools" class="rowactions" style="display:none;margin:10px 0"><label for="orderHistoryDate" style="font-weight:800;color:#d8ae42">Find history by day</label><input id="orderHistoryDate" type="date" class="input" aria-label="Filter order history by date"><button type="button" class="btn" id="orderHistoryDateClear">Clear date</button></div><div id="orderAlarm" class="notice" style="display:none;border-color:#d8ae42;background:#211706"><b>🔔 NEW ORDER</b><div id="orderAlarmText" class="muted" style="color:#fff;margin-top:4px"></div><button class="btn gold" id="stopAlarm" style="margin-top:8px">Acknowledge</button></div><div class="jpt-orders-vertical" id="ordersTableWrap"><div id="ordersBody" class="jpt-orders-list"></div></div></div>
+</div><div id="orderHistoryTools" class="rowactions" style="display:none;margin:10px 0;flex-wrap:wrap;gap:8px"><label for="orderHistoryDate" style="font-weight:800;color:#d8ae42">History date</label><input id="orderHistoryDate" type="date" class="input" aria-label="Filter order history by date"><label for="orderHistoryOutlet" style="font-weight:800;color:#d8ae42">Outlet</label><select id="orderHistoryOutlet" class="input" aria-label="Filter order history by outlet"></select><button type="button" class="btn" id="orderHistoryDateClear">Clear date</button></div><div id="orderAlarm" class="notice" style="display:none;border-color:#d8ae42;background:#211706"><b>🔔 NEW ORDER</b><div id="orderAlarmText" class="muted" style="color:#fff;margin-top:4px"></div><button class="btn gold" id="stopAlarm" style="margin-top:8px">Acknowledge</button></div><div class="jpt-orders-vertical" id="ordersTableWrap"><div id="ordersBody" class="jpt-orders-list"></div></div></div>
 </section>
 
 <section id="menu" class="panel">
@@ -1084,7 +1084,7 @@ setTimeout(checkSession,0);
 try{if("serviceWorker" in navigator){navigator.serviceWorker.register("./jpt-partner-sw.js?v=24-order-runtime-reject-monotonic",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});}}catch(e){}
 </script>
 
-<script src="./jpt-unified-partner-orders-v1.js?v=20261019-order-runtime-reject-monotonic-11"></script>
+<script src="./jpt-unified-partner-orders-v1.js?v=20261020-stable-queues-history-outlet-1"></script>
 <script src="./jpt-partner-dual-bar-nav-v1.js?v=20261007-1"></script>
 <script src="./jpt-partner-pro-menu-ui-v1.js?v=20261007-1"></script>
 <script src="./jpt-partner-timing-manager-v1.js?v=1"></script>
