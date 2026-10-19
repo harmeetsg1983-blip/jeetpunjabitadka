@@ -178,4 +178,15 @@ assert.equal(scopeStore.value, 'ALL', 'stale scope must be reset to All Outlet S
 
 assert.ok(source.includes('primeOrderAudio().then(primed=>{if(primed)retryBlockedRingtones()})'), 'first user gesture must retry a browser-blocked new-order ringtone automatically');
 
-console.log('GREEN: 38 order lifecycle, UPI, realtime, ringtone, All Outlet Select and UI-stability regression assertions passed');
+
+// Order accessibility regression checks: explicit tap-to-speak only, with outlet scope enforced.
+assert.ok(source.includes('function cookingInstructions(o){'), 'partner order cards must resolve supported cooking-instruction fields');
+assert.ok(source.includes('COOKING INSTRUCTIONS'), 'customer cooking instructions must be visibly separated on the order card');
+assert.ok(source.includes('data-speak-order='), 'each order card must provide a listen-to-order control');
+assert.ok(source.includes("document.querySelectorAll('[data-speak-order]').forEach(b=>b.onclick=()=>speakOrder(b.dataset.speakOrder))"), 'speech playback must be initiated by an explicit button tap');
+assert.ok(source.includes("if(!o||!orderBelongsToManagedOutlet(o)||!orderMatchesSelectedScope(o))return;"), 'speech readout must not expose orders outside the authorized selected scope');
+assert.ok(source.includes("window.speechSynthesis.speak(u)"), 'listen control must invoke browser speech synthesis');
+assert.ok(source.includes("u.lang='en-IN'"), 'speech readout must use an India English voice locale');
+assert.ok(!source.includes('speakOrder(o.id);'), 'speech must not start automatically when rendering a card');
+
+console.log('GREEN: order lifecycle, multi-outlet, ringtone, UI stability and order voice/instruction regression assertions passed');
