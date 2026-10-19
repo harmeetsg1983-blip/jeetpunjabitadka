@@ -244,10 +244,10 @@ const adminHtmlSource = fs.readFileSync('admin.html', 'utf8');
 const customerHtmlSource = fs.readFileSync('index.html', 'utf8');
 const partnerSwSource = fs.readFileSync('jpt-partner-sw.js', 'utf8');
 const partnerAppSource = fs.readFileSync('partner-app.html', 'utf8');
-assert.ok(adminHtmlSource.includes('jpt-unified-partner-orders-v1.js?v=20261019-order-runtime-reject-monotonic-11'), 'partner HTML must cache-bust the corrected order runtime');
+assert.ok(adminHtmlSource.includes('jpt-unified-partner-orders-v1.js?v=20261020-stable-queues-history-outlet-1'), 'partner HTML must cache-bust the corrected order runtime');
 assert.ok(customerHtmlSource.includes('jpt-unified-customer-live-v1.js?v=20261019-sponsor-rotation-10s-4'), 'customer HTML must cache-bust sponsor rotation changes');
-assert.ok(partnerSwSource.includes('jpt-partner-pwa-v33-order-runtime-reject-monotonic'), 'partner service-worker cache generation must advance with runtime fixes');
-assert.ok(partnerAppSource.includes('jpt-partner-sw.js?v=20261019-order-runtime-reject-monotonic-4'), 'partner app shell must register the current service-worker URL');
+assert.ok(partnerSwSource.includes('jpt-partner-pwa-v34-stable-queues-history-outlet'), 'partner service-worker cache generation must advance with runtime fixes');
+assert.ok(partnerAppSource.includes('jpt-partner-sw.js?v=20261020-stable-queues-history-outlet-1'), 'partner app shell must register the current service-worker URL');
 
 
 
