@@ -137,6 +137,24 @@ async function resolveManagedOutlets(){
   }
   return [...new Set(codes.map(String).filter(Boolean))];
 }
+const ORDER_SCOPE_KEY='jpt_partner_order_scope';
+function selectedOrderScope(codes=managedOutlets()){
+  const saved=String(localStorage.getItem(ORDER_SCOPE_KEY)||'ALL');
+  if(saved==='ALL'||!saved)return 'ALL';
+  if(codes.includes(saved))return saved;
+  /* A stale or no-longer-authorized scope must never hide every order. */
+  localStorage.setItem(ORDER_SCOPE_KEY,'ALL');
+  return 'ALL';
+}
+function selectedOutletCodes(codes){
+  const authorized=[...new Set((codes||[]).map(String).filter(Boolean))];
+  const scope=selectedOrderScope(authorized);
+  return scope==='ALL'?authorized:authorized.filter(code=>code===scope);
+}
+function orderMatchesSelectedScope(o){
+  const scope=selectedOrderScope();
+  return scope==='ALL'||String(o?.outlet_id||'')===scope;
+}
 function orderBelongsToManagedOutlet(o){ return managedOutlets().includes(String(o?.outlet_id||'')); }
 function shouldShowOnBoard(o){
   /* Preserve every genuinely active order regardless of age; never hide a
@@ -376,7 +394,7 @@ function actionHtml(o){
 function render(){
   const body=document.getElementById('ordersBody');
   if(!body)return;
-  const all=[...rows.values()].filter(o=>orderBelongsToManagedOutlet(o)&&shouldShowOnBoard(o))
+  const all=[...rows.values()].filter(o=>orderBelongsToManagedOutlet(o)&&orderMatchesSelectedScope(o)&&shouldShowOnBoard(o))
     .sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
   /* ALL is the active workboard only. Completed/cancelled records belong in history tabs
      and must never return to ALL or trigger active-order actions. */
@@ -398,6 +416,17 @@ function render(){
         return !historyStart||!historyEnd||(created>=historyStart.getTime()&&created<historyEnd.getTime());
       })
     : all.filter(o=>queueForStatus(o.status)===selectedQueue);
+  /* Avoid replacing every order card on each five-second safety poll.
+     Unchanged snapshots now leave the DOM/scroll anchor untouched. */
+  const renderKey=JSON.stringify({
+    queue:selectedQueue,historyDate,
+    orders:filtered.map(o=>Object.assign({},o,{
+      __realtimeSeenAt:undefined,
+      __renderBusy:actionBusy.has(String(o.id))||transitionBusy.has(String(o.id))
+    }))
+  });
+  updateCounts(all);
+  if(body.dataset.jptRenderKey===renderKey&&body.children.length)return;
   /* TEMP JPT diagnostics: report only recent NEW orders; no customer PII. */
   const diagCutoff=Date.now()-24*60*60*1000;
   const recentNew=[...rows.values()].filter(o=>status(o.status)==='new'&&new Date(o.created_at||0).getTime()>=diagCutoff);
@@ -443,6 +472,7 @@ function render(){
       '<div class="jpt-actions"><div class="jpt-label">ACTIONS</div>'+action+'</div>'+
       '</article>';
   }).join('')||'<div class="jpt-no-orders">No orders in this queue.</div>';
+  body.dataset.jptRenderKey=renderKey;
 
   document.querySelectorAll('[data-minus]').forEach(b=>b.onclick=()=>{
     const o=rows.get(String(b.dataset.minus)); if(!o)return;
@@ -470,7 +500,6 @@ function render(){
   document.querySelectorAll('[data-ready]').forEach(b=>b.onclick=()=>markReady(b.dataset.ready));
   document.querySelectorAll('[data-delivery]').forEach(b=>b.onclick=()=>transition(b.dataset.delivery,'out_for_delivery'));
   document.querySelectorAll('[data-delivered]').forEach(b=>b.onclick=()=>transition(b.dataset.delivered,'delivered'));
-  updateCounts(all);
 }
 function updateCounts(all){
   const c=document.getElementById('ordersCount'); if(c)c.textContent=String(all.length);
@@ -775,7 +804,8 @@ async function initialLoad(options={}){
   const loadAuthGeneration=authGeneration;
   const loadSequence=++initialLoadSequence;
   const verifyRows=options.verifyRows!==false;
-  const codes=await resolveManagedOutlets();
+  const authorizedCodes=await resolveManagedOutlets();
+  const codes=selectedOutletCodes(authorizedCodes);
   if(loadAuthGeneration!==authGeneration)return;
   if(!codes.length){
     if(options.preserveOnError){
@@ -1189,7 +1219,9 @@ async function startAuthenticatedRuntime(){
     if(generation!==authGeneration)return;
     console.info('[JPT-DIAG][authorized outlets ready]',{count:authorized.length,outlets:authorized});
     updateVisibleDiagnostics('AUTHORIZED OUTLETS READY');
-    await initialLoad();
+    /* If the app was closed when a fresh order arrived, ring it on startup too.
+       The five-minute age gate avoids replaying old pending orders after reinstall. */
+    await initialLoad({alertNewOrders:true});
     if(generation!==authGeneration)return;
     await subscribe();
     if(generation!==authGeneration)return;
@@ -1234,8 +1266,12 @@ async function boot(){
   if(outletSelect)outletSelect.addEventListener('change',async()=>{
     const code=String(outletSelect.value||'');
     if(code)localStorage.setItem('jpt_admin_outlet',code);
-    await initialLoad();
+    await initialLoad({alertNewOrders:true});
     await subscribe();
+  });
+  window.addEventListener('jpt:order-scope-changed',async()=>{
+    try{await initialLoad({alertNewOrders:true});render();}
+    catch(e){console.warn('[JPT Orders] outlet scope refresh failed',e);}
   });
   const alarm=document.getElementById('stopAlarm');
   if(alarm)alarm.onclick=()=>{acknowledgeRingtone(activeRingtoneOrderId);const box=document.getElementById('orderAlarm');if(box)box.style.display='none';};
