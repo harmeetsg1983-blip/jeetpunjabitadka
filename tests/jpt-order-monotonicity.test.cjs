@@ -146,4 +146,4 @@ const outletPicker = fs.readFileSync('jpt-partner-final-touch-v12.js', 'utf8');
 assert.ok(outletPicker.includes("allButton.textContent='All Outlet Select';"), 'outlet picker must offer All Outlet Select');
 assert.ok(outletPicker.includes("localStorage.setItem('jpt_partner_order_scope','ALL')"), 'All Outlet Select must set all-outlet order scope');
 
-console.log('GREEN: 29 order lifecycle, UPI, realtime, ringtone, All Outlet Select and UI-stability regression assertions passed');
+console.log('GREEN: 30 order lifecycle, UPI, realtime, ringtone, All Outlet Select and UI-stability regression assertions passed');
