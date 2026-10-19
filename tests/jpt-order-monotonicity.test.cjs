@@ -98,8 +98,12 @@ assert.doesNotMatch(
 );
 assert.match(
   acceptHandler,
-  /rows\.set\(key,Object\.assign\(o,server\)\);\s*acknowledgeRingtone\(key\);/,
-  'successful ACCEPT must acknowledge the ringtone only after the server returns a row'
+  /const latestBeforeConfirm=rows\.get\(key\)\|\|o;[\s\S]*?mergeOrderMonotonic\(latestBeforeConfirm,server\);[\s\S]*?acknowledgeRingtone\(key\);/,
+  'successful ACCEPT must reconcile monotonically and acknowledge only after the server returns a row'
+);
+assert.ok(
+  acceptHandler.includes('mergeOrderMonotonic(latest,fresh)'),
+  'failed ACCEPT reconciliation must not let a stale SELECT overwrite a newer Realtime lifecycle'
 );
 const rejectHandler = between('async function reject(id){', '\nconst transitionBusy=new Set();');
 const rejectPreflight = rejectHandler.slice(0, rejectHandler.indexOf('try{'));
