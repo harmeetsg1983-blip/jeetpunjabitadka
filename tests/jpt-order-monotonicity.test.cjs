@@ -125,7 +125,7 @@ assert.match(
 );
 assert.match(
   rejectHandler,
-  /if\(status\(fresh\.status\)!=='new'\)acknowledgeRingtone\(key\);/,
+  /if\(status\(reconciled\.status\)!=='new'\)acknowledgeRingtone\(key\);/,
   'failed REJECT must not silence an order that remains NEW'
 );
 
