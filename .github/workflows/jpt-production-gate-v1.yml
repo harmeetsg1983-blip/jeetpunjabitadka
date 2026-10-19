@@ -56,15 +56,16 @@ jobs:
           set -euo pipefail
           test -f jpt-unified-partner-orders-v1.js
           grep -Fq 'jpt-unified-partner-orders-v1.js' admin.html
-          grep -Fq 'admin.html?v=20261019-all-outlet-stable-8' partner-v107.html
+          grep -Fq 'admin.html?v=20261019-all-outlet-stable-9' partner-v107.html
           grep -Fq 'jpt-partner-access-bridge-v2.js' admin.html
           grep -Fq 'jpt-partner-final-touch-v10.js?v=20261019-header-clean-1' admin.html
           grep -Fq 'jpt-partner-final-touch-v12.js?v=20261019-all-outlet-picker-1' admin.html
-          grep -Fq 'jpt-partner-sw.js?v=20261019-all-outlet-stable-1' partner-app.html
+          grep -Fq 'jpt-partner-sw.js?v=20261019-all-outlet-stable-2' partner-app.html
           grep -Fq "const ORDER_SCOPE_KEY='jpt_partner_order_scope';" jpt-unified-partner-orders-v1.js
           grep -Fq 'const codes=selectedOutletCodes(authorizedCodes);' jpt-unified-partner-orders-v1.js
           grep -Fq 'body.dataset.jptRenderKey===renderKey&&body.children.length' jpt-unified-partner-orders-v1.js
           grep -Fq 'await initialLoad({alertNewOrders:true});' jpt-unified-partner-orders-v1.js
+          grep -Fq 'function retryBlockedRingtones()' jpt-unified-partner-orders-v1.js
           grep -Fq "allButton.textContent='All Outlet Select';" jpt-partner-final-touch-v12.js
           ! grep -Fq '<div class="jpt-v9-context">' jpt-partner-final-touch-v10.js
           grep -Fq "window.scrollTo({top:0,behavior:'auto'});" jpt-partner-dual-bar-nav-v1.js
@@ -99,7 +100,7 @@ jobs:
             echo "RED: unsupported broadcast_changes call returned to delivery migration"
             exit 1
           fi
-          grep -Fq "const CACHE='jpt-partner-pwa-v30-all-outlet-stable';" jpt-partner-sw.js
+          grep -Fq "const CACHE='jpt-partner-pwa-v31-audio-gesture-retry';" jpt-partner-sw.js
           echo "GREEN: delivery broadcasts use realtime.send, duplicate READY trigger is removed, and partner cache generation is explicit"
 
       - name: Run order lifecycle regression tests
