@@ -181,6 +181,7 @@ assert.ok(source.includes('async function enableBackgroundAlerts(){'), 'order so
 assert.ok(!source.includes('async async function enableBackgroundAlerts(){'), 'order sound permission function must not have a duplicated async keyword that breaks script parsing');
 assert.ok(source.includes('async function primeOrderAudio(){'), 'audio priming must be async because it awaits media playback and AudioContext resume');
 assert.ok(!source.includes('\nfunction primeOrderAudio(){'), 'audio priming must not remain a non-async function with await expressions');
+assert.ok(!source.includes('async async function primeOrderAudio(){'), 'audio priming must not have a duplicate async keyword that breaks script parsing');
 
 
 // Order accessibility regression checks: explicit tap-to-speak only, with outlet scope enforced.
