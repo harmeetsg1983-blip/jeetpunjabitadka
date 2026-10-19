@@ -59,7 +59,7 @@ async function primeOrderAudio(){
     audio.muted=true;
     audio.currentTime=0;
     const p=audio.play();
-    if(p?.then) await p.catch(()=>{});
+    if(p?.then) await p;
     try{audio.pause();audio.currentTime=0;}catch(e){}
     audio.muted=false;
     if(window.AudioContext||window.webkitAudioContext){
