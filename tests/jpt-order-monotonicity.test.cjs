@@ -186,7 +186,9 @@ assert.equal((source.match(/COOKING INSTRUCTIONS/g)||[]).length, 1, 'each order 
 assert.equal((source.match(/data-speak-order=/g)||[]).length, 1, 'each order card must show one listen-to-order button');
 assert.ok(source.includes('COOKING INSTRUCTIONS'), 'customer cooking instructions must be visibly separated on the order card');
 assert.ok(source.includes('data-speak-order='), 'each order card must provide a listen-to-order control');
-assert.ok(source.includes("document.querySelectorAll('[data-speak-order]').forEach(b=>b.onclick=()=>speakOrder(b.dataset.speakOrder))"), 'speech playback must be initiated by an explicit button tap');
+assert.ok(source.includes("body.querySelectorAll('[data-speak-order]').forEach(b=>b.onclick=()=>{const o=rows.get(String(b.dataset.speakOrder));if(o&&orderBelongsToManagedOutlet(o)&&orderMatchesSelectedScope(o))speakOrder(o);})"), 'speech playback must be an explicit tap scoped to authorized order cards');
+assert.ok(!source.includes('noteHtml+voiceHtml'), 'order card must not reference removed duplicate instruction/voice markup');
+assert.ok(!source.includes("document.querySelectorAll('[data-speak-order]').forEach"), 'a global speech binding must not override the authorized card-scope handler');
 assert.ok(source.includes("if(!o||!orderBelongsToManagedOutlet(o)||!orderMatchesSelectedScope(o))return;"), 'speech readout must not expose orders outside the authorized selected scope');
 assert.ok(source.includes("window.speechSynthesis.speak(u)"), 'listen control must invoke browser speech synthesis');
 assert.ok(source.includes("u.lang='en-IN'"), 'speech readout must use an India English voice locale');
