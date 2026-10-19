@@ -105,6 +105,10 @@ assert.ok(
   acceptHandler.includes('mergeOrderMonotonic(latest,fresh)'),
   'failed ACCEPT reconciliation must not let a stale SELECT overwrite a newer Realtime lifecycle'
 );
+assert.ok(
+  acceptHandler.includes('const conflictRow=mergeOrderMonotonic(reconciled,{status:serverStatus})'),
+  'ACCEPT conflict status must be reconciled without regressing a newer confirmed terminal/forward state'
+);
 const rejectHandler = between('async function reject(id){', '\nconst transitionBusy=new Set();');
 const rejectPreflight = rejectHandler.slice(0, rejectHandler.indexOf('try{'));
 assert.doesNotMatch(
