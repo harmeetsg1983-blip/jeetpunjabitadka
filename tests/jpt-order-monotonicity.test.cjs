@@ -159,6 +159,17 @@ assert.ok(source.includes('const codes=selectedOutletCodes(authorizedCodes);'), 
 assert.ok(source.includes('orderMatchesSelectedScope(o)'), 'order cards and realtime events must honor selected outlet scope');
 assert.ok(source.includes('await initialLoad({alertNewOrders:true});'), 'startup/scope refresh must ring recent NEW orders already placed while app was closed');
 
+// Queue changes must not auto-navigate the operator away from the selected screen.
+const queueFocus = between('function focusQueueForStatus(value){', '\nfunction syncHistoryTools(){');
+assert.match(queueFocus, /Deliberately keep the operator on the chosen queue[\s\S]*?return;/,
+  'status transitions must not switch the operator to another queue automatically');
+assert.ok(source.includes("const historyOutlet=String(document.getElementById('orderHistoryOutlet')?.value||'ALL')"),
+  'history outlet selector must determine the history query scope');
+assert.ok(source.includes("(selectedQueue==='history'||orderMatchesSelectedScope(o))"),
+  'history may show all authorized outlets independent of the active live queue scope');
+assert.ok(source.includes("outletFilter.addEventListener('change',async()=>{"),
+  'changing the history outlet must reload the history data');
+
 // Avoid full card DOM replacement on every five-second safety poll; this prevents scroll jumps.
 assert.ok(source.includes('body.dataset.jptRenderKey===renderKey&&body.children.length'), 'unchanged order snapshots must preserve the current order-card DOM');
 
