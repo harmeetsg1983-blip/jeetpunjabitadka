@@ -214,6 +214,14 @@ function items(x){
   if(typeof a==='string'){try{a=JSON.parse(a)}catch(e){a=[]}}
   return Array.isArray(a)?a:[];
 }
+function cookingNote(o){const v=o?.cooking_instructions??o?.special_instructions??o?.instructions??o?.customer_note??'';return typeof v==='string'?v.trim().slice(0,1000):'';}
+function speakOrder(o){
+ if(!('speechSynthesis' in window)||typeof SpeechSynthesisUtterance==='undefined'){toast('Voice reading unavailable on this device.');return;}
+ const dishes=items(o).map(i=>Math.max(1,Number(i.qty??i.quantity??1)||1)+' '+String(i.name||i.item_name||'item').slice(0,120));
+ const note=cookingNote(o),u=new SpeechSynthesisUtterance('Order '+String(o.order_no||'').slice(0,40)+'. '+dishes.join('. ')+(note?'. Cooking instructions: '+note:''));
+ u.rate=0.9;u.lang=/[\u0900-\u097F]/.test(u.text)?'hi-IN':'en-IN';
+ try{speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){toast('Could not read order aloud.')}
+}
 function toast(msg){
   try{window.toast?.(msg)}catch(e){}
   const n=document.getElementById('ordersNotice');
@@ -462,14 +470,17 @@ function render(){
     const itemHtml=its.length?its.map(i=>
       '<div class="jpt-item-line"><span>'+esc(i.name||i.item_name||'Item')+'</span><b>× '+Number(i.qty??i.quantity??1)+'</b></div>'
     ).join(''):'<div class="muted">No item details available</div>';
-    const action=actionHtml(o);
+    const note=cookingNote(o);
+     const noteHtml=note?'<div class="jpt-cooking-note" style="margin:10px 0;padding:12px;border:1px solid #c59b41;border-radius:10px"><b>COOKING INSTRUCTIONS</b><div style="white-space:pre-wrap">'+esc(note)+'</div></div>':'';
+     const voiceHtml='<button type="button" class="btn" data-speak-order="'+esc(o.id)+'" aria-label="Read order aloud">🔊 LISTEN TO ORDER</button>';
+     const action=actionHtml(o);
     return dayHeader+'<article class="jpt-order-card'+newClass+'" data-order-card="'+esc(o.id)+'">'+
       '<div class="jpt-order-head"><div><div class="jpt-label">ORDER ID</div><div class="jpt-order-id">#'+esc(o.order_no||o.id)+'</div></div>'+
       '<span class="tag jpt-status">'+esc(boardStatus(o).replaceAll('_',' ').toUpperCase())+'</span></div>'+
       '<div class="muted" style="margin:6px 0;font-weight:800">OUTLET: '+esc(outletDisplayName(o.outlet_id))+'</div>'+
       '<div class="jpt-customer"><div class="jpt-label">CUSTOMER</div><div class="jpt-customer-name">'+esc(o.customer_name||'Customer')+'</div>'+
       (o.customer_phone?'<div class="muted">'+esc(o.customer_phone)+'</div>':'')+'</div>'+
-      '<div class="jpt-items"><div class="jpt-label">ITEMS</div>'+itemHtml+'</div>'+
+      '<div class="jpt-items"><div class="jpt-label">ITEMS</div>'+itemHtml+'</div>'+noteHtml+voiceHtml+
       '<div class="jpt-order-meta"><div><span class="jpt-label">ORDER VALUE</span><b>'+money(o.total??o.grand_total??0)+'</b></div>'+
       '<div><span class="jpt-label">ORDER TIME</span><span>'+esc(o.created_at?new Date(o.created_at).toLocaleString('en-IN'):'—')+'</span></div></div>'+
       paymentHtml+'<div class="jpt-prep">'+timerButton+rider+'</div>'+
@@ -478,6 +489,7 @@ function render(){
   }).join('')||'<div class="jpt-no-orders">No orders in this queue.</div>';
   body.dataset.jptRenderKey=renderKey;
 
+  body.querySelectorAll('[data-speak-order]').forEach(b=>b.onclick=()=>{const o=rows.get(String(b.dataset.speakOrder));if(o&&orderBelongsToManagedOutlet(o)&&orderMatchesSelectedScope(o))speakOrder(o);});
   document.querySelectorAll('[data-minus]').forEach(b=>b.onclick=()=>{
     const o=rows.get(String(b.dataset.minus)); if(!o)return;
     o.__draftMinutes=Math.max(15,Number(o.__draftMinutes||o.target_minutes||15)-1); render();
