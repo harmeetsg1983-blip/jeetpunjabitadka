@@ -679,7 +679,10 @@ async function reject(id){
       if(actionAuthGeneration!==authGeneration)return;
       if(!server)throw new Error('Server returned no order record; cancellation was not confirmed.');
     }
-    rows.set(key,Object.assign(o,server));
+    /* A delayed RPC response must not roll a newer Realtime-confirmed lifecycle backward. */
+    const latestBeforeConfirm=rows.get(key)||o;
+    const confirmed=mergeOrderMonotonic(latestBeforeConfirm,server);
+    rows.set(key,confirmed);
     if(status(server.status)!=='cancelled'){
       if(status(server.status)!=='new')acknowledgeRingtone(key);
       throw new Error('Server did not confirm cancellation; current status is '+status(server.status).toUpperCase()+'.');
@@ -692,8 +695,11 @@ async function reject(id){
     const fresh=await read(id,o?.outlet_id).catch(()=>null);
     if(actionAuthGeneration!==authGeneration)return;
     if(fresh){
-      rows.set(key,fresh);
-      if(status(fresh.status)!=='new')acknowledgeRingtone(key);
+      /* Reconcile failed REJECT against the latest row; a stale SELECT must not undo a newer terminal state. */
+      const latest=rows.get(key)||o;
+      const reconciled=mergeOrderMonotonic(latest,fresh);
+      rows.set(key,reconciled);
+      if(status(reconciled.status)!=='new')acknowledgeRingtone(key);
     }
     render(); toast('REJECT failed: '+(e.message||e));
   }finally{
