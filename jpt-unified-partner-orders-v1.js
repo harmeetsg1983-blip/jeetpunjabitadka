@@ -224,7 +224,7 @@ function speakOrder(o){
 }
 /* Accessible order readout: explicit user gesture only. */
 function cookingInstructions(o){
- const v=o?.cooking_instructions??o?.special_instructions??o?.instructions??o?.customer_instructions??'';
+ const v=o?.cooking_instructions??o?.special_instructions??o?.instructions??o?.customer_instructions??o?.notes??'';
  return typeof v==='string'?v.trim():'';
 }
 function speakOrder(id){
