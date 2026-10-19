@@ -147,7 +147,10 @@ assert.match(acceptedAction, /MARK READY/, 'READY action label must be visible i
 const preparingAction = api.actionHtml({ id: 7, status: 'preparing', deadline_at: new Date(Date.now()+30*60*1000).toISOString() });
 assert.match(preparingAction, /data-ready="7"/, 'preparation countdown must never gate early MARK READY');
 assert.ok(source.includes('PREP TIME LEFT · '+''), 'countdown must be labelled as preparation time, not as the READY action');
-assert.ok(source.includes('data-timer="'+'+esc(o.id)+'+'"'), 'countdown and action are separate UI elements');
+const orderRenderSource = between('function render(){', '\\nfunction updateCounts(');
+assert.ok(orderRenderSource.includes('const timerButton='), 'preparation countdown must render in its own timer element');
+assert.ok(orderRenderSource.includes("'<div class=\\\"jpt-prep\\\">'+timerButton+rider+'</div>'"), 'countdown must stay in the prep panel separate from the action panel');
+assert.ok(orderRenderSource.includes("'<div class=\\\"jpt-actions\\\"><div class=\\\"jpt-label\\\">ACTIONS</div>'+action+'</div>'"), 'READY action must render in the separate actions panel');
 
 // All Outlet Select scopes queries/cards/realtime to the user's explicit scope;
 // the default and invalid/stale scope both safely fall back to all authorized outlets.
