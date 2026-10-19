@@ -214,14 +214,7 @@ function items(x){
   if(typeof a==='string'){try{a=JSON.parse(a)}catch(e){a=[]}}
   return Array.isArray(a)?a:[];
 }
-function cookingNote(o){const v=o?.cooking_instructions??o?.special_instructions??o?.instructions??o?.customer_note??'';return typeof v==='string'?v.trim().slice(0,1000):'';}
-function speakOrder(o){
- if(!('speechSynthesis' in window)||typeof SpeechSynthesisUtterance==='undefined'){toast('Voice reading unavailable on this device.');return;}
- const dishes=items(o).map(i=>Math.max(1,Number(i.qty??i.quantity??1)||1)+' '+String(i.name||i.item_name||'item').slice(0,120));
- const note=cookingNote(o),u=new SpeechSynthesisUtterance('Order '+String(o.order_no||'').slice(0,40)+'. '+dishes.join('. ')+(note?'. Cooking instructions: '+note:''));
- u.rate=0.9;u.lang=/[\u0900-\u097F]/.test(u.text)?'hi-IN':'en-IN';
- try{speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){toast('Could not read order aloud.')}
-}
+function cookingNote(o){const v=o?.cooking_instructions??o?.special_instructions??o?.instructions??o?.customer_instructions??o?.customer_note??o?.notes??'';return typeof v==='string'?v.trim().slice(0,1000):'';}
 /* Accessible order readout: explicit user gesture only. */
 function cookingInstructions(o){
  const v=o?.cooking_instructions??o?.special_instructions??o?.instructions??o?.customer_instructions??o?.notes??'';
@@ -485,10 +478,7 @@ function render(){
       '<div class="jpt-item-line"><span>'+esc(i.name||i.item_name||'Item')+'</span><b>× '+Number(i.qty??i.quantity??1)+'</b></div>'
     ).join(''):'<div class="muted">No item details available</div>';
     const note=cookingNote(o);
-     const noteHtml=note?'<div class="jpt-cooking-note" style="margin:10px 0;padding:12px;border:1px solid #c59b41;border-radius:10px"><b>COOKING INSTRUCTIONS</b><div style="white-space:pre-wrap">'+esc(note)+'</div></div>':'';
-     const voiceHtml='<button type="button" class="btn" data-speak-order="'+esc(o.id)+'" aria-label="Read order aloud">🔊 LISTEN TO ORDER</button>';
-     const instructions=cookingInstructions(o);
-    const instructionHtml=instructions?'<div class="jpt-cooking-instructions" style="margin:10px 0;padding:12px;border:1px solid #b58b3b;border-radius:10px;background:#201b10"><strong>COOKING INSTRUCTIONS</strong><div style="margin-top:5px;white-space:pre-wrap">'+esc(instructions)+'</div></div>':'';
+    const instructionHtml=note?'<div class="jpt-cooking-instructions" style="margin:10px 0;padding:12px;border:1px solid #b58b3b;border-radius:10px;background:#201b10"><strong>COOKING INSTRUCTIONS</strong><div style="margin-top:5px;white-space:pre-wrap">'+esc(note)+'</div></div>':'';
     const speechHtml='<button type="button" class="btn" data-speak-order="'+esc(o.id)+'" aria-label="Listen to order details">🔊 LISTEN TO ORDER</button>';
     const action=actionHtml(o);
     return dayHeader+'<article class="jpt-order-card'+newClass+'" data-order-card="'+esc(o.id)+'">'+
