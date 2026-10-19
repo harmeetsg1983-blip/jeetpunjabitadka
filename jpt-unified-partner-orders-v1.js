@@ -286,7 +286,9 @@ function actionHtml(o){
       '<button type="button" class="btn red" data-reject="'+id+'">REJECT ORDER</button></div>';
   }
   if(st==='accepted'||st==='preparing'){
-    /* MARK READY stays available while the preparation countdown runs. */
+    const deadline=o.deadline_at||o.__localDeadline;
+    const left=deadline?new Date(deadline).getTime()-Date.now():0;
+    if(left>0)return '<div class="muted jpt-prep-wait" data-prep-wait="'+id+'">Preparation in progress — countdown running</div>';
     return '<button class="btn gold" data-ready="'+id+'">MARK READY</button>';
   }
   if(st==='ready')
