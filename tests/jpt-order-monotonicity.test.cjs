@@ -160,7 +160,7 @@ const scopeStore = {
   setItem(key, value) { if (key === 'jpt_partner_order_scope') this.value = value; }
 };
 const scopeApi = vm.runInNewContext(
-  scopeSource + '\\n;({selectedOutletCodes, orderMatchesSelectedScope})',
+  scopeSource + '\n;({selectedOutletCodes, orderMatchesSelectedScope})',
   {
     window: { JPTPartnerAccess: { getOutlets: () => [{outlet_id:'JPT-001'},{outlet_id:'NME-001'}] } },
     localStorage: scopeStore,
