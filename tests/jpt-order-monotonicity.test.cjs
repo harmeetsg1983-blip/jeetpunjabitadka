@@ -147,7 +147,7 @@ assert.match(acceptedAction, /MARK READY/, 'READY action label must be visible i
 const preparingAction = api.actionHtml({ id: 7, status: 'preparing', deadline_at: new Date(Date.now()+30*60*1000).toISOString() });
 assert.match(preparingAction, /data-ready="7"/, 'preparation countdown must never gate early MARK READY');
 assert.ok(source.includes('PREP TIME LEFT · '+''), 'countdown must be labelled as preparation time, not as the READY action');
-const orderRenderSource = between('function render(){', '\\nfunction updateCounts(');
+const orderRenderSource = between('function render(){', 'function updateCounts(');
 assert.ok(orderRenderSource.includes('const timerButton='), 'preparation countdown must render in its own timer element');
 assert.match(orderRenderSource, /jpt-prep[^\n]*timerButton\+rider/, 'countdown must stay in the prep panel separate from the action panel');
 assert.match(orderRenderSource, /jpt-actions[^\n]*\+action\+/, 'READY action must render in the separate actions panel');
