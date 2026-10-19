@@ -146,4 +146,9 @@ const outletPicker = fs.readFileSync('jpt-partner-final-touch-v12.js', 'utf8');
 assert.ok(outletPicker.includes("allButton.textContent='All Outlet Select';"), 'outlet picker must offer All Outlet Select');
 assert.ok(outletPicker.includes("localStorage.setItem('jpt_partner_order_scope','ALL')"), 'All Outlet Select must set all-outlet order scope');
 
-console.log('GREEN: 30 order lifecycle, UPI, realtime, ringtone, All Outlet Select and UI-stability regression assertions passed');
+const adminUi = fs.readFileSync('admin.html', 'utf8');
+assert.ok(adminUi.includes('#orderQueueBar.jpt-status-tabs{position:relative!important;top:auto!important;z-index:1!important;transform:none!important}'), 'order queue tabs must not float over the header/logout control');
+const navUi = fs.readFileSync('jpt-partner-dual-bar-nav-v1.js', 'utf8');
+assert.ok(navUi.includes("window.scrollTo({top:0,behavior:'auto'});"), 'partner navigation must avoid animated scroll jumps');
+
+console.log('GREEN: 32 order lifecycle, UPI, realtime, ringtone, All Outlet Select and UI-stability regression assertions passed');
