@@ -300,7 +300,11 @@ function actionHtml(o){
 function render(){
   const body=document.getElementById('ordersBody');
   if(!body)return;
-  const all=[...rows.values()].filter(o=>orderBelongsToManagedOutlet(o)&&shouldShowOnBoard(o))
+  const scope=String(localStorage.getItem('jpt_partner_order_scope')||'ALL');
+  const all=[...rows.values()].filter(o=>
+    orderBelongsToManagedOutlet(o)&&
+    (scope==='ALL'||String(o.outlet_id||'')===scope)&&
+    shouldShowOnBoard(o))
     .sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
   /* ALL is the active workboard only. Completed/cancelled records belong in history tabs
      and must never return to ALL or trigger active-order actions. */
@@ -622,6 +626,9 @@ async function lifecycleTransition(id,next){
 }
 async function markReady(id){return lifecycleTransition(id,'ready')}
 async function transition(id,next){return lifecycleTransition(id,next)}
+window.addEventListener('jpt:order-scope-changed',function(){
+  render();
+});
 async function initialLoad(){
   const codes=await resolveManagedOutlets();
   if(!codes.length){
