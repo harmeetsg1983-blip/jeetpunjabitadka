@@ -288,8 +288,11 @@ function actionHtml(o){
   if(st==='accepted'||st==='preparing'){
     const deadline=o.deadline_at||o.__localDeadline;
     const left=deadline?new Date(deadline).getTime()-Date.now():0;
-    if(left>0)return '<div class="muted jpt-prep-wait" data-prep-wait="'+id+'">Preparation in progress — countdown running</div>';
-    return '<button class="btn gold" data-ready="'+id+'">MARK READY</button>';
+    const countdown=left>0
+      ? '<div class="muted jpt-prep-wait" data-prep-wait="'+id+'">Preparation in progress — countdown running</div>'
+      : '';
+    /* Keep the existing countdown, but never hide MARK READY while preparing. */
+    return countdown+'<button class="btn gold" data-ready="'+id+'">MARK READY</button>';
   }
   if(st==='ready')
     return '<button class="btn gold" data-delivery="'+id+'">OUT FOR DELIVERY</button>';
