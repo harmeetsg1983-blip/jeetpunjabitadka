@@ -181,6 +181,9 @@ assert.ok(source.includes('primeOrderAudio().then(primed=>{if(primed)retryBlocke
 
 // Order accessibility regression checks: explicit tap-to-speak only, with outlet scope enforced.
 assert.ok(source.includes('function cookingInstructions(o){'), 'partner order cards must resolve supported cooking-instruction fields');
+assert.ok(source.includes("o?.customer_note??o?.notes??''"), 'partner order card and voice readout must consume the existing notes field used by checkout');
+assert.equal((source.match(/COOKING INSTRUCTIONS/g)||[]).length, 1, 'each order card must show one cooking-instructions panel, not duplicate panels');
+assert.equal((source.match(/data-speak-order=/g)||[]).length, 1, 'each order card must show one listen-to-order button');
 assert.ok(source.includes('COOKING INSTRUCTIONS'), 'customer cooking instructions must be visibly separated on the order card');
 assert.ok(source.includes('data-speak-order='), 'each order card must provide a listen-to-order control');
 assert.ok(source.includes("document.querySelectorAll('[data-speak-order]').forEach(b=>b.onclick=()=>speakOrder(b.dataset.speakOrder))"), 'speech playback must be initiated by an explicit button tap');
