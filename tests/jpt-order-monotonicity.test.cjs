@@ -209,9 +209,11 @@ assert.ok(customerLiveSource.includes("table:'checkout_sponsor_ads'"), 'tracking
 const adminHtmlSource = fs.readFileSync('admin.html', 'utf8');
 const customerHtmlSource = fs.readFileSync('index.html', 'utf8');
 const partnerSwSource = fs.readFileSync('jpt-partner-sw.js', 'utf8');
+const partnerAppSource = fs.readFileSync('partner-app.html', 'utf8');
 assert.ok(adminHtmlSource.includes('jpt-unified-partner-orders-v1.js?v=20261019-order-runtime-async-fix-10'), 'partner HTML must cache-bust the corrected order runtime');
 assert.ok(customerHtmlSource.includes('jpt-unified-customer-live-v1.js?v=20261019-sponsor-rotation-10s-4'), 'customer HTML must cache-bust sponsor rotation changes');
 assert.ok(partnerSwSource.includes('jpt-partner-pwa-v32-order-runtime-fix'), 'partner service-worker cache generation must advance with runtime fixes');
+assert.ok(partnerAppSource.includes('jpt-partner-sw.js?v=20261019-order-runtime-fix-3'), 'partner app shell must register the current service-worker URL');
 
 
 
