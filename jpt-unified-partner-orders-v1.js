@@ -1001,6 +1001,13 @@ async function performSubscribe(){
         console.warn('[JPT-DIAG][INSERT rejected by outlet gate]',{channelOutlet:code,id:o?.id,outlet_id:o?.outlet_id,managedOutlets:managedOutlets()});
         return;
       }
+      if(!orderMatchesSelectedScope(o)){
+        const key=String(o.id);
+        rows.delete(key);
+        acknowledgeRingtone(key);
+        render();
+        return;
+      }
       /* Enforce the board cutover on Realtime too; otherwise pre-cutover orders
          can reappear after initialLoad correctly hides them. */
       if(!shouldShowOnBoard(o)){
@@ -1030,6 +1037,13 @@ async function performSubscribe(){
     ch.on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
       const o=payload?.new;
       if(!o || String(o.outlet_id)!==code || !liveCodes.includes(String(o.outlet_id)))return;
+      if(!orderMatchesSelectedScope(o)){
+        const key=String(o.id);
+        rows.delete(key);
+        acknowledgeRingtone(key);
+        render();
+        return;
+      }
       /* Updates for historical orders must not reinsert them into the board. */
       if(!shouldShowOnBoard(o)){
         rows.delete(String(o.id));
@@ -1093,6 +1107,12 @@ async function performSubscribe(){
         outlet:code,event:eventName,id:String(o.id),status:status(o.status)
       });
       const key=String(o.id);
+      if(!orderMatchesSelectedScope(o)){
+        rows.delete(key);
+        acknowledgeRingtone(key);
+        render();
+        return;
+      }
       if(actionBusy.has(key)||transitionBusy.has(key))return;
       if(!shouldShowOnBoard(o)){
         rows.delete(key);
