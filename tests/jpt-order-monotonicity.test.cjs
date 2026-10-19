@@ -180,6 +180,8 @@ assert.ok(source.includes('primeOrderAudio().then(primed=>{if(primed)retryBlocke
 assert.ok(source.includes('async function enableBackgroundAlerts(){'), 'order sound permission flow must be declared async before awaiting browser permission/audio priming');
 assert.ok(!source.includes('async async function enableBackgroundAlerts(){'), 'order sound permission function must not have a duplicated async keyword that breaks script parsing');
 assert.ok(source.includes('async function primeOrderAudio(){'), 'audio priming must be async because it awaits media playback and AudioContext resume');
+assert.ok(source.includes('if(p?.then) await p;'), 'audio priming must report playback rejection instead of silently treating a blocked ringtone as primed');
+assert.ok(!source.includes('if(p?.then) await p.catch(()=>{});'), 'audio priming must not swallow browser playback rejection');
 assert.ok(!source.includes('\nfunction primeOrderAudio(){'), 'audio priming must not remain a non-async function with await expressions');
 assert.ok(!source.includes('async async function primeOrderAudio(){'), 'audio priming must not have a duplicate async keyword that breaks script parsing');
 
