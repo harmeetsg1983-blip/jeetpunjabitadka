@@ -593,9 +593,12 @@ async function accept(id){
     if(r.error)throw r.error;
     const server=Array.isArray(r.data)?r.data[0]:r.data;
     if(!server)throw new Error('Server returned no order record; status was not confirmed.');
-    rows.set(key,Object.assign(o,server));
+    /* A delayed ACCEPT RPC must not roll a newer Realtime-confirmed lifecycle backward. */
+    const latestBeforeConfirm=rows.get(key)||o;
+    const confirmed=mergeOrderMonotonic(latestBeforeConfirm,server);
+    rows.set(key,confirmed);
     acknowledgeRingtone(key);
-    focusQueueForStatus(rows.get(key)?.status||'accepted');
+    focusQueueForStatus(confirmed.status||'accepted');
     toast('Order accepted — '+minutes+' minute preparation timer started.');
     render();
   }catch(e){
@@ -628,14 +631,19 @@ async function accept(id){
         fresh=rows.get(key)||null;
       }
       if(fresh){
-        rows.set(key,Object.assign(o,fresh));
-        const current=status(fresh.status);
+        /* Reconcile against the latest row so a stale SELECT cannot undo a newer Realtime state. */
+        const latest=rows.get(key)||o;
+        const reconciled=mergeOrderMonotonic(latest,fresh);
+        rows.set(key,reconciled);
+        const current=status(reconciled.status);
         if(current!=='new'){
           acknowledgeRingtone(key);
           focusQueueForStatus(current);
           toast('Server status synced: '+current.toUpperCase()+'. Duplicate accept stopped.');
         }else{
-          Object.assign(o,previous); rows.set(key,o);
+          Object.assign(o,previous);
+          const latestAfterRestore=rows.get(key)||o;
+          rows.set(key,mergeOrderMonotonic(latestAfterRestore,o));
           focusQueueForStatus('new');
           toast('ACCEPT failed: '+message);
         }
