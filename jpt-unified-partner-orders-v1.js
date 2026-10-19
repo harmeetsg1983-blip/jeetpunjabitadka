@@ -47,7 +47,7 @@ function updateVisibleDiagnostics(extra){
    - no customer/order transition logic is changed here.
 */
 
-async function primeOrderAudio(){
+async async function primeOrderAudio(){
   try{
     if(!audio){
       audio=new Audio('./ringtones/1000449570.mp4');
