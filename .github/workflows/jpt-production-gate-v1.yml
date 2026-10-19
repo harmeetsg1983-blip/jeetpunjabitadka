@@ -57,7 +57,7 @@ jobs:
           test -f jpt-unified-partner-orders-v1.js
           grep -Fq 'jpt-unified-partner-orders-v1.js' admin.html
           grep -Fq 'jpt-unified-partner-orders-v1.js?v=20261019-order-runtime-reject-monotonic-11' admin.html
-          grep -Fq 'admin.html?v=20261019-all-outlet-stable-9' partner-v107.html
+          grep -Fq 'admin.html?v=20261019-order-runtime-reject-monotonic-11' partner-v107.html
           grep -Fq 'jpt-partner-access-bridge-v2.js' admin.html
           grep -Fq 'jpt-partner-final-touch-v10.js?v=20261019-header-clean-1' admin.html
           grep -Fq 'jpt-partner-final-touch-v12.js?v=20261019-all-outlet-picker-1' admin.html
