@@ -800,14 +800,16 @@ async function lifecycleTransition(id,next){
       fresh=rows.get(key)||null;
     }
     if(fresh){
-      /* Reconciliation reads may briefly lag behind a confirmed transition.
-         Preserve a later lifecycle state already observed by this runtime. */
-      /* A direct server read resolves a failed transition. Prefer the server's
-         current status here so a stale ACCEPTED card cannot survive a NEW response. */
+      /* Reconcile a failed transition against the last non-optimistic state.
+         The card was optimistically changed to "next" above; treating that
+         temporary value as confirmed would make a failed READY/DELIVERY action
+         stick in the UI. Conversely, a later Realtime-confirmed state must not
+         be rolled backward by a stale SELECT response. */
       const prior=rows.get(key)||o;
-      const reconciled=Object.assign({},prior,fresh);
-      if(status(prior.status)!==status(fresh.status))delete reconciled.__optimisticStatus;
-      if(prior.__draftMinutes!==undefined)reconciled.__draftMinutes=prior.__draftMinutes;
+      const priorForMerge=prior.__optimisticStatus===next?before:prior;
+      const reconciled=mergeOrderMonotonic(priorForMerge,fresh);
+      if(status(priorForMerge.status)!==status(fresh.status))delete reconciled.__optimisticStatus;
+      if(priorForMerge.__draftMinutes!==undefined)reconciled.__draftMinutes=priorForMerge.__draftMinutes;
       rows.set(key,reconciled);
       focusQueueForStatus(reconciled.status);
       toast('Order state reconciled from server: '+status(reconciled.status).toUpperCase()+'. '+(String(e?.message||e)));
