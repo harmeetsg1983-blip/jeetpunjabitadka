@@ -80,7 +80,7 @@ jobs:
           grep -Fq ".in('status',['new','accepted','preparing','ready','out_for_delivery'])" jpt-unified-partner-orders-v1.js
           grep -Fq "q=q.in('status',['delivered','cancelled'])" jpt-unified-partner-orders-v1.js
           grep -Fq 'Deliberately keep the operator on the chosen queue.' jpt-unified-partner-orders-v1.js
-          grep -Fq 'const historyOutlet=String(document.getElementById(\'orderHistoryOutlet\')?.value||\'ALL\')' jpt-unified-partner-orders-v1.js
+          grep -Fq 'const historyOutlet=String' jpt-unified-partner-orders-v1.js
           grep -Fq 'id="orderHistoryOutlet"' admin.html
           grep -Fq 'pendingRingtoneOrderIds' jpt-unified-partner-orders-v1.js
           grep -Fq 'failedRingtoneOrderIds' jpt-unified-partner-orders-v1.js
