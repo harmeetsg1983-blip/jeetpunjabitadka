@@ -64,7 +64,8 @@ jobs:
           grep -Fq 'jpt-partner-sw.js?v=20261020-stable-queues-history-outlet-1' partner-app.html
           grep -Fq 'jpt-partner-sw.js?v=20261020-stable-queues-history-outlet-1' admin.html
           grep -Fq "const ORDER_SCOPE_KEY='jpt_partner_order_scope';" jpt-unified-partner-orders-v1.js
-          grep -Fq 'const codes=selectedOutletCodes(authorizedCodes);' jpt-unified-partner-orders-v1.js
+          grep -Fq ': selectedOutletCodes(authorizedCodes);' jpt-unified-partner-orders-v1.js
+          grep -Fq "? (historyOutlet==='ALL'" jpt-unified-partner-orders-v1.js
           grep -Fq 'body.dataset.jptRenderKey===renderKey&&body.children.length' jpt-unified-partner-orders-v1.js
           grep -Fq 'await initialLoad({alertNewOrders:true});' jpt-unified-partner-orders-v1.js
           grep -Fq 'function retryBlockedRingtones()' jpt-unified-partner-orders-v1.js
