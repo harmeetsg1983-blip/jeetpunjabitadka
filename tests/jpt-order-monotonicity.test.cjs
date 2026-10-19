@@ -144,6 +144,10 @@ assert.match(
 const acceptedAction = api.actionHtml({ id: 6, status: 'accepted' });
 assert.match(acceptedAction, /data-ready="6"/, 'ACCEPTED order must render a MARK READY action');
 assert.match(acceptedAction, /MARK READY/, 'READY action label must be visible in the generated markup');
+const preparingAction = api.actionHtml({ id: 7, status: 'preparing', deadline_at: new Date(Date.now()+30*60*1000).toISOString() });
+assert.match(preparingAction, /data-ready="7"/, 'preparation countdown must never gate early MARK READY');
+assert.ok(source.includes('PREP TIME LEFT · '+''), 'countdown must be labelled as preparation time, not as the READY action');
+assert.ok(source.includes('data-timer="'+'+esc(o.id)+'+'"'), 'countdown and action are separate UI elements');
 
 // All Outlet Select scopes queries/cards/realtime to the user's explicit scope;
 // the default and invalid/stale scope both safely fall back to all authorized outlets.
