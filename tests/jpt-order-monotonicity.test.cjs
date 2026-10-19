@@ -155,7 +155,8 @@ assert.match(orderRenderSource, /jpt-actions[^\n]*\+action\+/, 'READY action mus
 // All Outlet Select scopes queries/cards/realtime to the user's explicit scope;
 // the default and invalid/stale scope both safely fall back to all authorized outlets.
 assert.ok(source.includes("const ORDER_SCOPE_KEY='jpt_partner_order_scope';"), 'order scope must use its dedicated preference key');
-assert.ok(source.includes('const codes=selectedOutletCodes(authorizedCodes);'), 'initial order queries must honor selected outlet scope');
+assert.ok(source.includes(': selectedOutletCodes(authorizedCodes);'), 'live order queries must honor selected outlet scope');
+assert.ok(source.includes("? (historyOutlet==='ALL'"), 'history query scope must support all authorized outlets independently');
 assert.ok(source.includes('orderMatchesSelectedScope(o)'), 'order cards and realtime events must honor selected outlet scope');
 assert.ok(source.includes('await initialLoad({alertNewOrders:true});'), 'startup/scope refresh must ring recent NEW orders already placed while app was closed');
 
