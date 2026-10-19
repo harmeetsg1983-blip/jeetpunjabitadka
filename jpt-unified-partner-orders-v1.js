@@ -85,7 +85,7 @@ function retryBlockedRingtones(){
     if(order&&status(order.status)==='new')startRingtone(order);
   }
 }
-async function enableBackgroundAlerts(){
+async async function enableBackgroundAlerts(){
   try{
     if('Notification' in window && Notification.permission==='default') await Notification.requestPermission();
   }catch(e){}
