@@ -196,4 +196,11 @@ assert.ok(source.includes("window.speechSynthesis.speak(u)"), 'listen control mu
 assert.ok(source.includes("u.lang='en-IN'"), 'speech readout must use an India English voice locale');
 assert.ok(!source.includes('speakOrder(o.id);'), 'speech must not start automatically when rendering a card');
 
+// Customer live sponsor rotation advances videos as well as images on the same 10-second cadence.
+const customerLiveSource = fs.readFileSync('jpt-unified-customer-live-v1.js', 'utf8');
+assert.ok(customerLiveSource.includes('sponsorTimer=setTimeout(advance,10000)'), 'customer tracking sponsor media must rotate every 10 seconds, including video');
+assert.ok(customerLiveSource.includes("if(type==='video'){el.onended=advance;el.play?.().catch(()=>{})}"), 'video sponsor may advance sooner when playback ends');
+assert.ok(customerLiveSource.includes("table:'checkout_sponsor_ads'"), 'tracking sponsor updates must continue to use the existing sponsor manager table');
+
+
 console.log('GREEN: order lifecycle, multi-outlet, ringtone, UI stability and order voice/instruction regression assertions passed');
