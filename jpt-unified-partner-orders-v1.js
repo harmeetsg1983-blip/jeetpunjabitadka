@@ -852,7 +852,11 @@ async function initialLoad(options={}){
   const loadSequence=++initialLoadSequence;
   const verifyRows=options.verifyRows!==false;
   const authorizedCodes=await resolveManagedOutlets();
-  const codes=selectedOutletCodes(authorizedCodes);
+  const historyMode=selectedQueue==='history';
+  const historyOutlet=historyMode?String(document.getElementById('orderHistoryOutlet')?.value||'ALL'):'ALL';
+  const codes=historyMode
+    ? (historyOutlet==='ALL'?[...new Set(authorizedCodes.map(String).filter(Boolean))]:authorizedCodes.map(String).filter(code=>code===historyOutlet))
+    : selectedOutletCodes(authorizedCodes);
   if(loadAuthGeneration!==authGeneration)return;
   if(!codes.length){
     if(options.preserveOnError){
@@ -868,7 +872,6 @@ async function initialLoad(options={}){
   /* Active queues use a compact recent snapshot. History pages through the full
      90-day date-ordered window so busy outlets are not silently truncated at 1,000 rows.
      This is read-only and does not alter order or payment records. */
-  const historyMode=selectedQueue==='history';
   const historySince=new Date(Date.now()-90*24*60*60*1000).toISOString();
   const historyDate=historyMode?String(document.getElementById('orderHistoryDate')?.value||''):'';
   let historyDayStart=null,historyDayEnd=null;
@@ -1254,8 +1257,9 @@ function syncHistoryTools(){
     outletFilter.value=options.some(x=>x.value===preferred)?preferred:'ALL';
     if(outletFilter.dataset.bound!=='1'){
       outletFilter.dataset.bound='1';
-      outletFilter.addEventListener('change',()=>{
+      outletFilter.addEventListener('change',async()=>{
         localStorage.setItem('jpt_partner_history_outlet',String(outletFilter.value||'ALL'));
+        await initialLoad();
         render();
       });
     }
