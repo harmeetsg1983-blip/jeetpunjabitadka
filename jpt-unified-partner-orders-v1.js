@@ -631,19 +631,29 @@ async function initialLoad(){
     toast('Partner outlet access is not ready. Orders were not queried under a fallback outlet. Retry login/access refresh.');
     return;
   }
-  /* Hide only old terminal/history orders. Active lifecycle orders must remain visible
-     even when they were created before the board cutover. */
-  const r=codes.length===1
-    ? await window.sb.from('orders').select('*').eq('outlet_id',codes[0]).order('created_at',{ascending:false}).limit(100)
-    : await window.sb.from('orders').select('*').in('outlet_id',codes).order('created_at',{ascending:false}).limit(500);
-  if(r.error){
-    /* A failed/unauthorized refresh must never leave old cards presented as current NEW orders. */
-    rows.clear();
-    stopRingtone();
-    render();
-    toast('Orders load failed: '+r.error.message+' — stale cards cleared; check partner session/outlet access.');
-    return;
+  /* Load every page; page size is a transport batch, NOT an order-count cap.
+     Keep fetching until the server returns a short/empty page. */
+  const PAGE_SIZE=500;
+  const fetched=[];
+  let offset=0;
+  while(true){
+    let query=window.sb.from('orders').select('*');
+    query=codes.length===1?query.eq('outlet_id',codes[0]):query.in('outlet_id',codes);
+    const page=await query.order('created_at',{ascending:false}).order('id',{ascending:false}).range(offset,offset+PAGE_SIZE-1);
+    if(page.error){
+      /* A failed/unauthorized refresh must never leave old cards presented as current NEW orders. */
+      rows.clear();
+      stopRingtone();
+      render();
+      toast('Orders load failed: '+page.error.message+' — stale cards cleared; check partner session/outlet access.');
+      return;
+    }
+    const batch=page.data||[];
+    fetched.push(...batch);
+    if(batch.length<PAGE_SIZE)break;
+    offset+=PAGE_SIZE;
   }
+  const r={data:fetched,error:null};
   /* Server query is authoritative for the current board snapshot.
      Preserve local action drafts only where possible, but never preserve a stale
      lifecycle status over a successful fresh server response. */
@@ -668,7 +678,9 @@ async function initialLoad(){
   /* Reconcile cards against the same server lookup used by action recovery.
      Missing/unreadable rows are hidden from this in-memory queue only.
      Never delete or update database records during reconciliation. */
-  const checks=[...rows.entries()];
+  /* Verify only live orders individually; history rows came from the successful
+     paged snapshot and should not generate one extra network request each. */
+  const checks=[...rows.entries()].filter(([,o])=>LIVE_STATUSES.has(status(o.status)));
   for(let i=0;i<checks.length;i+=8){
     await Promise.all(checks.slice(i,i+8).map(async([key,o])=>{
       if(actionBusy.has(key)||transitionBusy.has(key))return;
