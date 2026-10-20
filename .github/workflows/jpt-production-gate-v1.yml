@@ -54,12 +54,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # This candidate deliberately uses the unified partner runtime; do not
+          # require the retired legacy order UI to own live queue actions.
           grep -Fq 'outlet' admin.html
           grep -Fq 'Orders' admin.html
-          grep -Fq 'delivery_offer_next' admin.html
-          grep -Fq 'delivery_offer_next' jpt-partner-orders-ui-v1.js
-          grep -Fq 'outlet' jpt-partner-orders-ui-v1.js
-          echo "GREEN: partner outlet/order/delivery-offer markers present"
+          grep -Fq 'jpt-unified-partner-orders-v1.js' admin.html
+          grep -Fq 'delivery_offer_next' jpt-unified-partner-orders-v1.js
+          grep -Fq 'outlet' jpt-unified-partner-orders-v1.js
+          echo "GREEN: unified partner outlet/order/delivery-offer markers present"
 
       - name: Verify locked ringtone integrity
         shell: bash
