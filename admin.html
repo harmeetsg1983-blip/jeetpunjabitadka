@@ -222,28 +222,37 @@ body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
 @media(max-width:480px){.brand{font-size:15px}.jpt-header-tools{gap:4px}.jpt-icon-btn{width:39px;height:39px}.jpt-menu-pro-title-row h2{font-size:19px}.jpt-menu-pro-title-row{align-items:flex-start}.jpt-add-item{padding:10px;font-size:11px}.jpt-menu-pro-actions{grid-template-columns:repeat(2,1fr)}}
 </style>
 <style id="jpt-four-queue-mobile-fit">
-/* Four order queues share the available row width; History must not be pushed off-screen. */
+/* Zomato-inspired status chips: keep every queue reachable on narrow phones.
+   Presentation only; queue keys and order runtime remain unchanged. */
 #orderQueueBar.jpt-status-tabs{
-  display:grid!important;
-  grid-template-columns:repeat(4,minmax(0,1fr))!important;
-  align-items:stretch!important;
-  gap:5px!important;
-  overflow:hidden!important;
-}
-#orderQueueBar .orderQueueBtn{
   display:flex!important;
+  flex-wrap:nowrap!important;
+  align-items:center!important;
+  gap:8px!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;
+  scroll-snap-type:x proximity;
+  scrollbar-width:none;
+}
+#orderQueueBar.jpt-status-tabs::-webkit-scrollbar{display:none}
+#orderQueueBar .orderQueueBtn{
+  display:inline-flex!important;
+  flex:0 0 auto!important;
   align-items:center!important;
   justify-content:center!important;
-  min-width:0!important;
-  width:100%!important;
+  min-width:max-content!important;
+  width:auto!important;
   max-width:none!important;
-  flex:initial!important;
-  padding:8px 3px!important;
-  font-size:10px!important;
+  padding:10px 15px!important;
+  min-height:42px!important;
+  font-size:11px!important;
   line-height:1.2!important;
   text-align:center!important;
-  white-space:normal!important;
-  overflow-wrap:anywhere!important;
+  white-space:nowrap!important;
+  overflow-wrap:normal!important;
+  scroll-snap-align:start;
 }
 </style>
 <style id="jpt-order-screen-stability-v1">html{scroll-behavior:auto!important}#orderQueueBar.jpt-status-tabs{position:relative!important;top:auto!important;z-index:1!important;transform:none!important}#ordersBody.jpt-orders-list{overflow-anchor:auto}.jpt-order-card{overflow-anchor:auto;scroll-margin-top:10px}</style>
