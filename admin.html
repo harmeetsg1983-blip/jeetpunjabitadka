@@ -140,7 +140,7 @@ body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
  overflow-x:auto;overflow-y:hidden;scrollbar-width:none;
  background:rgba(7,7,7,.97);
  border-top:1px solid #242424;border-bottom:1px solid #2e2e2e;
- backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+ /* Android stability: solid sticky bar, no backdrop repaint */
 }
 #orderQueueBar::-webkit-scrollbar{display:none}
 .jpt-status-tab{
@@ -162,7 +162,7 @@ body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
  background:rgba(10,10,10,.98);
  border-top:1px solid #343434;
  box-shadow:0 -10px 30px #000b;
- backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+ /* Android stability: solid bottom nav, no backdrop repaint */
 }
 .jpt-bottom-item{
  appearance:none;border:0;background:transparent;color:#888;
@@ -221,6 +221,32 @@ body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
 @media(min-width:700px){.jpt-menu-pro-card{grid-template-columns:100px 1fr auto;align-items:center}.jpt-menu-image-wrap,.jpt-menu-pro-image{width:100px;height:100px}.jpt-menu-pro-actions{grid-column:auto;grid-template-columns:repeat(2,92px);width:190px}}
 @media(max-width:480px){.brand{font-size:15px}.jpt-header-tools{gap:4px}.jpt-icon-btn{width:39px;height:39px}.jpt-menu-pro-title-row h2{font-size:19px}.jpt-menu-pro-title-row{align-items:flex-start}.jpt-add-item{padding:10px;font-size:11px}.jpt-menu-pro-actions{grid-template-columns:repeat(2,1fr)}}
 </style>
+<style id="jpt-four-queue-mobile-fit">
+/* Four order queues share the available row width; History must not be pushed off-screen. */
+#orderQueueBar.jpt-status-tabs{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  align-items:stretch!important;
+  gap:5px!important;
+  overflow:hidden!important;
+}
+#orderQueueBar .orderQueueBtn{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:0!important;
+  width:100%!important;
+  max-width:none!important;
+  flex:initial!important;
+  padding:8px 3px!important;
+  font-size:10px!important;
+  line-height:1.2!important;
+  text-align:center!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere!important;
+}
+</style>
+<style id="jpt-order-screen-stability-v1">html{scroll-behavior:auto!important}#orderQueueBar.jpt-status-tabs{position:relative!important;top:auto!important;z-index:1!important;transform:none!important}#ordersBody.jpt-orders-list{overflow-anchor:auto}.jpt-order-card{overflow-anchor:auto;scroll-margin-top:10px}</style>
 </head>
 <body>
 <div class="app">
@@ -277,15 +303,11 @@ body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
 
 <section id="orders" class="panel">
  <div class="card"><div class="rowactions"><button class="btn" id="ordersRefresh">↻ Refresh Orders</button><button class="btn gold" id="enableAlarm">🔔 Order Alarm Active</button></div><div id="ordersNotice" class="notice">Loading…</div><div id="orderQueueBar" class="jpt-status-tabs" role="tablist" aria-label="Order status filters">
- <button type="button" class="jpt-status-tab is-active orderQueueBtn" data-queue="all" role="tab">ALL</button>
- <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="new" role="tab">NEW</button>
- <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="accepted" role="tab">ACCEPTED</button>
- <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="preparing" role="tab">PREPARING</button>
+ <button type="button" class="jpt-status-tab is-active orderQueueBtn" data-queue="preparing" role="tab" aria-selected="true">PREPARING</button>
  <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="ready" role="tab">READY</button>
  <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="out_for_delivery" role="tab">OUT FOR DELIVERY</button>
- <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="delivered" role="tab">DELIVERED</button>
- <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="cancelled" role="tab">CANCELLED</button>
-</div><div id="orderAlarm" class="notice" style="display:none;border-color:#d8ae42;background:#211706"><b>🔔 NEW ORDER</b><div id="orderAlarmText" class="muted" style="color:#fff;margin-top:4px"></div><button class="btn gold" id="stopAlarm" style="margin-top:8px">Acknowledge</button></div><div class="jpt-orders-vertical" id="ordersTableWrap"><div id="ordersBody" class="jpt-orders-list"></div></div></div>
+ <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="history" role="tab" aria-selected="false">HISTORY ORDERS</button>
+</div><div id="orderHistoryTools" class="rowactions" style="display:none;margin:10px 0;flex-wrap:wrap;gap:8px"><label for="orderHistoryDate" style="font-weight:800;color:#d8ae42">History date</label><input id="orderHistoryDate" type="date" class="input" aria-label="Filter order history by date"><label for="orderHistoryOutlet" style="font-weight:800;color:#d8ae42">Outlet</label><select id="orderHistoryOutlet" class="input" aria-label="Filter order history by outlet"></select><button type="button" class="btn" id="orderHistoryDateClear">Clear date</button></div><div id="orderAlarm" class="notice" style="display:none;border-color:#d8ae42;background:#211706"><b>🔔 NEW ORDER</b><div id="orderAlarmText" class="muted" style="color:#fff;margin-top:4px"></div><button class="btn gold" id="stopAlarm" style="margin-top:8px">Acknowledge</button></div><div class="jpt-orders-vertical" id="ordersTableWrap"><div id="ordersBody" class="jpt-orders-list"></div></div></div>
 </section>
 
 <section id="menu" class="panel">
@@ -350,30 +372,7 @@ body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./jpt-partner-access-bridge-v2.js?v=20261011-access-await-5"></script>
 <script src="./jpt-live-platform-bridge-v1.js?v=1"></script>
-<script>
-/* JPT Partner Dynamic Outlet Access Bridge V2 — RPC column compatible */
-(function(){
-  'use strict';
-  const SELECTOR_ID='outletSelect';
-  const OUTLET_KEY='jpt_admin_outlet';
-  let authorized=[]; let loading=false;
-  function getSelect(){return document.getElementById(SELECTOR_ID)}
-  function normalize(rows){return (Array.isArray(rows)?rows:[]).filter(r=>r&&(r.outlet_id||r.code)).map(r=>({
-    outlet_id:String(r.outlet_id||r.code),
-    outlet_name:String(r.outlet_name||r.name||r.outlet_id||r.code),
-    access_level:String(r.access_level||'view')
-  }))}
-  function render(rows){const select=getSelect(); if(!select)return false; authorized=normalize(rows); if(!authorized.length)return false;
-    const saved=localStorage.getItem(OUTLET_KEY)||'', current=select.value||'';
-    const selected=authorized.some(x=>x.outlet_id===saved)?saved:authorized.some(x=>x.outlet_id===current)?current:authorized[0].outlet_id;
-    select.replaceChildren(); authorized.forEach(o=>{const op=document.createElement('option');op.value=o.outlet_id;op.textContent=o.outlet_name+' ('+o.outlet_id+')'+(o.access_level==='view'?' — VIEW':'');op.dataset.accessLevel=o.access_level;select.appendChild(op)});
-    select.value=selected; if(typeof select.onchange==='function')select.dispatchEvent(new Event('change',{bubbles:true}));
-    window.JPT_PARTNER_OUTLETS=authorized.slice(); window.JPTPartnerAccess={version:'v2.1',authorizedOutlets:authorized.slice(),canAccess:id=>authorized.some(x=>x.outlet_id===id),getOutlets:()=>authorized.slice(),reload:load}; return true}
-  async function load(){if(loading)return authorized.slice(); loading=true; try{if(!window.sb||typeof window.sb.rpc!=='function')throw new Error('Supabase client not ready'); const {data,error}=await window.sb.rpc('partner_my_outlets'); if(error)throw error; render(data||[]); return authorized.slice()}catch(e){console.warn('[JPT Partner Access] reload failed safely:',e);return authorized.slice()}finally{loading=false}}
-  window.JPTPartnerAccess={version:'v2.1',authorizedOutlets:[],canAccess:()=>false,getOutlets:()=>[],reload:load};
-})();
-
-</script>
+<!-- Duplicate inline access bridge removed: use jpt-partner-access-bridge-v2.js single-flight reload implementation. -->
 <script>
 'use strict';
 const sb=window.supabase.createClient(window.JPT_SUPABASE_URL,window.JPT_SUPABASE_PUBLISHABLE_KEY);
@@ -790,141 +789,28 @@ function renderOrderSummaries(rows){
   $('reportsNotice').textContent='Operational counts are for the selected outlet only and use the current order status values.';
 }
 
-let orderChannel=null;
-window.__JPTDisableLegacyOrderRuntime=async function(){
-  try{if(orderChannel){await sb.removeChannel(orderChannel);orderChannel=null;}}catch(e){}
+/* LEGACY ORDER FLOW DISABLED
+   jpt-unified-partner-orders-v1.js is the sole owner of order queries,
+   realtime, queue actions, countdowns, and ringtone. These compatibility
+   shims remain only because dashboard startup calls these function names.
+   They intentionally do not subscribe, render, mutate, or ring.
+*/
+let orderChannel = null;
+window.__JPTDisableLegacyOrderRuntime = async function () {
+  if (orderChannel) {
+    try { await sb.removeChannel(orderChannel); } catch (_) {}
+    orderChannel = null;
+  }
 };
-let jptNewOrderAudio=null;
-const JPT_NEW_ORDER_AUDIO='./ringtones/1000449570.mp4';
-function ensureNewOrderAudio(){
-  if(!jptNewOrderAudio){
-    jptNewOrderAudio=new Audio(JPT_NEW_ORDER_AUDIO);
-    jptNewOrderAudio.preload='auto';
-    jptNewOrderAudio.loop=true;
-  }
-  return jptNewOrderAudio;
+async function bindOrderRealtime() {
+  if (window.__JPTOrdersV3Active) return true;
+  return false;
 }
-function primeNewOrderAudio(){
-  try{
-    const a=ensureNewOrderAudio();
-    a.muted=true;
-    const p=a.play();
-    if(p&&p.then)p.then(()=>{a.pause();a.currentTime=0;a.muted=false}).catch(()=>{a.muted=false});
-  }catch(e){}
+async function loadOrders() {
+  if (window.__JPTOrdersV3Active) return true;
+  return false;
 }
-const jptAlarmedOrders=new Set();
-function orderItemsText(x){
-  const a=Array.isArray(x.items)?x.items:[];
-  return a.map(i=>`${i.name||i.item_name||'Item'} × ${Number(i.qty??i.quantity??1)}`).join(', ');
-}
-function showOrderAlarm(order){
-  const alarmKey=String(order?.id||order?.order_no||'');
-  if(!alarmKey)return;
-  // Single-owner guard: never start a second alarm for an order that is
-  // already acknowledged or is already active in this page instance.
-  if(jptAlarmedOrders.has(alarmKey))return;
-  if(String(order?.status||'').toLowerCase()!=='new')return;
-  jptAlarmedOrders.add(alarmKey);
-  $('orderAlarmText').textContent='New order '+(order?.order_no||'')+' received for '+(currentOutletRow?.name||activeOutlet)+'.';
-  $('orderAlarm').style.display='block';$('orderAlarm').classList.add('alarmPulse');
-  try{navigator.vibrate?.([300,120,300]);}catch(e){}
-  try{if('Notification' in window && Notification.permission==='granted') new Notification('JPT — NEW ORDER',{body:$('orderAlarmText').textContent});}catch(e){}
-  try{const a=ensureNewOrderAudio();a.loop=true;a.muted=false;const p=a.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}
-}
-function stopOrderAlarm(orderId){
-  $('orderAlarm').style.display='none';
-  $('orderAlarm').classList.remove('alarmPulse');
-  try{navigator.vibrate?.(0)}catch(e){}
-  try{if(jptNewOrderAudio){jptNewOrderAudio.pause();jptNewOrderAudio.currentTime=0}}catch(e){}
-  if(orderId!==undefined&&orderId!==null)jptAlarmedOrders.delete(String(orderId));
-}
-async function enableOrderAlarm(){
-  try{primeNewOrderAudio();}catch(e){}
-  try{if('Notification' in window && Notification.permission==='default') await Notification.requestPermission();}catch(e){}
-  localStorage.setItem('jpt_v107_alarm_enabled','1');toast('Order alert is enabled; use the saved notification ringtone in Sound Settings');
-}
-$('enableAlarm').onclick=enableOrderAlarm;$('stopAlarm').onclick=stopOrderAlarm;
-const jptOrderActionBusy=new Set();
-async function orderAction(id,status,extra={}){
-  // Stop the active NEW-order alert before any ACCEPT/REJECT/status action.
-  if(['accepted','cancelled'].includes(String(status).toLowerCase())){
-    try{window.JPTPartnerOrderAlertV4?.stop?.(true)}catch(e){}
-    try{window.stopOrderAlarm?.(id)}catch(e){}
-    try{window.JPTOrderControlBridge?.stopAlerts?.(id)}catch(e){}
-  }
-  if(window.JPTOrderControlBridge?.transition){
-    try{
-      const row=await window.JPTOrderControlBridge.transition(id,activeOutlet,status,extra);
-      if(['accepted','cancelled'].includes(String(status).toLowerCase()))window.JPTOrderControlBridge.stopAlerts(id);
-      await loadOrders(); return !!row;
-    }catch(e){toast('Order update failed: '+(e.message||e));return false}
-  }
-  const key=String(id||'')+'|'+String(status||''); if(jptOrderActionBusy.has(key))return false; jptOrderActionBusy.add(key);
-  try{const patch={status,updated_at:new Date().toISOString(),...extra};const r=await sb.from('orders').update(patch).eq('id',id).eq('outlet_id',activeOutlet).select('id,status,target_minutes,accepted_at,deadline_at,updated_at').maybeSingle();if(r.error){toast('Order update failed: '+r.error.message);return false}if(!r.data){toast('Order update was not confirmed by the server. Please retry.');return false}if(String(status).toLowerCase()!=='new'){stopOrderAlarm(id);try{window.JPTPartnerOrderAlertV4?.stop?.(true)}catch(e){}}await loadOrders();return true}finally{jptOrderActionBusy.delete(key)}
-}
-async function acceptOrder(id,minutes){
-  const n=Number(minutes);
-  const m=Number.isFinite(n)?Math.max(15,Math.min(40,Math.round(n))):15;
-  return orderAction(id,'accepted',{target_minutes:m});
-}
-let activeOrderQueue='all',ordersLoadBusy=false,ordersLoadQueued=false;
-function normalizeOrderStatus(v){const s=String(v||'new').toLowerCase();if(s==='completed')return 'delivered';if(s==='canceled')return 'cancelled';return s}
-function setOrderQueue(q){activeOrderQueue=q||'all';document.querySelectorAll('.orderQueueBtn').forEach(b=>b.classList.toggle('gold',b.dataset.queue===activeOrderQueue));loadOrders().catch(()=>{})}
-document.querySelectorAll('.orderQueueBtn').forEach(b=>b.onclick=()=>setOrderQueue(b.dataset.queue));
-async function loadOrders(){
-  if(window.__JPTOrdersV3Active)return true;
-  if(ordersLoadBusy){ordersLoadQueued=true;return}
-  ordersLoadBusy=true;
-  const pageY=window.scrollY,wrap=document.getElementById('ordersTableWrap'),wrapY=wrap?.scrollTop||0;
-  try{
-    const r=await sb.from('orders').select('*').eq('outlet_id',activeOutlet).order('created_at',{ascending:false}).limit(100);
-    if(r.error){$('ordersNotice').innerHTML='<span class="danger">'+esc(r.error.message)+'</span>';return}
-    const rows=r.data||[],filtered=activeOrderQueue==='all'?rows:rows.filter(x=>normalizeOrderStatus(x.status)===activeOrderQueue);
-    rows.forEach(x=>{if(String(x.status||'').toLowerCase()!=='new')jptAlarmedOrders.delete(String(x.id||x.order_no||''));});
-    renderOrderSummaries(rows);$('ordersCount').textContent=filtered.length;$('ordersNotice').textContent='Showing '+filtered.length+' '+(activeOrderQueue==='all'?'outlet-scoped':activeOrderQueue.toUpperCase())+' orders';
-    $('ordersBody').innerHTML=filtered.map(x=>{
-      const order=x.order_no||x.order_number||x.id||'—',customer=x.customer_name||x.name||x.customer_phone||'Customer',status=normalizeOrderStatus(x.status),total=x.total??x.grand_total??x.amount??'—',time=x.created_at?new Date(x.created_at).toLocaleString('en-IN'):'—',rawTarget=Number(x.target_minutes),target=Number.isFinite(rawTarget)?Math.max(15,Math.min(40,Math.round(rawTarget))):15,deadline=x.deadline_at||(x.created_at?new Date(new Date(x.created_at).getTime()+target*60000).toISOString():''),left=deadline?Math.max(0,new Date(deadline).getTime()-Date.now()):0,secs=Math.floor(left/1000),mm=Math.floor(secs/60),ss=secs%60;
-      let actions='';
-      if(status==='new') actions=`<div class="order-actions" data-stepper="${esc(x.id||'')}">
-        <button type="button" class="btn prepMinus" data-order-id="${esc(x.id||'')}" aria-label="Decrease preparation time">−</button>
-        <span class="tag prepValue" data-minutes="${target}" style="min-width:58px;text-align:center">${target} min</span>
-        <button type="button" class="btn prepPlus" data-order-id="${esc(x.id||'')}" aria-label="Increase preparation time">+</button>
-        <button class="btn gold acceptBtn" data-order-id="${esc(x.id||'')}">ACCEPT</button>
-        <button class="btn red rejectBtn" data-order-id="${esc(x.id||'')}">REJECT</button></div>`;
-      else if(status==='accepted') actions='<div class="order-actions"><button class="btn gold prepBtn" data-order-id="'+esc(x.id||'')+'">MARK READY</button></div>';
-      else if(status==='preparing') actions='<div class="order-actions"><button class="btn green readyBtn" data-order-id="'+esc(x.id||'')+'">READY</button></div>';
-      else if(status==='ready') actions='<div class="order-actions"><button class="btn gold outBtn" data-order-id="'+esc(x.id||'')+'">OUT FOR DELIVERY</button></div>';
-      else if(status==='out_for_delivery') actions='<div class="order-actions"><button class="btn green completeBtn" data-order-id="'+esc(x.id||'')+'">DELIVERED</button></div>';
-      return `<tr><td><b>${esc(order)}</b><div class="muted">${esc(orderItemsText(x))}</div></td><td>${esc(customer)}<div class="muted">${esc(x.customer_phone||x.phone||'')}</div></td><td><span class="tag">${esc(status.toUpperCase())}</span></td><td>${typeof total==='number'?money(total):esc(total)}</td><td>${esc(time)}</td><td><span class="tag countdown" data-deadline="${esc(deadline)}">${left?String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0'):(status==='preparing'?'TIME OVER':'—')}</span></td><td>${actions}</td></tr>`;
-    }).join('')||'<tr><td colspan="7">No orders in this queue.</td></tr>';
-    document.querySelectorAll('.prepMinus').forEach(b=>b.onclick=()=>{const v=b.closest('[data-stepper]')?.querySelector('.prepValue');if(!v)return;const n=Math.max(15,Number(v.dataset.minutes||15)-1);v.dataset.minutes=String(n);v.textContent=n+' min'});
-    document.querySelectorAll('.prepPlus').forEach(b=>b.onclick=()=>{const v=b.closest('[data-stepper]')?.querySelector('.prepValue');if(!v)return;const n=Math.min(40,Number(v.dataset.minutes||15)+1);v.dataset.minutes=String(n);v.textContent=n+' min'});
-    document.querySelectorAll('.acceptBtn').forEach(b=>b.onclick=async()=>{if(b.dataset.busy==='1')return;b.dataset.busy='1';b.disabled=true;const v=b.closest('[data-stepper]')?.querySelector('.prepValue');const ok=await acceptOrder(b.dataset.orderId,Number(v?.dataset.minutes||15));if(ok)toast('Order accepted');else b.disabled=false;b.dataset.busy='0'});
-    document.querySelectorAll('.rejectBtn').forEach(b=>b.onclick=async()=>{if(b.dataset.busy==='1')return;if(confirm('Reject this customer order?')){b.dataset.busy='1';b.disabled=true;const ok=await orderAction(b.dataset.orderId,'cancelled',{rejection_reason:'Rejected by restaurant'});if(ok)toast('Order rejected');else b.disabled=false;b.dataset.busy='0'}});
-    document.querySelectorAll('.prepBtn').forEach(b=>b.onclick=async()=>{if(b.dataset.busy==='1')return;b.dataset.busy='1';b.disabled=true;const ok=await orderAction(b.dataset.orderId,'ready');if(ok)toast('Order marked READY');else b.disabled=false;b.dataset.busy='0'});
-    document.querySelectorAll('.readyBtn').forEach(b=>b.onclick=async()=>{if(b.dataset.busy==='1')return;b.dataset.busy='1';b.disabled=true;const ok=await orderAction(b.dataset.orderId,'ready');if(ok){toast('Order marked READY');try{const rr=await sb.rpc('delivery_offer_next',{p_order_id:Number(b.dataset.orderId)});if(rr.error)toast('Delivery assignment: '+rr.error.message);else if(rr.data?.status==='offered')toast('Delivery partner offer sent');else if(rr.data?.status==='no_online_rider')toast('READY — no online delivery partner available');}catch(e){toast('Delivery assignment check failed');}}else b.disabled=false;b.dataset.busy='0'});
-    document.querySelectorAll('.outBtn').forEach(b=>b.onclick=async()=>{if(b.dataset.busy==='1')return;b.dataset.busy='1';b.disabled=true;const ok=await orderAction(b.dataset.orderId,'out_for_delivery');if(ok)toast('Order moved to OUT FOR DELIVERY');else b.disabled=false;b.dataset.busy='0'});
-    document.querySelectorAll('.completeBtn').forEach(b=>b.onclick=async()=>{if(b.dataset.busy==='1')return;b.dataset.busy='1';b.disabled=true;const ok=await orderAction(b.dataset.orderId,'delivered');if(ok)toast('Order marked DELIVERED');else b.disabled=false;b.dataset.busy='0'});
-    document.querySelectorAll('.orderStatus').forEach(sel=>sel.onchange=async()=>{await orderAction(sel.dataset.orderId,sel.value)});
-    const newest=rows[0];if(newest){const stamp=String(newest.created_at||'')+'|'+String(newest.id||'');if(lastOrderStamp&&stamp!==lastOrderStamp&&normalizeOrderStatus(newest.status)==='new')showOrderAlarm(newest);lastOrderStamp=stamp;localStorage.setItem('jpt_v107_last_order_'+activeOutlet,stamp)}
-  }finally{
-    requestAnimationFrame(()=>{window.scrollTo(0,pageY);const w=document.getElementById('ordersTableWrap');if(w)w.scrollTop=wrapY});
-    ordersLoadBusy=false;if(ordersLoadQueued){ordersLoadQueued=false;loadOrders().catch(()=>{})}
-  }
-}
-async function bindOrderRealtime(){
-  if(window.__JPTOrdersV3Active)return;
-  try{if(orderChannel) await sb.removeChannel(orderChannel);orderChannel=sb.channel('jpt-v107-orders-'+activeOutlet+'-'+Date.now()).on('postgres_changes',{event:'INSERT',schema:'public',table:'orders',filter:'outlet_id=eq.'+activeOutlet},p=>{if(window.JPTLiveBridge?.receive&&p?.new){window.JPTLiveBridge.receive({event_id:'order.created:'+String(p.new.id),event_type:'order.created',entity_type:'order',entity_id:p.new.id,outlet_id:p.new.outlet_id,audience:'partner',occurred_at:p.new.created_at,payload:p.new},'supabase-realtime')}if(p?.new?.status==='new'){showOrderAlarm(p.new)}loadOrders().catch(()=>{})}).on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders',filter:'outlet_id=eq.'+activeOutlet},p=>{if(window.JPTLiveBridge?.receive&&p?.new){window.JPTLiveBridge.receive({event_id:'order.updated:'+String(p.new.id)+':'+String(p.new.updated_at||Date.now()),event_type:'order.updated',entity_type:'order',entity_id:p.new.id,outlet_id:p.new.outlet_id,audience:'partner',occurred_at:p.new.updated_at,payload:p.new},'supabase-realtime')}loadOrders().catch(()=>{})}).subscribe();}catch(e){console.warn('Order realtime unavailable',e)}
-}
-$('ordersRefresh').onclick=loadOrders;
-document.querySelectorAll('.orderQueueBtn').forEach(b=>b.classList.toggle('gold',b.dataset.queue==='all'));
 
-$('scratchSetup').onclick=configureScratchSlabs;
-
-
-function closeModal(){$('modal').classList.remove('show')}$('modal').onclick=e=>{if(e.target.id==='modal')closeModal()};
-
-function refreshOrderCountdowns(){document.querySelectorAll('.countdown[data-deadline]').forEach(el=>{const d=el.dataset.deadline;if(!d)return;const left=Math.max(0,new Date(d).getTime()-Date.now());const secs=Math.floor(left/1000),mm=Math.floor(secs/60),ss=secs%60;el.textContent=left?String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0'):'TIME OVER'});} setInterval(refreshOrderCountdowns,1000);
 async function reloadAll(){
   const tasks=[
     ['access',loadAccess],
@@ -972,7 +858,7 @@ $('outletSelect').onchange=async function(){activeOutlet=this.value;localStorage
 $('reloadBtn').onclick=reloadAll;
 
 
-setInterval(()=>{ if(document.visibilityState!=='hidden') loadOrders().catch(()=>{}); },15000);
+/* Legacy 15-second order poll removed; unified order runtime owns the 5-second recovery poll. */
 </script>
  <style>
 #jptAuthGate{
@@ -1156,7 +1042,8 @@ showLogin();
 
 });
 
-checkSession();
+/* Let following scripts (including unified order runtime) initialize before legacy reloadAll can bind order listeners. */
+setTimeout(checkSession,0);
 
 })();
 </script>
@@ -1184,20 +1071,20 @@ checkSession();
 <script src="./jpt-partner-outlet-context-v1.js"></script>
 
 <script src="./jpt-partner-permission-ui-v1.js"></script>
-<script src="./jpt-partner-outlet-header-v1.js"></script>
+<!-- Outlet name/code banner below the notification area intentionally omitted; outlet identity remains on each order card. -->
 <script src="./jpt-partner-branding-form-guard-v1.js"></script>
 <script src="./jpt-partner-onboarding-status-badge-v1.js"></script>
 <script src="./jpt-partner-safe-cache-v1.js"></script>
 <script src="./jpt-partner-build-loader-v1.js?v=1"></script>
-<script src="./jpt-partner-final-touch-v10.js?v=10-bridge-20260924"></script>
+<script src="./jpt-partner-final-touch-v10.js?v=20261019-header-clean-1"></script>
 <script src="./jpt-partner-final-touch-v11.js?v=11"></script>
-<script src="./jpt-partner-final-touch-v12.js?v=20261019-select-all-outlets-1"></script>
+<script src="./jpt-partner-final-touch-v12.js?v=20261019-all-outlet-picker-1"></script>
 <script src="./JPT_Delivery_Partner_Admin_Approval_Bridge_V2.js?v=107"></script>
 <script>
-try{if("serviceWorker" in navigator){navigator.serviceWorker.register("./jpt-partner-sw.js?v=20",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});}}catch(e){}
+try{if("serviceWorker" in navigator){navigator.serviceWorker.register("./jpt-partner-sw.js?v=20261020-stable-queues-history-outlet-1",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});}}catch(e){}
 </script>
 
-<script src="./jpt-unified-partner-orders-v1.js?v=20261020-mark-ready-anytime-1"></script>
+<script src="./jpt-unified-partner-orders-v1.js?v=20261020-stable-queues-history-outlet-1"></script>
 <script src="./jpt-partner-dual-bar-nav-v1.js?v=20261007-1"></script>
 <script src="./jpt-partner-pro-menu-ui-v1.js?v=20261007-1"></script>
 <script src="./jpt-partner-timing-manager-v1.js?v=1"></script>
