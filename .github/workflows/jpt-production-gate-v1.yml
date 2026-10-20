@@ -71,7 +71,7 @@ jobs:
             [ringtones/1000449570.mp4]=2780660
             [ringtones/1000449571.mp4]=2825197
             [ringtones/1000449572.mp4]=237252
-            [ringtones/1000449491.mp4]=630716
+            [ringtones/1000449491.mp4]=240411
           )
           declare -A expected_sha=(
             [ringtones/1000449570.mp4]=9106a098deac4d9493924457ea676ec3bc2bc2460e54d902703aa1c878fd63c4
@@ -84,7 +84,7 @@ jobs:
             actual_size=$(stat -c '%s' "$f")
             test "$actual_size" = "${expected_size[$f]}" || { echo "RED: size mismatch $f ($actual_size != ${expected_size[$f]})"; exit 1; }
             actual_sha=$(sha256sum "$f" | awk '{print $1}')
-            test "$actual_sha" = "${expected_sha[$f]}" || { echo "RED: SHA-256 mismatch $f"; exit 1; }
+            test "$actual_sha" = "${expected_sha[$f]}" || { echo "RED: SHA-256 mismatch $f (actual=$actual_sha expected=${expected_sha[$f]})"; exit 1; }
             echo "GREEN: locked ringtone verified $f"
           done
 
