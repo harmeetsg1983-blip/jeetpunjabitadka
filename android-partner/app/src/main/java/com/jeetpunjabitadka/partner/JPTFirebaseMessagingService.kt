@@ -8,6 +8,7 @@ class JPTFirebaseMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         val data = message.data
         if (data["event_type"] != "order.created") return
+        if (!getSharedPreferences("jpt_alarm", MODE_PRIVATE).getBoolean("order_notifications", true)) return
 
         val orderId = data["order_id"].orEmpty()
         val outletId = data["outlet_id"].orEmpty()
