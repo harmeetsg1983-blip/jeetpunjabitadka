@@ -166,7 +166,7 @@ async function loadOutletDirectory(){
   const accentFallback=['#d8ae42','#49b36a','#df6680','#f29b32','#7b74e8'];
   const existing={...OUTLETS};
   const next={};
-  r.data.forEach((row,i)=>{
+  r.data.filter(row=>Object.prototype.hasOwnProperty.call(existing,String(row.code||'').trim())).forEach((row,i)=>{
    const id=String(row.code||'').trim();
    if(!id)return;
    next[id]={...(existing[id]||{}),name:row.name||existing[id]?.name||id,accent:existing[id]?.accent||accentFallback[i%accentFallback.length]};
