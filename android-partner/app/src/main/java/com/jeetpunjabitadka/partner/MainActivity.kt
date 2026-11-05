@@ -118,6 +118,24 @@ class MainActivity : ComponentActivity() {
         }
 
         @JavascriptInterface
+        fun notificationsAllowed(): Boolean {
+            return Build.VERSION.SDK_INT < 33 || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+
+        @JavascriptInterface
+        fun requestNotificationPermission(): Boolean {
+            if (Build.VERSION.SDK_INT < 33) return true
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) return true
+            runOnUiThread { notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS) }
+            return false
+        }
+
+        @JavascriptInterface
+        fun setOrderNotifications(enabled: Boolean) {
+            getSharedPreferences("jpt_alarm", MODE_PRIVATE).edit().putBoolean("order_notifications", enabled).apply()
+        }
+
+        @JavascriptInterface
         fun testRingtone() {
             OrderAlarmService.test(this@MainActivity)
         }
