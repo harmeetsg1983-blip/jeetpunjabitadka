@@ -123,9 +123,12 @@ async function resolveManagedOutlets(){
 }
 function orderBelongsToManagedOutlet(o){ return managedOutlets().includes(String(o?.outlet_id||'')); }
 function shouldShowOnBoard(o){
-  /* The queue is lifecycle-based, not date-cutoff-based.
-     Active orders must remain visible even when created before a rollout/cutover.
-     Delivered/cancelled orders remain available in their own history tabs. */
+  /* Enforce the approved board cutover consistently for the initial snapshot
+     and Realtime INSERT/UPDATE events. Pre-cutover test/legacy orders must not
+     re-enter the live partner board. Historical records remain in the database. */
+  const createdAt=new Date(o?.created_at||0).getTime();
+  const cutoverAt=new Date(BOARD_CUTOVER_AT).getTime();
+  if(!Number.isFinite(createdAt)||createdAt<cutoverAt)return false;
   return ['new','accepted','preparing','ready','out_for_delivery','delivered','cancelled']
     .includes(status(o?.status));
 }
