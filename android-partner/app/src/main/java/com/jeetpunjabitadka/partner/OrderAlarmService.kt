@@ -67,6 +67,10 @@ class OrderAlarmService : Service() {
         when (intent?.action) {
             ACTION_START -> {
                 handler.removeCallbacks(finishPreview)
+                if (!getSharedPreferences("jpt_alarm", MODE_PRIVATE).getBoolean("order_notifications", true)) {
+                    stopAlarm()
+                    return START_NOT_STICKY
+                }
                 val id = intent.getStringExtra(EXTRA_ORDER_ID).orEmpty()
                 val outlet = intent.getStringExtra(EXTRA_OUTLET_ID).orEmpty()
                 val orderNo = intent.getStringExtra(EXTRA_ORDER_NO).orEmpty().ifBlank { id }
