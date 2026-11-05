@@ -16,6 +16,13 @@ android {
         versionName = "1.0.1"
         buildConfigField("String", "PARTNER_WEB_URL", "\"https://harmeetsg1983-blip.github.io/jeetpunjabitadka/partner-v107.html\"")
     }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = "17"
+    }
     buildFeatures { buildConfig = true }
 }
 
