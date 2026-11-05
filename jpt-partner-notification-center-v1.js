@@ -51,13 +51,21 @@ function stopPreview(){
 }
 async function preview(){
  stopPreview();
- const file=await get(RING_KEY);
- if(!file){alert('Restaurant Partner ringtone is not saved on this device yet. Use “Add / Replace Ringtone” first.');return}
- previewUrl=URL.createObjectURL(file);
+ const native=window.AndroidOrderAlarm;
+ if(native&&typeof native.testRingtone==='function'){
+  try{native.setRingVolume?.(Number(document.getElementById('jptNotifyVolume')?.value||100));native.testRingtone();return}
+  catch(e){console.warn('[JPT Native Alarm] test failed',e)}
+ }
+ let file=await get(RING_KEY);
+ if(file instanceof Blob&&file.size){
+  previewUrl=URL.createObjectURL(file);
+ }else{
+  previewUrl='./ringtones/1000449570.mp4';
+ }
  previewAudio=new Audio(previewUrl);
  previewAudio.volume=Number(document.getElementById('jptNotifyVolume')?.value||100)/100;
- previewAudio.onended=()=>{previewAudio=null;if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null}};
- try{await previewAudio.play()}catch(e){alert('Tap Test Ringtone again after allowing audio playback.')}
+ previewAudio.onended=()=>{previewAudio=null;if(previewUrl&&previewUrl.startsWith('blob:')){URL.revokeObjectURL(previewUrl)}previewUrl=null};
+ try{await previewAudio.play()}catch(e){alert('Ringtone could not play: '+(e.message||'Check media volume and try again.'))}
 }
 async function savePrefs(p){
  await put(KEY,p);
@@ -89,7 +97,7 @@ async function render(){
  row('Rider notifications','Notify this device when a rider assignment/acceptance event needs restaurant attention.','riderNotifications',p.riderNotifications)+'</div>'+
  '<div class="jpt-nc-note">Volume is the app audio setting. Android/iOS system volume, Do Not Disturb, browser permissions and device policies can still limit audible playback.</div>';
  const vol=document.getElementById('jptNotifyVolume');
- vol.oninput=async()=>{document.getElementById('jptNotifyVolumeValue').textContent=vol.value+'%';p.ringVolume=Number(vol.value);await savePrefs(p)};
+ vol.oninput=async()=>{document.getElementById('jptNotifyVolumeValue').textContent=vol.value+'%';p.ringVolume=Number(vol.value);try{window.AndroidOrderAlarm?.setRingVolume?.(p.ringVolume)}catch(e){}await savePrefs(p)};
  root.querySelectorAll('input[type=checkbox][data-key]').forEach(el=>el.onchange=async()=>{p[el.dataset.key]=el.checked;await savePrefs(p)});
  document.getElementById('jptTestRingtone').onclick=preview;
  const perm=document.getElementById('jptAllowNotifications'), state=document.getElementById('jptNotificationState');
@@ -99,9 +107,20 @@ async function render(){
  document.getElementById('jptAddRingtone').onclick=()=>document.getElementById('jptRingtoneFile').click();
  document.getElementById('jptRingtoneFile').onchange=async e=>{
   const file=e.target.files?.[0];if(!file)return;
-  await put(RING_KEY,file);
-  document.getElementById('jptRingtoneState').textContent='✓ Saved: '+file.name+' • '+Math.round(file.size/1024)+' KB';
-  window.dispatchEvent(new CustomEvent('jpt:notification-ringtone',{detail:{name:file.name}}));
+  const stateEl=document.getElementById('jptRingtoneState');
+  try{
+   if(!file.type.startsWith('audio/'))throw new Error('Please select an audio file.');
+   if(file.size>10*1024*1024)throw new Error('Ringtone must be 10 MB or smaller.');
+   await put(RING_KEY,file);
+   let nativeSaved=false;
+   if(window.AndroidOrderAlarm?.saveRingtone){
+    const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||''));reader.onerror=()=>reject(reader.error||new Error('File read failed'));reader.readAsDataURL(file)});
+    nativeSaved=window.AndroidOrderAlarm.saveRingtone(dataUrl,file.type,file.name)===true;
+   }
+   stateEl.textContent='✓ Saved: '+file.name+' • '+Math.round(file.size/1024)+' KB'+(window.AndroidOrderAlarm?(nativeSaved?' • Native alarm updated':' • Web saved; native copy failed'):'');
+   window.dispatchEvent(new CustomEvent('jpt:notification-ringtone',{detail:{name:file.name,nativeSaved}}));
+  }catch(err){stateEl.textContent='Save failed: '+(err.message||err);alert('Ringtone save failed: '+(err.message||err))}
+  finally{e.target.value=''}
  };
  const saved=await get(RING_KEY);
  document.getElementById('jptRingtoneState').textContent=saved?'✓ Restaurant Partner ringtone is saved on this device.':'⚠ No Restaurant Partner ringtone saved on this device yet.';
