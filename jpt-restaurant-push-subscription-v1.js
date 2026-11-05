@@ -17,14 +17,16 @@ function base64ToUint8Array(base64){
   return Uint8Array.from(raw,c=>c.charCodeAt(0));
 }
 function getOutlets(){
+  const allowed=new Set(['JPT-001','SOP-002','PFA-003','NME-004','TOP-005']);
   const list=window.JPTPartnerAccess?.getOutlets?.()||window.JPT_PARTNER_OUTLETS||[];
-  const codes=list.map(x=>String(x?.outlet_id||x?.code||x?.id||'').trim()).filter(Boolean);
+  const codes=list.map(x=>String(x?.outlet_id||x?.code||x?.id||'').trim()).filter(code=>allowed.has(code));
   const current=String(window.activeOutlet||window.JPT_ACTIVE_OUTLET||localStorage.getItem('jpt_admin_outlet')||'').trim();
   return [...new Set(codes.length?codes:(current?[current]:[]))];
 }
 function getOutlet(){return getOutlets()[0]||'';}
 async function enable(){
   try{
+    if(!('Notification' in window)) return {ok:false,reason:'notifications_unsupported'};
     if(!('serviceWorker' in navigator)||!('PushManager' in window)) return {ok:false,reason:'push_unsupported'};
     if(!window.sb) return {ok:false,reason:'supabase_not_ready'};
     const outlets=getOutlets();
@@ -65,8 +67,22 @@ async function enable(){
   }
 }
 async function boot(){
-  if(Notification.permission!=='granted') return {ok:false,reason:'permission_not_granted'};
+  if(!('Notification' in window)||Notification.permission!=='granted') return {ok:false,reason:'permission_not_granted'};
+  try{await window.JPTPartnerAccess?.reload?.()}catch(e){}
   return enable();
 }
-window.JPTRestaurantPushSubscription={enable,boot,getOutlet,getOutlets};
+let autoBootBusy=false;
+async function autoBoot(){
+  if(autoBootBusy||!('Notification' in window)||Notification.permission!=='granted')return;
+  autoBootBusy=true;
+  try{const r=await boot();if(!r.ok)console.info('[JPT Restaurant Push] automatic registration pending:',r.reason||'unknown')}
+  finally{autoBootBusy=false}
+}
+window.addEventListener('load',()=>setTimeout(autoBoot,900));
+if(window.sb?.auth?.onAuthStateChange){
+  window.sb.auth.onAuthStateChange((event,session)=>{
+    if(event==='SIGNED_IN'&&session?.user&&'Notification' in window&&Notification.permission==='granted')setTimeout(autoBoot,500);
+  });
+}
+window.JPTRestaurantPushSubscription={version:'2.0.0-five-outlet',enable,boot,getOutlet,getOutlets};
 })();
