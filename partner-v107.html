@@ -55,9 +55,9 @@ html,body{margin:0;width:100%;height:100%;background:#090909;overflow:hidden}
       if(pushOrderId && w.JPTPartnerOrdersUI?.openOrderDetail){w.JPTPartnerOrdersUI.openOrderDetail(pushOrderId);return true;}
       const orders=d.getElementById('orders');
       orders?.scrollIntoView({behavior:'instant',block:'start'});
-      const candidates=[...d.querySelectorAll('[data-id]')];
+      const candidates=[...d.querySelectorAll('[data-order-card]')];
       const hit=candidates.find(el=>{
-        const id=String(el.getAttribute('data-id')||'');
+        const id=String(el.getAttribute('data-order-card')||'');
         return (pushOrderId&&id===pushOrderId) ||
           (pushOrderNo&&String(el.textContent||'').includes(pushOrderNo));
       });
