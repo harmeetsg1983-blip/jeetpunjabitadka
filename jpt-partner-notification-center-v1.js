@@ -98,11 +98,36 @@ async function render(){
  '<div class="jpt-nc-note">Volume is the app audio setting. Android/iOS system volume, Do Not Disturb, browser permissions and device policies can still limit audible playback.</div>';
  const vol=document.getElementById('jptNotifyVolume');
  vol.oninput=async()=>{document.getElementById('jptNotifyVolumeValue').textContent=vol.value+'%';p.ringVolume=Number(vol.value);try{window.AndroidOrderAlarm?.setRingVolume?.(p.ringVolume)}catch(e){}await savePrefs(p)};
- root.querySelectorAll('input[type=checkbox][data-key]').forEach(el=>el.onchange=async()=>{p[el.dataset.key]=el.checked;await savePrefs(p)});
+ root.querySelectorAll('input[type=checkbox][data-key]').forEach(el=>el.onchange=async()=>{
+  p[el.dataset.key]=el.checked;
+  if(el.dataset.key==='orderNotifications')try{window.AndroidOrderAlarm?.setOrderNotifications?.(el.checked)}catch(e){}
+  await savePrefs(p)
+ });
  document.getElementById('jptTestRingtone').onclick=preview;
  const perm=document.getElementById('jptAllowNotifications'), state=document.getElementById('jptNotificationState');
- async function refreshPermission(){if(!('Notification' in window)){state.textContent='Notifications are not supported by this browser.';return} state.textContent='Permission: '+Notification.permission; perm.disabled=Notification.permission==='granted';}
- perm.onclick=async()=>{try{const permission=await Notification.requestPermission();state.textContent='Permission: '+permission;if(permission==='granted'){const current=await prefs();await savePrefs(Object.assign({},current,{orderNotifications:true}));if(window.JPTRestaurantPushSubscription?.enable){const push=await window.JPTRestaurantPushSubscription.enable();state.textContent=push.ok?'Permission: granted • Background push enabled':'Permission: granted • '+String(push.reason||'push setup pending');}}}catch(e){state.textContent='Permission request failed.'}};
+ async function refreshPermission(){
+  if(window.AndroidOrderAlarm){
+   const allowed=window.AndroidOrderAlarm.notificationsAllowed?.()===true;
+   state.textContent=allowed?'Native Android notifications: allowed • FCM setup still required for background delivery':'Native Android notifications: permission required';
+   perm.disabled=allowed;return;
+  }
+  if(!('Notification' in window)){state.textContent='Browser notifications are not supported here.';return}
+  state.textContent='Permission: '+Notification.permission;perm.disabled=Notification.permission==='granted';
+ }
+ perm.onclick=async()=>{
+  try{
+   if(window.AndroidOrderAlarm){
+    const allowed=window.AndroidOrderAlarm.requestNotificationPermission?.()===true;
+    state.textContent=allowed?'Android notification permission is already allowed.':'Android permission request opened. Return here after choosing Allow.';
+    setTimeout(refreshPermission,900);return;
+   }
+   const permission=await Notification.requestPermission();state.textContent='Permission: '+permission;
+   if(permission==='granted'){
+    const current=await prefs();await savePrefs(Object.assign({},current,{orderNotifications:true}));
+    if(window.JPTRestaurantPushSubscription?.enable){const push=await window.JPTRestaurantPushSubscription.enable();state.textContent=push.ok?'Permission: granted • Background push enabled':'Permission: granted • '+String(push.reason||'push setup pending');}
+   }
+  }catch(e){state.textContent='Permission request failed: '+(e.message||e)}
+ };
  refreshPermission();
  document.getElementById('jptAddRingtone').onclick=()=>document.getElementById('jptRingtoneFile').click();
  document.getElementById('jptRingtoneFile').onchange=async e=>{
