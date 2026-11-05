@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "378863026073",
+    "project_id": "jeet-punjabi-tadka",
+    "storage_bucket": "jeet-punjabi-tadka.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:378863026073:android:8ef51e48f73ae479c11d08",
+        "android_client_info": {
+          "package_name": "com.jeetpunjabitadka.partner"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDOsw0uQ0WOH-fFwSW1NVvRkqUjJ6xpOec"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
