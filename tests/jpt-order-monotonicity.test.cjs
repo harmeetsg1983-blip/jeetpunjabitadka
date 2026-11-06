@@ -18,10 +18,22 @@ const helpers = [
 ].join('\n');
 
 const api = vm.runInNewContext(
-  helpers + '\n;({status, lifecycleRank, mergeOrderMonotonic, actionHtml})',
+  helpers + '\n;({status, boardStatus, queueForStatus, lifecycleRank, mergeOrderMonotonic, actionHtml})',
   {},
   { timeout: 1000 }
 );
+
+// Queue routing is behavioral, not just a source-string check.
+assert.equal(api.queueForStatus('new'), 'new', 'NEW orders must stay in NEW ORDERS');
+assert.equal(api.queueForStatus('received'), 'new', 'legacy RECEIVED alias must route to NEW ORDERS');
+assert.equal(api.queueForStatus('accepted'), 'preparing', 'ACCEPTED orders must move to PREPARATION');
+assert.equal(api.queueForStatus('preparing'), 'preparing', 'PREPARING orders must stay in PREPARATION');
+assert.equal(api.queueForStatus('ready'), 'ready', 'READY orders must route to READY');
+assert.equal(api.queueForStatus('out_for_delivery'), 'out_for_delivery', 'delivery handoff orders must route to OUT FOR DELIVERY');
+assert.equal(api.queueForStatus('delivered'), 'history', 'delivered orders must route to HISTORY');
+assert.equal(api.queueForStatus('cancelled'), 'history', 'cancelled orders must route to HISTORY');
+assert.equal(api.queueForStatus('canceled'), 'history', 'legacy CANCELED alias must route to HISTORY');
+assert.equal(api.boardStatus({status:'accepted'}), 'preparing', 'ACCEPTED must display as PREPARATION without changing persisted status');
 
 // Realtime/SELECT ordering must not regress a known lifecycle state.
 assert.equal(
