@@ -86,12 +86,13 @@ assert.ok(
   'READY handler must retain its UPI verification guard'
 );
 
-// Realtime recovery contract: keep both Postgres Changes and private Broadcast paths.
-assert.ok(
-  source.includes("const readyHandler = between('async function lifecycleTransition(id,next){', '\nasync function markReady(id)');
+const readyHandler = between('async function lifecycleTransition(id,next){', '\\nasync function markReady(id)');
 assert.doesNotMatch(readyHandler,/delivery_offer_next/, 'MARK READY must complete within the Restaurant Partner flow without invoking delivery dispatch');
 
-window.sb.channel('jpt:partner:outlet:'+code,{config:{private:true}})"),
+// Restaurant Partner READY must not invoke delivery dispatch.
+// Realtime recovery contract: keep both Postgres Changes and private Broadcast paths.
+assert.ok(
+  source.includes("window.sb.channel('jpt:partner:outlet:'+code,{config:{private:true}})"),
   'partner must subscribe to the private per-outlet broadcast topic'
 );
 assert.ok(
