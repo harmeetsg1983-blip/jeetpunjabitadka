@@ -140,7 +140,47 @@ async function startDeliveryPrivateBroadcast(){
   }catch(e){console.warn('Delivery private live unavailable',e)}
 }
 async function startOfferPolling(){stopOfferPolling();offerTimer=setInterval(async()=>{await loadOffer();await loadActive()},5000);await loadOffer();await loadActive()}function stopOfferPolling(){if(offerTimer){clearInterval(offerTimer);offerTimer=null}}async function loadOffer(){try{let {data,error}=await sb.rpc('delivery_partner_offer_snapshot');if(error)throw error;let raw=Array.isArray(data)?data[0]:data;let x=null;if(raw?.status==='offer'&&raw.assignment_id){const o=raw.order||{};x={...raw,id:raw.assignment_id,order_id:o.id,outlet_id:o.outlet_id,customer_address:o.customer_address||o.address||''}}else if(raw?.id){x=raw}else if(raw?.status==='expired'&&raw.next_offer){const n=raw.next_offer,o=n.order||{};x={...n,id:n.assignment_id||n.id,order_id:o.id||n.order_id,outlet_id:o.outlet_id||n.outlet_id,customer_address:o.customer_address||o.address||n.customer_address||''}}if(x?.id){if(!offer||String(offer.id)!==String(x.id)){offer=x;showOffer(x);startTone()}}else if(raw?.status==='no_offer'||raw?.status==='not_registered'||raw?.status==='expired'){stopTone();stopOfferCountdown();offer=null;$('offer').classList.add('hidden')}else if(!raw){stopTone();offer=null;$('offer').classList.add('hidden')}}catch(e){console.warn(e)}}function showOffer(x){$('offer').classList.remove('hidden');$('offerText').textContent='Order #'+(x.order_id||'—');$('offerDetails').textContent=(x.outlet_id||'')+' • offered • '+(x.customer_address||'Delivery details after acceptance');startOfferCountdown(x)}function startOfferCountdown(x){if(offerCountdownTimer)clearInterval(offerCountdownTimer);const el=$('offerCountdown');const offeredAt=Date.parse(x.offered_at||'');const deadline=(Number.isFinite(offeredAt)?offeredAt:Date.now())+300000;const tick=()=>{const left=Math.max(0,deadline-Date.now());const mm=Math.floor(left/60000),ss=Math.floor((left%60000)/1000);el.textContent=left>0?'Accept within '+mm+':'+String(ss).padStart(2,'0'):'Offer expired — refreshing…';if(left<=0&&offerCountdownTimer){clearInterval(offerCountdownTimer);offerCountdownTimer=null}};tick();offerCountdownTimer=setInterval(tick,1000)}function stopOfferCountdown(){if(offerCountdownTimer){clearInterval(offerCountdownTimer);offerCountdownTimer=null}}
-async function respondOffer(accept){if(!offer)return;stopTone();stopOfferCountdown();try{let r=await sb.rpc('delivery_assignment_respond',{p_assignment_id:offer.id,p_accept:accept,p_reason:accept?null:'rider_rejected'});if(r.error)throw r.error;$('offer').classList.add('hidden');offer=null;if(accept)playDeliveryAcceptedTone();await loadActive()}catch(e){alert(e.message)}}
+let offerResponseBusy=false;
+async function respondOffer(accept){
+  if(!offer||offerResponseBusy)return;
+  offerResponseBusy=true;
+  const respondingOffer=offer;
+  const buttons=$('offer').querySelectorAll('button');
+  buttons.forEach(b=>b.disabled=true);
+  stopTone();
+  stopOfferCountdown();
+  try{
+    const r=await sb.rpc('delivery_assignment_respond',{
+      p_assignment_id:respondingOffer.id,
+      p_accept:accept,
+      p_reason:accept?null:'rider_rejected'
+    });
+    if(r.error)throw r.error;
+    const result=r.data||{};
+    $('offer').classList.add('hidden');
+    offer=null;
+    if(result.status==='accepted'){
+      playDeliveryAcceptedTone();
+      await loadActive();
+    }else if(result.status==='expired'||result.status==='rejected'||result.status==='not_offered'){
+      stopTone();
+      await loadActive();
+      await loadOffer();
+    }else{
+      throw new Error('Unexpected offer response. Please refresh offers.');
+    }
+  }catch(e){
+    console.warn('Offer response failed:',e);
+    if(offer&&String(offer.id)===String(respondingOffer.id)){
+      showOffer(offer);
+      startTone();
+    }
+    alert(e.message||'Could not update this delivery offer.');
+  }finally{
+    offerResponseBusy=false;
+    buttons.forEach(b=>b.disabled=false);
+  }
+}
 async function loadActive(){let {data,error}=await sb.rpc('delivery_partner_assignment_snapshot');if(error){console.warn('Active assignment refresh:',error.message);return}let x=Array.isArray(data)?data.find(a=>['accepted','picked_up','out_for_delivery'].includes(a.status)):data;if(!x){if(current){clearLocalLocation();current=null;lastOrderStatus=''}$('current').classList.add('hidden');return}current={...x,id:x.assignment_id||x.id};$('current').classList.remove('hidden');$('currentOrder').textContent='Order #'+x.order_id;$('currentStatus').textContent=(x.status||'accepted').replace(/_/g,' ').toUpperCase();updateNextButton(x.status);await checkRestaurantReady();startLocation()}
 async function checkRestaurantReady(){try{if(!current)return;const assignmentId=current.assignment_id||current.id;const r=await sb.functions.invoke('delivery-partner-order-details',{body:{assignment_id:assignmentId}});if(r.error)throw r.error;if(!r.data?.ok||!r.data?.order)return;const o=r.data.order;current.customer_address=o.address||'';current.delivery_lat=o.delivery_lat??null;current.delivery_lng=o.delivery_lng??null;current.customer_name=o.customer_name||'';current.customer_phone=o.customer_phone||'';const st=String(o.status||'').toLowerCase();if(st==='ready'&&lastOrderStatus!=='ready')playDeliveryReadyTone();lastOrderStatus=st;}catch(e){console.warn('Rider order details endpoint unavailable:',e.message)}}
 function playDeliveryReadyTone(){try{const a=new Audio(JPT_DELIVERY_OFFER_AUDIO);a.preload='auto';a.loop=false;a.volume=1;const p=a.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}}
