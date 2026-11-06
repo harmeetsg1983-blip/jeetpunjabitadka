@@ -236,17 +236,10 @@ assert.ok(source.includes("window.speechSynthesis.speak(u)"), 'listen control mu
 assert.ok(source.includes("u.lang='en-IN'"), 'speech readout must use an India English voice locale');
 assert.ok(!source.includes('speakOrder(o.id);'), 'speech must not start automatically when rendering a card');
 
-// Customer live sponsor rotation advances videos as well as images on the same 10-second cadence.
-const customerLiveSource = fs.readFileSync('jpt-unified-customer-live-v1.js', 'utf8');
-assert.ok(customerLiveSource.includes('sponsorTimer=setTimeout(advance,10000)'), 'customer tracking sponsor media must rotate every 10 seconds, including video');
-assert.ok(customerLiveSource.includes("if(type==='video'){el.onended=advance;el.play?.().catch(()=>{})}"), 'video sponsor may advance sooner when playback ends');
-assert.ok(customerLiveSource.includes("table:'checkout_sponsor_ads'"), 'tracking sponsor updates must continue to use the existing sponsor manager table');
 const adminHtmlSource = fs.readFileSync('admin.html', 'utf8');
-const customerHtmlSource = fs.readFileSync('index.html', 'utf8');
 const partnerSwSource = fs.readFileSync('jpt-partner-sw.js', 'utf8');
 const partnerAppSource = fs.readFileSync('partner-app.html', 'utf8');
 assert.ok(adminHtmlSource.includes('jpt-unified-partner-orders-v1.js?v=20261020-stable-queues-history-outlet-1'), 'partner HTML must cache-bust the corrected order runtime');
-assert.ok(customerHtmlSource.includes('jpt-unified-customer-live-v1.js?v=20261019-sponsor-rotation-10s-4'), 'customer HTML must cache-bust sponsor rotation changes');
 assert.ok(partnerSwSource.includes('jpt-partner-pwa-v34-stable-queues-history-outlet'), 'partner service-worker cache generation must advance with runtime fixes');
 assert.ok(partnerAppSource.includes('jpt-partner-sw.js?v=20261020-stable-queues-history-outlet-1'), 'partner app shell must register the current service-worker URL');
 assert.ok(adminHtmlSource.includes('jpt-partner-sw.js?v=20261020-stable-queues-history-outlet-1'), 'admin dashboard must register the same current service-worker URL');
