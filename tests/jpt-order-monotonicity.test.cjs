@@ -286,6 +286,7 @@ assert.ok(countWriterStart>=0&&countWriterEnd>countWriterStart,'order count writ
 const countWriter = source.slice(countWriterStart,countWriterEnd);
 assert.ok(!countWriter.includes("getElementById('ordersCount')"), 'active queue row count must not overwrite the outlet-scoped Orders Today metric');
 assert.ok(adminHtmlSource.includes(".eq('outlet_id',activeOutlet)") && adminHtmlSource.includes("metric.title='Orders created today for '+activeOutlet"), 'dashboard daily order count must be scoped to the selected outlet');
+assert.ok(adminHtmlSource.includes("in('status',['new','accepted','preparing','ready','out_for_delivery'])") && adminHtmlSource.includes('older than 24 hours'), 'dashboard must flag old active orders for manual review without auto-changing their status');
 assert.ok(adminHtmlSource.includes('imageById[String(x.id)]||nameFallback||x.image_url||'), 'menu image mapping must resolve both menu item IDs and safe unique-name fallbacks');
 assert.ok(adminHtmlSource.includes('menuNameCounts.get(nameKey)===1&&!ambiguousNames.has(nameKey)'), 'menu image fallback must not assign an ambiguous same-name image to multiple dishes');
 const brandThemeSource = fs.readFileSync('jpt-partner-brand-status-theme-v2.js', 'utf8');
