@@ -80,6 +80,9 @@ function injectStyle(){
 .${ROOT_CLASS} .btn:focus{outline-color:#d8ae42}
 
 /* Main status/banner panel */
+.${ROOT_CLASS} .hero.jpt-no-outlet-banner{
+  min-height:0!important;
+}
 .${ROOT_CLASS} .hero{
   position:relative!important;
   overflow:hidden!important;
@@ -318,6 +321,7 @@ function applyOutlet(row){
 
   const hero=document.getElementById('hero');
   if(hero){
+    hero.classList.toggle('jpt-no-outlet-banner',!banner);
     if(banner){
       hero.style.backgroundImage=
         'linear-gradient(90deg,rgba(0,0,0,.82),rgba(0,0,0,.40)),url("'+esc(banner)+'")';
