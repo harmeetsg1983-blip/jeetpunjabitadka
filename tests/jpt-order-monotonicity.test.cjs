@@ -276,6 +276,13 @@ assert.ok(source.includes("u.lang='en-IN'"), 'speech readout must use an India E
 assert.ok(!source.includes('speakOrder(o.id);'), 'speech must not start automatically when rendering a card');
 
 const adminHtmlSource = fs.readFileSync('admin.html', 'utf8');
+assert.ok(adminHtmlSource.includes("select('id',{count:'exact',head:true})"), 'dashboard Orders Today metric must use an exact read-only count');
+assert.ok(adminHtmlSource.includes(".eq('outlet_id',activeOutlet)") && adminHtmlSource.includes("metric.title='Orders created today for '+activeOutlet"), 'dashboard daily order count must be scoped to the selected outlet');
+assert.ok(adminHtmlSource.includes('imageById[String(x.id)]||nameFallback||x.image_url||'), 'menu image mapping must resolve both menu item IDs and safe unique-name fallbacks');
+assert.ok(adminHtmlSource.includes('menuNameCounts.get(nameKey)===1&&!ambiguousNames.has(nameKey)'), 'menu image fallback must not assign an ambiguous same-name image to multiple dishes');
+const brandThemeSource = fs.readFileSync('jpt-partner-brand-status-theme-v2.js', 'utf8');
+assert.ok(brandThemeSource.includes("hero.classList.toggle('jpt-no-outlet-banner',!banner)"), 'partner hero must detect outlets with no banner');
+assert.ok(brandThemeSource.includes('.hero.jpt-no-outlet-banner{'), 'partner hero must collapse its empty banner space when no outlet banner exists');
 const partnerSwSource = fs.readFileSync('jpt-partner-sw.js', 'utf8');
 const partnerAppSource = fs.readFileSync('partner-app.html', 'utf8');
 assert.ok(adminHtmlSource.includes('jpt-unified-partner-orders-v1.js?v=20261106-new-preparation-queues-1'), 'partner HTML must cache-bust the corrected order runtime');
