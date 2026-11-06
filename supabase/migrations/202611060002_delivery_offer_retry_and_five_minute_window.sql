@@ -147,16 +147,18 @@ DO $schedule$
 DECLARE
   v_job_id bigint;
 BEGIN
-  SELECT jobid INTO v_job_id
-  FROM cron.job
-  WHERE jobname='jpt-delivery-offer-retry';
-
-  IF v_job_id IS NOT NULL THEN
+  -- Replace either known name so the existing timeout job is not duplicated.
+  FOR v_job_id IN
+    SELECT jobid
+    FROM cron.job
+    WHERE jobname IN ('jpt-delivery-offer-timeout','jpt-delivery-offer-retry')
+  LOOP
     PERFORM cron.unschedule(v_job_id);
-  END IF;
+  END LOOP;
 
+  -- Preserve the production job name and keep exactly one minute scheduler.
   PERFORM cron.schedule(
-    'jpt-delivery-offer-retry',
+    'jpt-delivery-offer-timeout',
     '* * * * *',
     'select public.jpt_process_expired_delivery_offers();'
   );
