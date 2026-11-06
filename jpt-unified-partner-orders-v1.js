@@ -183,7 +183,8 @@ function boardStatus(o){
 }
 function queueForStatus(value){
   const st=status(value);
-  if(['new','accepted','preparing'].includes(st))return 'preparing';
+  if(st==='new')return 'new';
+  if(['accepted','preparing'].includes(st))return 'preparing';
   if(st==='ready')return 'ready';
   if(st==='out_for_delivery')return 'out_for_delivery';
   if(['delivered','cancelled'].includes(st))return 'history';
