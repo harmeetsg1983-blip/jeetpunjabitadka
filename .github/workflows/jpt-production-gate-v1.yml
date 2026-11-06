@@ -58,13 +58,13 @@ jobs:
           set -euo pipefail
           test -f jpt-unified-partner-orders-v1.js
           grep -Fq 'jpt-unified-partner-orders-v1.js' admin.html
-          grep -Fq 'jpt-unified-partner-orders-v1.js?v=20261106-new-preparation-queues-1' admin.html
-          grep -Fq 'admin.html?v=20261106-new-preparation-queues-1' partner-v107.html
+          grep -Fq 'jpt-unified-partner-orders-v1.js?v=20261107-jpt-only-audio-timer-scope-1' admin.html
+          grep -Fq 'admin.html?v=20261107-jpt-only-audio-timer-scope-1' partner-v107.html
           grep -Fq 'jpt-partner-access-bridge-v2.js' admin.html
           grep -Fq 'jpt-partner-final-touch-v10.js?v=20261019-header-clean-1' admin.html
-          grep -Fq 'jpt-partner-final-touch-v12.js?v=20261019-all-outlet-picker-1' admin.html
-          grep -Fq 'jpt-partner-sw.js?v=20261020-stable-queues-history-outlet-1' partner-app.html
-          grep -Fq 'jpt-partner-sw.js?v=20261020-stable-queues-history-outlet-1' admin.html
+          grep -Fq 'jpt-partner-final-touch-v12.js?v=20261107-jpt-only-scope-1' admin.html
+          grep -Fq 'jpt-partner-sw.js?v=20261107-jpt-only-scope-1' partner-app.html
+          grep -Fq 'jpt-partner-sw.js?v=20261107-jpt-only-scope-1' admin.html
           grep -Fq "const ORDER_SCOPE_KEY='jpt_partner_order_scope';" jpt-unified-partner-orders-v1.js
           grep -Fq ': selectedOutletCodes(authorizedCodes);' jpt-unified-partner-orders-v1.js
           grep -Fq "? (historyOutlet==='ALL'" jpt-unified-partner-orders-v1.js
@@ -113,7 +113,7 @@ jobs:
             echo "RED: unsupported broadcast_changes call returned to delivery migration"
             exit 1
           fi
-          grep -Fq "const CACHE='jpt-partner-pwa-v34-stable-queues-history-outlet';" jpt-partner-sw.js
+          grep -Fq "const CACHE='jpt-partner-pwa-v35-jpt-only-scope';" jpt-partner-sw.js
           echo "GREEN: delivery broadcasts use realtime.send, duplicate READY trigger is removed, and partner cache generation is explicit"
 
       - name: Run order lifecycle regression tests
