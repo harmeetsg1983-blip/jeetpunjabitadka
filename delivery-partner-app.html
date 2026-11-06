@@ -81,7 +81,7 @@ async async function sendDeliveryHeartbeat(){
   try{
     const s=await ensureSession();
     if(!s)return false;
-    const {error}=await sb.rpc('delivery_partner_heartbeat',{p_notification_permission:(typeof Notification!=='undefined'?Notification.permission:'default'),p_sound_enabled:true,p_vibration_enabled:true});
+    const {error}=await sb.rpc('delivery_partner_heartbeat');
     if(error)throw error;
     return true;
   }catch(e){
