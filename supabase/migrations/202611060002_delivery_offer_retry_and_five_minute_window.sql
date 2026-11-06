@@ -141,3 +141,24 @@ begin
   );
 end;
 $function$;
+
+-- Ensure the retry processor actually runs. pg_cron is already installed in this project.
+DO $schedule$
+DECLARE
+  v_job_id bigint;
+BEGIN
+  SELECT jobid INTO v_job_id
+  FROM cron.job
+  WHERE jobname='jpt-delivery-offer-retry';
+
+  IF v_job_id IS NOT NULL THEN
+    PERFORM cron.unschedule(v_job_id);
+  END IF;
+
+  PERFORM cron.schedule(
+    'jpt-delivery-offer-retry',
+    '* * * * *',
+    'select public.jpt_process_expired_delivery_offers();'
+  );
+END
+$schedule$;
