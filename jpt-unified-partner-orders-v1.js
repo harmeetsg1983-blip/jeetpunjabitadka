@@ -843,9 +843,8 @@ async function lifecycleTransition(id,next){
     focusQueueForStatus(rows.get(key)?.status||next);
     toast('Order status updated: '+status(rows.get(key)?.status||next).toUpperCase()+'.');
     render();
-    if(next==='ready'){
-      try{await window.sb.rpc('delivery_offer_next',{p_order_id:Number(id)})}catch(e){}
-    }
+    /* Restaurant Partner order lifecycle ends this phase at READY.
+       Delivery dispatch is intentionally not invoked from this dashboard flow. */
   }catch(e){
     if(actionAuthGeneration!==authGeneration)return;
     let fresh=await read(id,before.outlet_id).catch(()=>null);
