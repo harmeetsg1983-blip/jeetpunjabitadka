@@ -280,6 +280,8 @@ assert.ok(!source.includes('speakOrder(o.id);'), 'speech must not start automati
 
 const adminHtmlSource = fs.readFileSync('admin.html', 'utf8');
 assert.ok(adminHtmlSource.includes("select('id',{count:'exact',head:true})"), 'dashboard Orders Today metric must use an exact read-only count');
+assert.ok(adminHtmlSource.includes("function notifyOutletDataRefreshed(){window.dispatchEvent(new CustomEvent('jpt:outlet-data-refreshed'))}"), 'visible home metrics must refresh after their hidden source values are updated');
+assert.ok((adminHtmlSource.match(/notifyOutletDataRefreshed\(\)/g)||[]).length>=4, 'menu, offers, campaigns and daily orders must refresh the visible partner home metrics');
 const countWriterStart = source.indexOf('function updateCounts(');
 const countWriterEnd = source.indexOf(String.fromCharCode(10)+'async function read(',countWriterStart);
 assert.ok(countWriterStart>=0&&countWriterEnd>countWriterStart,'order count writer must be present for regression inspection');
