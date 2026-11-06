@@ -24,7 +24,7 @@
       const active=document.querySelector('.jpt-status-tab.is-active');
       if(!active && tabs[0]) tabs[0].classList.add('is-active');
     }
-    window.scrollTo({top:0,behavior:'smooth'});
+    window.scrollTo({top:0,behavior:'auto'});
   }
 
   function bind(){
