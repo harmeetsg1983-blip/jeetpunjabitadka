@@ -119,6 +119,8 @@ begin
     select o.id
     from public.orders o
     where o.status='ready'
+      -- Never dispatch historical READY orders during recovery; only recent live orders.
+      and o.ready_at >= now()-interval '2 hours'
       and not exists(
         select 1 from public.delivery_assignments da
         where da.order_id=o.id
