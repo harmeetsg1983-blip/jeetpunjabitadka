@@ -531,7 +531,11 @@ function render(){
   document.querySelectorAll('[data-delivered]').forEach(b=>b.onclick=()=>transition(b.dataset.delivered,'delivered'));
 }
 function updateCounts(all){
-  const c=document.getElementById('ordersCount'); if(c)c.textContent=String(all.length);
+  /* ordersCount is the dashboard's outlet-scoped TODAY metric, populated by
+     admin.html with an exact created_at date-range count. Do not overwrite it
+     with the active workboard row count (which includes older pending orders). */
+  const live=document.getElementById('liveQueueCount');
+  if(live)live.textContent=String(all.length);
 }
 async function read(id,outletId){
   const code=String(outletId||rows.get(String(id))?.outlet_id||'');
