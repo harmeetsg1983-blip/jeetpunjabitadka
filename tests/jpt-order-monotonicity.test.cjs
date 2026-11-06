@@ -14,11 +14,12 @@ function between(startMarker, endMarker) {
 const helpers = [
   between('function status(v){', '\nfunction items(x){'),
   between('function esc(v){', '\nfunction money(v){'),
-  between('function actionHtml(o){', '\nfunction render(){')
+  between('function actionHtml(o){', '\nfunction render(){'),
+  between('function countdownDeadline(order){', '\nfunction remaining(deadline){')
 ].join('\n');
 
 const api = vm.runInNewContext(
-  helpers + '\n;({status, boardStatus, queueForStatus, lifecycleRank, mergeOrderMonotonic, actionHtml})',
+  helpers + '\n;({status, boardStatus, queueForStatus, lifecycleRank, mergeOrderMonotonic, actionHtml, countdownDeadline})',
   {},
   { timeout: 1000 }
 );
@@ -28,6 +29,11 @@ assert.equal(api.queueForStatus('new'), 'new', 'NEW orders must stay in NEW ORDE
 assert.equal(api.queueForStatus('received'), 'new', 'legacy RECEIVED alias must route to NEW ORDERS');
 assert.equal(api.queueForStatus('accepted'), 'preparing', 'ACCEPTED orders must move to PREPARATION');
 assert.equal(api.queueForStatus('preparing'), 'preparing', 'PREPARING orders must stay in PREPARATION');
+const acceptedAt = '2026-11-06T10:00:00.000Z';
+assert.equal(api.countdownDeadline({accepted_at:acceptedAt,target_minutes:25,deadline_at:'2026-11-06T10:00:03.000Z'}), '2026-11-06T10:25:00.000Z', 'preparation countdown must anchor to accepted_at plus selected minutes, not a stale deadline');
+const primeSource = between('async function primeOrderAudio(){', '\nfunction retryBlockedRingtones(){');
+assert.ok(primeSource.includes('audioPrime=new Audio('), 'audio priming must use a dedicated media element');
+assert.ok(!primeSource.includes('audio.pause()') && !primeSource.includes('audio.muted=true'), 'audio priming must never pause or mute the live ringtone element');
 assert.equal(api.queueForStatus('ready'), 'ready', 'READY orders must route to READY');
 assert.equal(api.queueForStatus('out_for_delivery'), 'out_for_delivery', 'delivery handoff orders must route to OUT FOR DELIVERY');
 assert.equal(api.queueForStatus('delivered'), 'history', 'delivered orders must route to HISTORY');
