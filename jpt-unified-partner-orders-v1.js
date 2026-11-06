@@ -15,6 +15,7 @@ const rows=new Map();
 const actionBusy=new Set();
 let channel=null;
 let audio=null;
+let audioPrime=null;
 let activeRingtoneOrderId=null;
 const ringtoneAlertedOrderIds=new Set();
 const pendingRingtoneOrderIds=[];
@@ -49,19 +50,21 @@ function updateVisibleDiagnostics(extra){
 
 async function primeOrderAudio(){
   try{
-    if(!audio){
-      audio=new Audio('./ringtones/1000449570.mp4');
-      audio.preload='auto';
-      audio.loop=true;
-      audio.playsInline=true;
-      audio.volume=1;
+    /* Use a dedicated muted priming element. Never pause/mute the live ringtone
+       element here: the first dashboard touch must not silence an incoming order. */
+    if(!audioPrime){
+      audioPrime=new Audio('./ringtones/1000449570.mp4');
+      audioPrime.preload='auto';
+      audioPrime.loop=false;
+      audioPrime.playsInline=true;
+      audioPrime.volume=0;
     }
-    audio.muted=true;
-    audio.currentTime=0;
-    const p=audio.play();
+    audioPrime.muted=true;
+    audioPrime.currentTime=0;
+    const p=audioPrime.play();
     if(p?.then) await p;
-    try{audio.pause();audio.currentTime=0;}catch(e){}
-    audio.muted=false;
+    try{audioPrime.pause();audioPrime.currentTime=0;}catch(e){}
+    audioPrime.muted=true;
     if(window.AudioContext||window.webkitAudioContext){
       const C=window.AudioContext||window.webkitAudioContext;
       const ctx=window.__JPT_AUDIO_CTX__||new C();
@@ -370,6 +373,16 @@ function playRingtone(order){
 function localDeadline(minutes){
   return new Date(Date.now()+Number(minutes)*60000).toISOString();
 }
+function countdownDeadline(order){
+  const acceptedAt=order?.accepted_at?new Date(order.accepted_at).getTime():NaN;
+  const minutes=Number(order?.target_minutes||order?.__draftMinutes||15);
+  /* Countdown is anchored to this acceptance, not an older stale deadline
+     carried over from the NEW order snapshot. */
+  if(Number.isFinite(acceptedAt)&&acceptedAt>0&&Number.isFinite(minutes)&&minutes>0){
+    return new Date(acceptedAt+minutes*60000).toISOString();
+  }
+  return order?.deadline_at||order?.__localDeadline||null;
+}
 function remaining(deadline){
   const ms=Math.max(0,new Date(deadline||0).getTime()-Date.now());
   const s=Math.floor(ms/1000);
@@ -469,7 +482,7 @@ function render(){
     const dayHeader=selectedQueue==='history' && (!previousDay || currentDay.toDateString()!==previousDay.toDateString())
       ? '<h3 class="jpt-history-date">'+esc(currentDay.toLocaleDateString('en-IN',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}))+'</h3>' : '';
     const target=Math.max(15,Math.min(40,Number(o.target_minutes||o.__draftMinutes||15)));
-    const deadline=o.deadline_at||o.__localDeadline;
+    const deadline=countdownDeadline(o);
     const timer=st==='accepted'||st==='preparing'?remaining(deadline):'—';
     const timerButton=(st==='accepted'||st==='preparing')?
       '<div class="jpt-ready-countdown" data-timer="'+esc(o.id)+'" aria-label="Preparation time remaining">PREP TIME LEFT · '+timer+'</div>':'';
@@ -1253,7 +1266,7 @@ function updateTimers(){
     const o=rows.get(String(el.dataset.timer));if(!o)return;
     const st=status(o.status);
     if(st!=='accepted'&&st!=='preparing')return;
-    const deadline=o.deadline_at||o.__localDeadline;
+    const deadline=countdownDeadline(o);
     el.textContent='PREP TIME LEFT · '+remaining(deadline);
     if(deadline && new Date(deadline).getTime()<=Date.now() && el.dataset.readyEnabled!=='1'){
       el.dataset.readyEnabled='1';shouldRender=true;
