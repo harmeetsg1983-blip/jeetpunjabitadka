@@ -86,7 +86,7 @@ assert.ok(
   'READY handler must retain its UPI verification guard'
 );
 
-const readyHandler = between('async function lifecycleTransition(id,next){', '\\nasync function markReady(id)');
+const readyHandler = between('async function lifecycleTransition(id,next){', '\nasync function markReady(id)');
 assert.doesNotMatch(readyHandler,/delivery_offer_next/, 'MARK READY must complete within the Restaurant Partner flow without invoking delivery dispatch');
 
 // Restaurant Partner READY must not invoke delivery dispatch.
