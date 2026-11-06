@@ -144,6 +144,74 @@ begin
 end;
 $function$;
 
+
+-- Keep the rider-facing snapshot expiry aligned with the five-minute offer window.
+-- Without this replacement, polling would still expire offers after 45 seconds.
+CREATE OR REPLACE FUNCTION public.delivery_partner_offer_snapshot()
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+declare
+  v_uid uuid:=auth.uid();
+  v_partner uuid;
+  v_assignment record;
+  v_order record;
+  v_next jsonb;
+begin
+  if v_uid is null then raise exception 'AUTH_REQUIRED'; end if;
+  select id into v_partner
+  from public.delivery_partners
+  where user_id=v_uid and is_active=true
+  limit 1;
+
+  if v_partner is null then
+    return jsonb_build_object('status','not_registered');
+  end if;
+
+  -- Expire only after the same five-minute window used by the retry processor.
+  select da.* into v_assignment
+  from public.delivery_assignments da
+  where da.delivery_partner_id=v_partner and da.status='offered'
+  order by da.offered_at asc
+  limit 1;
+
+  if v_assignment.id is not null
+     and v_assignment.offered_at < now()-interval '5 minutes' then
+    update public.delivery_assignments
+    set status='expired',
+        responded_at=now(),
+        rejection_reason='offer_timeout',
+        updated_at=now()
+    where id=v_assignment.id and status='offered';
+
+    v_next:=public._delivery_offer_next_internal(v_assignment.order_id);
+    return jsonb_build_object(
+      'status','expired',
+      'assignment_id',v_assignment.id,
+      'next_offer',v_next
+    );
+  end if;
+
+  if v_assignment.id is null then
+    return jsonb_build_object('status','no_offer');
+  end if;
+
+  select id,outlet_id,customer_name,customer_phone,customer_address,total,status
+  into v_order
+  from public.orders
+  where id=v_assignment.order_id;
+
+  return jsonb_build_object(
+    'status','offer',
+    'assignment_id',v_assignment.id,
+    'order',to_jsonb(v_order),
+    'offered_at',v_assignment.offered_at
+  );
+end;
+$function$;
+
 -- Ensure the retry processor actually runs. pg_cron is already installed in this project.
 DO $schedule$
 DECLARE
