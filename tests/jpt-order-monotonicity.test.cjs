@@ -32,8 +32,10 @@ assert.equal(api.queueForStatus('preparing'), 'preparing', 'PREPARING orders mus
 const acceptedAt = '2026-11-06T10:00:00.000Z';
 assert.equal(api.countdownDeadline({accepted_at:acceptedAt,target_minutes:25,deadline_at:'2026-11-06T10:00:03.000Z'}), '2026-11-06T10:25:00.000Z', 'preparation countdown must anchor to accepted_at plus selected minutes, not a stale deadline');
 const primeSource = between('async function primeOrderAudio(){', '\nfunction retryBlockedRingtones(){');
-assert.ok(primeSource.includes('audioPrime=new Audio('), 'audio priming must use a dedicated media element');
-assert.ok(!primeSource.includes('audio.pause()') && !primeSource.includes('audio.muted=true'), 'audio priming must never pause or mute the live ringtone element');
+assert.ok(primeSource.includes("audio=new Audio('./ringtones/1000449570.mp4')"), 'audio priming must unlock the same media element used for incoming order ringtones');
+assert.ok(primeSource.includes('audio.muted=true') && primeSource.includes('audio.volume=0'), 'priming must be silent before live ringtone playback');
+assert.ok(primeSource.includes('if(activeRingtoneOrderId && audio && !audio.paused)'), 'priming must not interrupt an active incoming-order ringtone');
+assert.ok(!primeSource.includes('audioPrime'), 'a separate media element must not be used because it does not reliably unlock the live ringtone element');
 assert.equal(api.queueForStatus('ready'), 'ready', 'READY orders must route to READY');
 assert.equal(api.queueForStatus('out_for_delivery'), 'out_for_delivery', 'delivery handoff orders must route to OUT FOR DELIVERY');
 assert.equal(api.queueForStatus('delivered'), 'history', 'delivered orders must route to HISTORY');
