@@ -152,6 +152,24 @@ assert.match(
 );
 
 
+// Each lifecycle state must expose only its valid next operator action.
+const newAction = api.actionHtml({ id: 10, status: 'new' });
+assert.match(newAction, /data-accept="10"/, 'NEW order must expose ACCEPT');
+assert.match(newAction, /data-reject="10"/, 'NEW order must expose REJECT');
+assert.doesNotMatch(newAction, /data-ready="10"|data-delivery="10"|data-delivered="10"/, 'NEW order must not expose later lifecycle actions');
+const acceptedNext = api.actionHtml({ id: 11, status: 'accepted' });
+assert.match(acceptedNext, /data-ready="11"/, 'ACCEPTED order must expose MARK READY');
+const preparingNext = api.actionHtml({ id: 12, status: 'preparing' });
+assert.match(preparingNext, /data-ready="12"/, 'PREPARING order must expose MARK READY');
+const readyNext = api.actionHtml({ id: 13, status: 'ready' });
+assert.match(readyNext, /data-delivery="13"/, 'READY order must expose OUT FOR DELIVERY');
+const deliveryNext = api.actionHtml({ id: 14, status: 'out_for_delivery' });
+assert.match(deliveryNext, /data-delivered="14"/, 'OUT FOR DELIVERY order must expose MARK DELIVERED');
+for (const terminal of ['delivered','cancelled']) {
+  assert.doesNotMatch(api.actionHtml({ id: 15, status: terminal }), /data-accept=|data-reject=|data-ready=|data-delivery=|data-delivered=/, terminal+' order must not expose active lifecycle actions');
+}
+assert.match(api.actionHtml({ id: 16, status: 'received' }), /data-accept="16"/, 'legacy RECEIVED status must retain NEW-order actions');
+
 // The preparation timer must never replace or hide the actionable READY control.
 const acceptedAction = api.actionHtml({ id: 6, status: 'accepted' });
 assert.match(acceptedAction, /data-ready="6"/, 'ACCEPTED order must render a MARK READY action');
