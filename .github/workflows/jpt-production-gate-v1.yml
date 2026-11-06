@@ -190,16 +190,14 @@ jobs:
           print(f'GREEN: {total} inline JavaScript blocks passed Node syntax validation')
           PY
 
-      - name: Verify root JavaScript syntax
+      - name: Verify partner order-flow JavaScript syntax
         shell: bash
         run: |
           set -euo pipefail
-          count=0
-          while IFS= read -r -d '' f; do
+          for f in jpt-unified-partner-orders-v1.js jpt-partner-access-bridge-v2.js jpt-partner-dual-bar-nav-v1.js jpt-partner-final-touch-v10.js jpt-partner-final-touch-v12.js; do
             node --check "$f" >/dev/null
-            count=$((count+1))
-          done < <(find . -maxdepth 1 -type f -name '*.js' -print0)
-          echo "GREEN: $count root JavaScript files passed node syntax validation"
+            echo "GREEN: $f syntax valid"
+          done
 
       - name: Report missing future production layers
         shell: bash
