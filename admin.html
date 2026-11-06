@@ -389,6 +389,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
 function toast(s){$('toast').textContent=s;$('toast').style.display='block';clearTimeout(window.__toast);window.__toast=setTimeout(()=>$('toast').style.display='none',2400)}
+function notifyOutletDataRefreshed(){window.dispatchEvent(new CustomEvent('jpt:outlet-data-refreshed'))}
 function showPanel(id){document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active',x.id===id));document.querySelectorAll('.tabs .btn').forEach(x=>x.classList.toggle('gold',x.dataset.panel===id))}
 document.querySelectorAll('.tabs .btn').forEach(b=>b.onclick=()=>showPanel(b.dataset.panel));
 
@@ -413,6 +414,7 @@ async function loadOrdersTodayCount(){
   }
   metric.textContent=String(result.count??0);
   metric.title='Orders created today for '+activeOutlet;
+  notifyOutletDataRefreshed();
   const staleNotice=$('staleOrderNotice');
   if(staleNotice){
     const stale=await sb.from('orders').select('id',{count:'exact',head:true})
@@ -523,7 +525,7 @@ async function loadMenu(){
     const nameFallback=nameKey&&menuNameCounts.get(nameKey)===1&&!ambiguousNames.has(nameKey)?imageByName[nameKey]:'';
     x.image_url=imageById[String(x.id)]||nameFallback||x.image_url||'';
   });
-  $('menuCount').textContent=menuItems.length;$('menuNotice').textContent='Live menu: '+menuItems.length+' items';
+  $('menuCount').textContent=menuItems.length;$('menuNotice').textContent='Live menu: '+menuItems.length+' items';notifyOutletDataRefreshed();
   $('menuList').innerHTML=menuItems.map(x=>`<div class="itemrow">
     ${x.image_url?`<img class="thumb" src="${esc(x.image_url)}" alt="">`:`<div class="thumb" style="display:grid;place-items:center;color:#777">IMG</div>`}<div class="grow"><b>${esc(x.name)}</b><div class="muted">${esc(x.category||'Uncategorised')} • ${money(x.price)}</div><div class="muted">${x.available===false?'OFF':'ON'}${x.featured?' • FEATURED':''}</div></div>
     <div class="rowactions"><button class="btn" onclick="editItem('${esc(x.id)}')">Edit</button><button class="btn" onclick="toggleItem('${esc(x.id)}')">${x.available===false?'Turn ON':'Turn OFF'}</button></div>
@@ -756,7 +758,7 @@ async function configureScratchSlabs(){
 async function loadOffers(){
   const r=await sb.from('offers').select('*').eq('outlet_id',activeOutlet).order('created_at',{ascending:false});
   if(r.error){$('offersNotice').innerHTML='<span class="danger">'+esc(r.error.message)+'</span>';return}
-  currentOffers=r.data||[];$('offerCount').textContent=currentOffers.filter(x=>x.active||x.is_active).length;
+  currentOffers=r.data||[];$('offerCount').textContent=currentOffers.filter(x=>x.active||x.is_active).length;notifyOutletDataRefreshed();
   $('offersNotice').textContent=currentOffers.length+' offer records';
   $('offersList').innerHTML=currentOffers.map(x=>`<div class="itemrow"><div class="grow"><b>${esc(x.title||'Offer')}</b><div class="muted">${esc(x.code||'')} • ${x.active||x.is_active?'ON':'OFF'}</div></div><span class="tag">${x.discount_type?esc(x.discount_type):'Configured'}</span><button class="btn ${x.active||x.is_active?'red':'green'}" data-offer-toggle="${esc(x.id)}">${x.active||x.is_active?'Turn OFF':'Turn ON'}</button></div>`).join('')||'<div class="notice">No offers found.</div>';
   document.querySelectorAll('[data-offer-toggle]').forEach(btn=>btn.onclick=async()=>{
@@ -776,7 +778,7 @@ function activeToday(c){
 async function loadCampaigns(){
   const r=await sb.from('campaigns').select('*').eq('outlet_id',activeOutlet).order('priority',{ascending:false}).order('created_at',{ascending:false});
   if(r.error){$('campaignList').innerHTML='<span class="danger">'+esc(r.error.message)+'</span>';return}
-  currentCampaigns=r.data||[];$('campaignCount').textContent=currentCampaigns.length;
+  currentCampaigns=r.data||[];$('campaignCount').textContent=currentCampaigns.length;notifyOutletDataRefreshed();
   $('campaignList').innerHTML=currentCampaigns.map(c=>`<div class="itemrow"><div class="grow"><b>${esc(c.title||'Campaign')}</b><div class="muted">${c.active?'ON':'OFF'} • priority ${Number(c.priority||0)}</div>${activeToday(c)?'<span class="tag">TODAY OFFER</span>':''}</div></div>`).join('')||'<div class="notice">No campaigns found.</div>';
   loadTodayExisting();
 }
