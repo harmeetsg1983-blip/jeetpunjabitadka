@@ -50,21 +50,30 @@ function updateVisibleDiagnostics(extra){
 
 async function primeOrderAudio(){
   try{
-    /* Use a dedicated muted priming element. Never pause/mute the live ringtone
-       element here: the first dashboard touch must not silence an incoming order. */
-    if(!audioPrime){
-      audioPrime=new Audio('./ringtones/1000449570.mp4');
-      audioPrime.preload='auto';
-      audioPrime.loop=false;
-      audioPrime.playsInline=true;
-      audioPrime.volume=0;
+    /* Prime the exact media element that later plays incoming orders.
+       A separate Audio element does not reliably unlock playback of another
+       element on Android Chrome. Never interrupt a ringtone already in progress. */
+    if(activeRingtoneOrderId && audio && !audio.paused){
+      window.__JPT_ORDER_AUDIO_PRIMED__=true;
+      return true;
     }
-    audioPrime.muted=true;
-    audioPrime.currentTime=0;
-    const p=audioPrime.play();
+    if(!audio){
+      audio=new Audio('./ringtones/1000449570.mp4');
+      audio.preload='auto';
+      audio.loop=true;
+      audio.playsInline=true;
+      audio.volume=1;
+    }
+    audio.loop=true;
+    audio.playsInline=true;
+    audio.muted=true;
+    audio.volume=0;
+    audio.currentTime=0;
+    const p=audio.play();
     if(p?.then) await p;
-    try{audioPrime.pause();audioPrime.currentTime=0;}catch(e){}
-    audioPrime.muted=true;
+    try{audio.pause();audio.currentTime=0;}catch(e){}
+    audio.muted=false;
+    audio.volume=1;
     if(window.AudioContext||window.webkitAudioContext){
       const C=window.AudioContext||window.webkitAudioContext;
       const ctx=window.__JPT_AUDIO_CTX__||new C();
@@ -74,6 +83,7 @@ async function primeOrderAudio(){
     window.__JPT_ORDER_AUDIO_PRIMED__=true;
     return true;
   }catch(e){
+    try{if(audio){audio.pause();audio.currentTime=0;audio.muted=false;audio.volume=1}}catch(_){}
     window.__JPT_ORDER_AUDIO_PRIMED__=false;
     return false;
   }
