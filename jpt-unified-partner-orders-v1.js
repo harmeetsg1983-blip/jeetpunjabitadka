@@ -421,8 +421,8 @@ function render(){
     .sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
   /* ALL is the active workboard only. Completed/cancelled records belong in history tabs
      and must never return to ALL or trigger active-order actions. */
-  /* Four operator-facing queues: all NEW/ACCEPTED/PREPARING orders stay in
-     Preparing; terminal delivered/cancelled orders are kept in History. */
+  /* Five operator-facing queues: NEW stays separate from ACCEPTED/PREPARING;
+     READY, OUT FOR DELIVERY and terminal HISTORY remain distinct. */
   const historyDate=selectedQueue==='history'?String(document.getElementById('orderHistoryDate')?.value||''):'';
   const historyStart=historyDate&&/^\d{4}-\d{2}-\d{2}$/.test(historyDate)
     ? new Date(Number(historyDate.slice(0,4)),Number(historyDate.slice(5,7))-1,Number(historyDate.slice(8,10)))
