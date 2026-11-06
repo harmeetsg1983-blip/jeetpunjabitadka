@@ -1,4 +1,5 @@
 name: JPT Production Gate V1 - Safe Preflight
+# Partner order-flow validation runs on pull requests as well as production pushes.
 
 on:
   push:
