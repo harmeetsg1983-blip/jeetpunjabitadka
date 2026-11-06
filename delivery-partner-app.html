@@ -71,20 +71,22 @@ async function ensureSession(){
   return null;
 }
 
-async function refresh(){try{let s=await ensureSession();if(!s)return;let {data}=await sb.from('delivery_partners').select('id,status,is_active,onboarding_completed,verification_status,last_seen_at').eq('user_id',s.user.id).maybeSingle();if(data){window.JPT_DELIVERY_PARTNER_ID=String(data.id||'');$('onboardState').textContent='Onboarding: '+(data.onboarding_completed?'Submitted':'Not submitted');$('verifyState').textContent='Admin: '+(data.verification_status||'pending');const seen=data.last_seen_at?Date.parse(data.last_seen_at):0;const fresh=seen&&((Date.now()-seen)<=120000);const online=data.status==='online'&&!!fresh;renderStatus(online);if(online){try{const deviceReady=await window.JPTDeliveryDevice?.register?.();await window.JPTDeliveryDevice?.boot?.();if(deviceReady)await window.JPTDeliveryPushSubscription?.boot?.();}catch(e){console.warn('Delivery device/push setup:',e.message)}startOfferPolling()}else if(data.status==='online'&&!fresh&&$('submitMsg'))$('submitMsg').textContent='Rider session is stale. Tap GO ONLINE to refresh the live connection.';}await loadEarnings()}catch(e){$('submitMsg').textContent='Session setup: '+e.message}}
+async function refresh(){try{let s=await ensureSession();if(!s)return;let {data}=await sb.from('delivery_partners').select('id,status,is_active,onboarding_completed,verification_status,last_seen_at').eq('user_id',s.user.id).maybeSingle();if(data){window.JPT_DELIVERY_PARTNER_ID=String(data.id||'');$('onboardState').textContent='Onboarding: '+(data.onboarding_completed?'Submitted':'Not submitted');$('verifyState').textContent='Admin: '+(data.verification_status||'pending');const seen=data.last_seen_at?Date.parse(data.last_seen_at):0;const fresh=seen&&((Date.now()-seen)<=120000);let online=data.status==='online'&&!!fresh;const approved=data.is_active===true&&data.onboarding_completed===true&&data.verification_status==='verified';if(data.status==='online'&&!fresh&&approved){const resumed=await sendDeliveryHeartbeat();if(resumed){online=true;if($('submitMsg'))$('submitMsg').textContent='Live connection restored.';}else if($('submitMsg'))$('submitMsg').textContent='Live connection could not be restored. Check network and tap GO ONLINE.';}renderStatus(online);if(online){try{const deviceReady=await window.JPTDeliveryDevice?.register?.();await window.JPTDeliveryDevice?.boot?.();if(deviceReady)await window.JPTDeliveryPushSubscription?.boot?.();}catch(e){console.warn('Delivery device/push setup:',e.message)}startOfferPolling()}else if(data.status==='online'&&!fresh&&$('submitMsg')&&!approved)$('submitMsg').textContent='Rider approval is required before going ONLINE.';}await loadEarnings()}catch(e){$('submitMsg').textContent='Session setup: '+e.message}}
 function renderStatus(v){$('statusPill').textContent=v?'ONLINE':'OFFLINE';$('statusPill').className='pill '+(v?'online':'');if(v)startDeliveryHeartbeat();else stopDeliveryHeartbeat()}
 let deliveryHeartbeatTimer=null;
 let deliveryHeartbeatBusy=false;
 async function sendDeliveryHeartbeat(){
-  if(deliveryHeartbeatBusy)return;
+  if(deliveryHeartbeatBusy)return false;
   deliveryHeartbeatBusy=true;
   try{
     const s=await ensureSession();
-    if(!s)return;
+    if(!s)return false;
     const {error}=await sb.rpc('delivery_partner_heartbeat',{p_notification_permission:(typeof Notification!=='undefined'?Notification.permission:'default'),p_sound_enabled:true,p_vibration_enabled:true});
     if(error)throw error;
+    return true;
   }catch(e){
     if($('submitMsg'))$('submitMsg').textContent='Live status: '+(e.message||'heartbeat unavailable');
+    return false;
   }finally{deliveryHeartbeatBusy=false}
 }
 function stopDeliveryHeartbeat(){
@@ -95,7 +97,7 @@ function startDeliveryHeartbeat(){
   sendDeliveryHeartbeat();
   deliveryHeartbeatTimer=setInterval(sendDeliveryHeartbeat,30000);
 }
-window.addEventListener('focus',()=>{if($('statusPill')?.textContent==='ONLINE')sendDeliveryHeartbeat()});
+window.addEventListener('focus',()=>{if($('statusPill')?.textContent==='ONLINE')sendDeliveryHeartbeat()});document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&$('statusPill')?.textContent==='ONLINE')sendDeliveryHeartbeat()});
 async function setOnline(){try{let s=await ensureSession();if(!s)return;let {data,error}=await sb.rpc('delivery_partner_set_status',{p_status:'online'});if(error)throw error;await sendDeliveryHeartbeat();renderStatus(true);startOfferPolling()}catch(e){alert(e.message||'Online status is not available until admin approval is complete.')}}async function setOffline(){try{let s=await ensureSession();if(!s)return;let {error}=await sb.rpc('delivery_partner_set_status',{p_status:'offline'});if(error)throw error;stopDeliveryHeartbeat();renderStatus(false);stopOfferPolling()}catch(e){alert(e.message)}}
 async function openCamera(){try{if(stream)stream.getTracks().forEach(t=>t.stop());stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'user'},width:{ideal:1280},height:{ideal:1280}},audio:false});$('video').srcObject=stream;$('video').style.display='block';$('canvas').style.display='none';$('capture').disabled=false;$('selfieState').textContent='Camera ready — capture live selfie';}catch(e){alert('Camera error: '+e.name+' — '+e.message)}}
 function captureSelfie(){let v=$('video'),c=$('canvas');if(!stream)return;let w=v.videoWidth||720,h=v.videoHeight||720;c.width=w;c.height=h;c.getContext('2d').drawImage(v,0,0,w,h);c.toBlob(b=>{selfieBlob=b;$('video').style.display='none';c.style.display='block';$('capture').disabled=true;$('retake').classList.remove('hidden');$('selfieState').textContent='Live selfie: Captured';stream.getTracks().forEach(t=>t.stop());stream=null},'image/jpeg',.88)}function retakeSelfie(){selfieBlob=null;$('canvas').style.display='none';$('retake').classList.add('hidden');openCamera()}
