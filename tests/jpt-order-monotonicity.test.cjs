@@ -124,6 +124,10 @@ assert.ok(
   'ACCEPT conflict status must be reconciled without regressing a newer confirmed terminal/forward state'
 );
 const rejectHandler = between('async function reject(id){', '\nconst transitionBusy=new Set();');
+assert.match(rejectHandler,/canonical=await read\(id,o\.outlet_id\);[\s\S]*?if\(status\(canonical\.status\)!=='new'\)[\s\S]*?Duplicate REJECT blocked\./,
+  'REJECT must verify the canonical server row is still NEW before sending cancellation');
+assert.ok(rejectHandler.indexOf('canonical=await read(id,o.outlet_id)') < rejectHandler.indexOf("p_next_status:'cancelled'"),
+  'REJECT preflight read must happen before the cancellation RPC');
 const rejectPreflight = rejectHandler.slice(0, rejectHandler.indexOf('try{'));
 assert.doesNotMatch(
   rejectPreflight,
