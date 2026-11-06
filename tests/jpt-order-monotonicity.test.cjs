@@ -307,10 +307,10 @@ assert.ok(brandThemeSource.includes("hero.classList.toggle('jpt-no-outlet-banner
 assert.ok(brandThemeSource.includes('.hero.jpt-no-outlet-banner{'), 'partner hero must collapse its empty banner space when no outlet banner exists');
 const partnerSwSource = fs.readFileSync('jpt-partner-sw.js', 'utf8');
 const partnerAppSource = fs.readFileSync('partner-app.html', 'utf8');
-assert.ok(adminHtmlSource.includes('jpt-unified-partner-orders-v1.js?v=20261106-new-preparation-queues-1'), 'partner HTML must cache-bust the corrected order runtime');
-assert.ok(partnerSwSource.includes('jpt-partner-pwa-v34-stable-queues-history-outlet'), 'partner service-worker cache generation must advance with runtime fixes');
-assert.ok(partnerAppSource.includes('jpt-partner-sw.js?v=20261020-stable-queues-history-outlet-1'), 'partner app shell must register the current service-worker URL');
-assert.ok(adminHtmlSource.includes('jpt-partner-sw.js?v=20261020-stable-queues-history-outlet-1'), 'admin dashboard must register the same current service-worker URL');
+assert.ok(adminHtmlSource.includes('jpt-unified-partner-orders-v1.js?v=20261107-jpt-only-audio-timer-scope-1'), 'partner HTML must cache-bust the corrected order runtime');
+assert.ok(partnerSwSource.includes('jpt-partner-pwa-v35-jpt-only-scope'), 'partner service-worker cache generation must advance with runtime fixes');
+assert.ok(partnerAppSource.includes('jpt-partner-sw.js?v=20261107-jpt-only-scope-1'), 'partner app shell must register the current service-worker URL');
+assert.ok(adminHtmlSource.includes('jpt-partner-sw.js?v=20261107-jpt-only-scope-1'), 'admin dashboard must register the same current service-worker URL');
 
 
 
