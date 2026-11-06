@@ -178,7 +178,7 @@ assert.ok(source.includes('body.dataset.jptRenderKey===renderKey&&body.children.
 const finalTouch = fs.readFileSync('jpt-partner-final-touch-v10.js', 'utf8');
 assert.doesNotMatch(finalTouch, /<div class="jpt-v9-context">/, 'redundant outlet-name row under the bell must not render');
 const outletPicker = fs.readFileSync('jpt-partner-final-touch-v12.js', 'utf8');
-assert.ok(outletPicker.includes("allButton.textContent='All Outlet Select';"), 'outlet picker must offer All Outlet Select');
+assert.ok(outletPicker.includes("allButton.textContent='SELECT ALL OUTLETS';"), 'outlet picker must offer SELECT ALL OUTLETS');
 assert.ok(outletPicker.includes("localStorage.setItem('jpt_partner_order_scope','ALL')"), 'All Outlet Select must set all-outlet order scope');
 
 const adminUi = fs.readFileSync('admin.html', 'utf8');
