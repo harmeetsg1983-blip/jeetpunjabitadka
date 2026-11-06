@@ -15,13 +15,14 @@ const rows=new Map();
 const actionBusy=new Set();
 let channel=null;
 let audio=null;
+let audioPrime=null;
 let activeRingtoneOrderId=null;
 const ringtoneAlertedOrderIds=new Set();
 const pendingRingtoneOrderIds=[];
 const failedRingtoneOrderIds=new Set();
 let audioGeneration=0;
 let timerHandle=null;
-let selectedQueue='preparing';
+let selectedQueue='new';
 let managedSignature='';
 let fallbackPollBusy=false;
 let initialLoadSequence=0;
@@ -49,6 +50,13 @@ function updateVisibleDiagnostics(extra){
 
 async function primeOrderAudio(){
   try{
+    /* Prime the exact media element that later plays incoming orders.
+       A separate Audio element does not reliably unlock playback of another
+       element on Android Chrome. Never interrupt a ringtone already in progress. */
+    if(activeRingtoneOrderId && audio && !audio.paused){
+      window.__JPT_ORDER_AUDIO_PRIMED__=true;
+      return true;
+    }
     if(!audio){
       audio=new Audio('./ringtones/1000449570.mp4');
       audio.preload='auto';
@@ -56,12 +64,16 @@ async function primeOrderAudio(){
       audio.playsInline=true;
       audio.volume=1;
     }
+    audio.loop=true;
+    audio.playsInline=true;
     audio.muted=true;
+    audio.volume=0;
     audio.currentTime=0;
     const p=audio.play();
     if(p?.then) await p;
     try{audio.pause();audio.currentTime=0;}catch(e){}
     audio.muted=false;
+    audio.volume=1;
     if(window.AudioContext||window.webkitAudioContext){
       const C=window.AudioContext||window.webkitAudioContext;
       const ctx=window.__JPT_AUDIO_CTX__||new C();
@@ -71,6 +83,7 @@ async function primeOrderAudio(){
     window.__JPT_ORDER_AUDIO_PRIMED__=true;
     return true;
   }catch(e){
+    try{if(audio){audio.pause();audio.currentTime=0;audio.muted=false;audio.volume=1}}catch(_){}
     window.__JPT_ORDER_AUDIO_PRIMED__=false;
     return false;
   }
@@ -143,10 +156,12 @@ async function resolveManagedOutlets(){
 }
 const ORDER_SCOPE_KEY='jpt_partner_order_scope';
 function selectedOrderScope(codes=managedOutlets()){
-  const saved=String(localStorage.getItem(ORDER_SCOPE_KEY)||'ALL');
+  const saved=String(localStorage.getItem(ORDER_SCOPE_KEY)||'JPT-001');
   if(saved==='ALL'||!saved)return 'ALL';
   if(codes.includes(saved))return saved;
-  /* A stale or no-longer-authorized scope must never hide every order. */
+  /* JPT-only startup is fail-closed: if JPT-001 is not authorized, show no outlet orders. */
+  if(saved==='JPT-001')return saved;
+  /* A stale or no-longer-authorized user-selected scope must never hide every order. */
   localStorage.setItem(ORDER_SCOPE_KEY,'ALL');
   return 'ALL';
 }
@@ -183,7 +198,8 @@ function boardStatus(o){
 }
 function queueForStatus(value){
   const st=status(value);
-  if(['new','accepted','preparing'].includes(st))return 'preparing';
+  if(st==='new')return 'new';
+  if(['accepted','preparing'].includes(st))return 'preparing';
   if(st==='ready')return 'ready';
   if(st==='out_for_delivery')return 'out_for_delivery';
   if(['delivered','cancelled'].includes(st))return 'history';
@@ -369,6 +385,16 @@ function playRingtone(order){
 function localDeadline(minutes){
   return new Date(Date.now()+Number(minutes)*60000).toISOString();
 }
+function countdownDeadline(order){
+  const acceptedAt=order?.accepted_at?new Date(order.accepted_at).getTime():NaN;
+  const minutes=Number(order?.target_minutes||order?.__draftMinutes||15);
+  /* Countdown is anchored to this acceptance, not an older stale deadline
+     carried over from the NEW order snapshot. */
+  if(Number.isFinite(acceptedAt)&&acceptedAt>0&&Number.isFinite(minutes)&&minutes>0){
+    return new Date(acceptedAt+minutes*60000).toISOString();
+  }
+  return order?.deadline_at||order?.__localDeadline||null;
+}
 function remaining(deadline){
   const ms=Math.max(0,new Date(deadline||0).getTime()-Date.now());
   const s=Math.floor(ms/1000);
@@ -420,8 +446,8 @@ function render(){
     .sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
   /* ALL is the active workboard only. Completed/cancelled records belong in history tabs
      and must never return to ALL or trigger active-order actions. */
-  /* Four operator-facing queues: all NEW/ACCEPTED/PREPARING orders stay in
-     Preparing; terminal delivered/cancelled orders are kept in History. */
+  /* Five operator-facing queues: NEW stays separate from ACCEPTED/PREPARING;
+     READY, OUT FOR DELIVERY and terminal HISTORY remain distinct. */
   const historyDate=selectedQueue==='history'?String(document.getElementById('orderHistoryDate')?.value||''):'';
   const historyStart=historyDate&&/^\d{4}-\d{2}-\d{2}$/.test(historyDate)
     ? new Date(Number(historyDate.slice(0,4)),Number(historyDate.slice(5,7))-1,Number(historyDate.slice(8,10)))
@@ -468,7 +494,7 @@ function render(){
     const dayHeader=selectedQueue==='history' && (!previousDay || currentDay.toDateString()!==previousDay.toDateString())
       ? '<h3 class="jpt-history-date">'+esc(currentDay.toLocaleDateString('en-IN',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}))+'</h3>' : '';
     const target=Math.max(15,Math.min(40,Number(o.target_minutes||o.__draftMinutes||15)));
-    const deadline=o.deadline_at||o.__localDeadline;
+    const deadline=countdownDeadline(o);
     const timer=st==='accepted'||st==='preparing'?remaining(deadline):'—';
     const timerButton=(st==='accepted'||st==='preparing')?
       '<div class="jpt-ready-countdown" data-timer="'+esc(o.id)+'" aria-label="Preparation time remaining">PREP TIME LEFT · '+timer+'</div>':'';
@@ -530,7 +556,11 @@ function render(){
   document.querySelectorAll('[data-delivered]').forEach(b=>b.onclick=()=>transition(b.dataset.delivered,'delivered'));
 }
 function updateCounts(all){
-  const c=document.getElementById('ordersCount'); if(c)c.textContent=String(all.length);
+  /* ordersCount is the dashboard's outlet-scoped TODAY metric, populated by
+     admin.html with an exact created_at date-range count. Do not overwrite it
+     with the active workboard row count (which includes older pending orders). */
+  const live=document.getElementById('liveQueueCount');
+  if(live)live.textContent=String(all.length);
 }
 async function read(id,outletId){
   const code=String(outletId||rows.get(String(id))?.outlet_id||'');
@@ -681,6 +711,35 @@ async function reject(id){
      Keep the NEW-order alert active until the server confirms cancellation. */
   actionBusy.add(key);
   try{
+    /* Reject only while the canonical server row is still NEW. A stale card
+       must never send a cancellation transition for an already accepted order. */
+    let canonical;
+    try{
+      canonical=await read(id,o.outlet_id);
+      if(actionAuthGeneration!==authGeneration)return;
+    }catch(preflightError){
+      if(actionAuthGeneration!==authGeneration)return;
+      toast('REJECT paused: server status could not be verified. Refresh Orders before retrying.');
+      await initialLoad().catch(()=>{});
+      return;
+    }
+    if(!canonical){
+      rows.delete(key);
+      acknowledgeRingtone(key);
+      toast('Order is no longer in the live server queue; stale card removed.');
+      render();
+      return;
+    }
+    if(status(canonical.status)!=='new'){
+      const latest=rows.get(key)||o;
+      const reconciled=mergeOrderMonotonic(latest,canonical);
+      rows.set(key,reconciled);
+      if(status(reconciled.status)!=='new')acknowledgeRingtone(key);
+      toast('Server confirms '+status(reconciled.status).toUpperCase()+'. Duplicate REJECT blocked.');
+      render();
+      return;
+    }
+    rows.set(key,mergeOrderMonotonic(rows.get(key)||o,canonical));
     const r=await window.sb.rpc('jpt_partner_transition_order',{
       p_order_id:Number(id),
       p_next_status:'cancelled',
@@ -809,9 +868,8 @@ async function lifecycleTransition(id,next){
     focusQueueForStatus(rows.get(key)?.status||next);
     toast('Order status updated: '+status(rows.get(key)?.status||next).toUpperCase()+'.');
     render();
-    if(next==='ready'){
-      try{await window.sb.rpc('delivery_offer_next',{p_order_id:Number(id)})}catch(e){}
-    }
+    /* Restaurant Partner order lifecycle ends this phase at READY.
+       Delivery dispatch is intentionally not invoked from this dashboard flow. */
   }catch(e){
     if(actionAuthGeneration!==authGeneration)return;
     let fresh=await read(id,before.outlet_id).catch(()=>null);
@@ -1029,7 +1087,7 @@ async function performSubscribe(){
     console.warn('[JPT Orders] Realtime not started: authorized outlet list is empty.');
     return;
   }
-  const liveCodes=[...new Set(codes.map(String).filter(Boolean))];
+  const liveCodes=selectedOutletCodes([...new Set(codes.map(String).filter(Boolean))]);
   for(const code of liveCodes){
     const ch=window.sb.channel('jpt-unified-orders-'+code+'-'+Date.now());
     ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
@@ -1220,7 +1278,7 @@ function updateTimers(){
     const o=rows.get(String(el.dataset.timer));if(!o)return;
     const st=status(o.status);
     if(st!=='accepted'&&st!=='preparing')return;
-    const deadline=o.deadline_at||o.__localDeadline;
+    const deadline=countdownDeadline(o);
     el.textContent='PREP TIME LEFT · '+remaining(deadline);
     if(deadline && new Date(deadline).getTime()<=Date.now() && el.dataset.readyEnabled!=='1'){
       el.dataset.readyEnabled='1';shouldRender=true;

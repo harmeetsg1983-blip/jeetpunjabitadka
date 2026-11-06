@@ -14,14 +14,34 @@ function between(startMarker, endMarker) {
 const helpers = [
   between('function status(v){', '\nfunction items(x){'),
   between('function esc(v){', '\nfunction money(v){'),
-  between('function actionHtml(o){', '\nfunction render(){')
+  between('function actionHtml(o){', '\nfunction render(){'),
+  between('function countdownDeadline(order){', '\nfunction remaining(deadline){')
 ].join('\n');
 
 const api = vm.runInNewContext(
-  helpers + '\n;({status, lifecycleRank, mergeOrderMonotonic, actionHtml})',
+  helpers + '\n;({status, boardStatus, queueForStatus, lifecycleRank, mergeOrderMonotonic, actionHtml, countdownDeadline})',
   {},
   { timeout: 1000 }
 );
+
+// Queue routing is behavioral, not just a source-string check.
+assert.equal(api.queueForStatus('new'), 'new', 'NEW orders must stay in NEW ORDERS');
+assert.equal(api.queueForStatus('received'), 'new', 'legacy RECEIVED alias must route to NEW ORDERS');
+assert.equal(api.queueForStatus('accepted'), 'preparing', 'ACCEPTED orders must move to PREPARATION');
+assert.equal(api.queueForStatus('preparing'), 'preparing', 'PREPARING orders must stay in PREPARATION');
+const acceptedAt = '2026-11-06T10:00:00.000Z';
+assert.equal(api.countdownDeadline({accepted_at:acceptedAt,target_minutes:25,deadline_at:'2026-11-06T10:00:03.000Z'}), '2026-11-06T10:25:00.000Z', 'preparation countdown must anchor to accepted_at plus selected minutes, not a stale deadline');
+const primeSource = between('async function primeOrderAudio(){', '\nfunction retryBlockedRingtones(){');
+assert.ok(primeSource.includes("audio=new Audio('./ringtones/1000449570.mp4')"), 'audio priming must unlock the same media element used for incoming order ringtones');
+assert.ok(primeSource.includes('audio.muted=true') && primeSource.includes('audio.volume=0'), 'priming must be silent before live ringtone playback');
+assert.ok(primeSource.includes('if(activeRingtoneOrderId && audio && !audio.paused)'), 'priming must not interrupt an active incoming-order ringtone');
+assert.ok(!primeSource.includes('audioPrime'), 'a separate media element must not be used because it does not reliably unlock the live ringtone element');
+assert.equal(api.queueForStatus('ready'), 'ready', 'READY orders must route to READY');
+assert.equal(api.queueForStatus('out_for_delivery'), 'out_for_delivery', 'delivery handoff orders must route to OUT FOR DELIVERY');
+assert.equal(api.queueForStatus('delivered'), 'history', 'delivered orders must route to HISTORY');
+assert.equal(api.queueForStatus('cancelled'), 'history', 'cancelled orders must route to HISTORY');
+assert.equal(api.queueForStatus('canceled'), 'history', 'legacy CANCELED alias must route to HISTORY');
+assert.equal(api.boardStatus({status:'accepted'}), 'preparing', 'ACCEPTED must display as PREPARATION without changing persisted status');
 
 // Realtime/SELECT ordering must not regress a known lifecycle state.
 assert.equal(
@@ -74,6 +94,10 @@ assert.ok(
   'READY handler must retain its UPI verification guard'
 );
 
+const readyHandler = between('async function lifecycleTransition(id,next){', '\nasync function markReady(id)');
+assert.doesNotMatch(readyHandler,/delivery_offer_next/, 'MARK READY must complete within the Restaurant Partner flow without invoking delivery dispatch');
+
+// Restaurant Partner READY must not invoke delivery dispatch.
 // Realtime recovery contract: keep both Postgres Changes and private Broadcast paths.
 assert.ok(
   source.includes("window.sb.channel('jpt:partner:outlet:'+code,{config:{private:true}})"),
@@ -112,6 +136,10 @@ assert.ok(
   'ACCEPT conflict status must be reconciled without regressing a newer confirmed terminal/forward state'
 );
 const rejectHandler = between('async function reject(id){', '\nconst transitionBusy=new Set();');
+assert.match(rejectHandler,/canonical=await read\(id,o\.outlet_id\);[\s\S]*?if\(status\(canonical\.status\)!=='new'\)[\s\S]*?Duplicate REJECT blocked\./,
+  'REJECT must verify the canonical server row is still NEW before sending cancellation');
+assert.ok(rejectHandler.indexOf('canonical=await read(id,o.outlet_id)') < rejectHandler.indexOf("p_next_status:'cancelled'"),
+  'REJECT preflight read must happen before the cancellation RPC');
 const rejectPreflight = rejectHandler.slice(0, rejectHandler.indexOf('try{'));
 assert.doesNotMatch(
   rejectPreflight,
@@ -140,6 +168,24 @@ assert.match(
 );
 
 
+// Each lifecycle state must expose only its valid next operator action.
+const newAction = api.actionHtml({ id: 10, status: 'new' });
+assert.match(newAction, /data-accept="10"/, 'NEW order must expose ACCEPT');
+assert.match(newAction, /data-reject="10"/, 'NEW order must expose REJECT');
+assert.doesNotMatch(newAction, /data-ready="10"|data-delivery="10"|data-delivered="10"/, 'NEW order must not expose later lifecycle actions');
+const acceptedNext = api.actionHtml({ id: 11, status: 'accepted' });
+assert.match(acceptedNext, /data-ready="11"/, 'ACCEPTED order must expose MARK READY');
+const preparingNext = api.actionHtml({ id: 12, status: 'preparing' });
+assert.match(preparingNext, /data-ready="12"/, 'PREPARING order must expose MARK READY');
+const readyNext = api.actionHtml({ id: 13, status: 'ready' });
+assert.match(readyNext, /data-delivery="13"/, 'READY order must expose OUT FOR DELIVERY');
+const deliveryNext = api.actionHtml({ id: 14, status: 'out_for_delivery' });
+assert.match(deliveryNext, /data-delivered="14"/, 'OUT FOR DELIVERY order must expose MARK DELIVERED');
+for (const terminal of ['delivered','cancelled']) {
+  assert.doesNotMatch(api.actionHtml({ id: 15, status: terminal }), /data-accept=|data-reject=|data-ready=|data-delivery=|data-delivered=/, terminal+' order must not expose active lifecycle actions');
+}
+assert.match(api.actionHtml({ id: 16, status: 'received' }), /data-accept="16"/, 'legacy RECEIVED status must retain NEW-order actions');
+
 // The preparation timer must never replace or hide the actionable READY control.
 const acceptedAction = api.actionHtml({ id: 6, status: 'accepted' });
 assert.match(acceptedAction, /data-ready="6"/, 'ACCEPTED order must render a MARK READY action');
@@ -160,6 +206,11 @@ assert.ok(source.includes("? (historyOutlet==='ALL'"), 'history query scope must
 assert.ok(source.includes('orderMatchesSelectedScope(o)'), 'order cards and realtime events must honor selected outlet scope');
 assert.ok(source.includes('await initialLoad({alertNewOrders:true});'), 'startup/scope refresh must ring recent NEW orders already placed while app was closed');
 
+// NEW orders have their own first queue; ACCEPTED/PREPARING belong to preparation.
+assert.ok(source.includes("if(st==='new')return 'new';"), 'NEW orders must remain in the dedicated NEW ORDERS queue');
+assert.ok(source.includes("if(['accepted','preparing'].includes(st))return 'preparing';"), 'accepted orders must move into PREPARATION');
+assert.ok(source.includes("let selectedQueue='new';"), 'dashboard must open on NEW ORDERS by default');
+
 // Queue changes must not auto-navigate the operator away from the selected screen.
 const queueFocus = between('function focusQueueForStatus(value){', '\nfunction syncHistoryTools(){');
 assert.match(queueFocus, /Deliberately keep the operator on the chosen queue[\s\S]*?return;/,
@@ -176,6 +227,9 @@ assert.ok(source.includes('body.dataset.jptRenderKey===renderKey&&body.children.
 
 // Header must not repeat outlet identity under the bell; outlet list remains in the picker.
 const finalTouch = fs.readFileSync('jpt-partner-final-touch-v10.js', 'utf8');
+assert.ok(finalTouch.includes('if(POSTERS.length<2)'), 'single-poster dashboard must not show misleading carousel arrows');
+assert.ok(finalTouch.includes('jpt-v9-poster-fallback'), 'failed poster media must show a branded fallback instead of a blank grey box');
+assert.ok(finalTouch.includes('jpt-v9-logo-fallback'), 'failed embedded logo media must show a readable JPT fallback');
 assert.doesNotMatch(finalTouch, /<div class="jpt-v9-context">/, 'redundant outlet-name row under the bell must not render');
 const outletPicker = fs.readFileSync('jpt-partner-final-touch-v12.js', 'utf8');
 assert.ok(outletPicker.includes("allButton.textContent='SELECT ALL OUTLETS';"), 'outlet picker must offer SELECT ALL OUTLETS');
@@ -203,12 +257,13 @@ const scopeApi = vm.runInNewContext(
   },
   { timeout: 1000 }
 );
-assert.equal([...scopeApi.selectedOutletCodes(['JPT-001','NME-001'])].join(','), 'JPT-001,NME-001', 'default order scope must include every authorized outlet');
+assert.equal([...scopeApi.selectedOutletCodes(['JPT-001','NME-001'])].join(','), 'JPT-001', 'default order scope must isolate JPT-001');
+assert.equal([...scopeApi.selectedOutletCodes(['NME-001'])].length, 0, 'JPT-only default must fail closed when JPT-001 is not authorized');
 scopeStore.value = 'NME-001';
 assert.equal([...scopeApi.selectedOutletCodes(['JPT-001','NME-001'])].join(','), 'NME-001', 'a specific outlet scope must filter the query');
 assert.equal(scopeApi.orderMatchesSelectedScope({outlet_id:'JPT-001'}), false, 'events from another outlet must not enter a specific outlet scope');
 scopeStore.value = 'NOT_AUTHORIZED';
-assert.equal([...scopeApi.selectedOutletCodes(['JPT-001','NME-001'])].join(','), 'JPT-001,NME-001', 'stale unauthorized scope must fail open to authorized all-outlet view');
+assert.equal([...scopeApi.selectedOutletCodes(['JPT-001','NME-001'])].join(','), 'JPT-001,NME-001', 'stale non-JPT user-selected scope must fail open to authorized all-outlet view');
 assert.equal(scopeStore.value, 'ALL', 'stale scope must be reset to All Outlet Select');
 
 assert.ok(source.includes('primeOrderAudio().then(primed=>{if(primed)retryBlockedRingtones()})'), 'first user gesture must retry a browser-blocked new-order ringtone automatically');
@@ -237,12 +292,27 @@ assert.ok(source.includes("u.lang='en-IN'"), 'speech readout must use an India E
 assert.ok(!source.includes('speakOrder(o.id);'), 'speech must not start automatically when rendering a card');
 
 const adminHtmlSource = fs.readFileSync('admin.html', 'utf8');
+assert.ok(adminHtmlSource.includes("select('id',{count:'exact',head:true})"), 'dashboard Orders Today metric must use an exact read-only count');
+assert.ok(adminHtmlSource.includes("function notifyOutletDataRefreshed(){window.dispatchEvent(new CustomEvent('jpt:outlet-data-refreshed'))}"), 'visible home metrics must refresh after their hidden source values are updated');
+assert.ok((adminHtmlSource.match(/notifyOutletDataRefreshed\(\)/g)||[]).length>=4, 'menu, offers, campaigns and daily orders must refresh the visible partner home metrics');
+const countWriterStart = source.indexOf('function updateCounts(');
+const countWriterEnd = source.indexOf(String.fromCharCode(10)+'async function read(',countWriterStart);
+assert.ok(countWriterStart>=0&&countWriterEnd>countWriterStart,'order count writer must be present for regression inspection');
+const countWriter = source.slice(countWriterStart,countWriterEnd);
+assert.ok(!countWriter.includes("getElementById('ordersCount')"), 'active queue row count must not overwrite the outlet-scoped Orders Today metric');
+assert.ok(adminHtmlSource.includes(".eq('outlet_id',activeOutlet)") && adminHtmlSource.includes("metric.title='Orders created today for '+activeOutlet"), 'dashboard daily order count must be scoped to the selected outlet');
+assert.ok(adminHtmlSource.includes("in('status',['new','accepted','preparing','ready','out_for_delivery'])") && adminHtmlSource.includes('older than 24 hours'), 'dashboard must flag old active orders for manual review without auto-changing their status');
+assert.ok(adminHtmlSource.includes('imageById[String(x.id)]||nameFallback||x.image_url||'), 'menu image mapping must resolve both menu item IDs and safe unique-name fallbacks');
+assert.ok(adminHtmlSource.includes('menuNameCounts.get(nameKey)===1&&!ambiguousNames.has(nameKey)'), 'menu image fallback must not assign an ambiguous same-name image to multiple dishes');
+const brandThemeSource = fs.readFileSync('jpt-partner-brand-status-theme-v2.js', 'utf8');
+assert.ok(brandThemeSource.includes("hero.classList.toggle('jpt-no-outlet-banner',!banner)"), 'partner hero must detect outlets with no banner');
+assert.ok(brandThemeSource.includes('.hero.jpt-no-outlet-banner{'), 'partner hero must collapse its empty banner space when no outlet banner exists');
 const partnerSwSource = fs.readFileSync('jpt-partner-sw.js', 'utf8');
 const partnerAppSource = fs.readFileSync('partner-app.html', 'utf8');
-assert.ok(adminHtmlSource.includes('jpt-unified-partner-orders-v1.js?v=20261020-stable-queues-history-outlet-1'), 'partner HTML must cache-bust the corrected order runtime');
-assert.ok(partnerSwSource.includes('jpt-partner-pwa-v34-stable-queues-history-outlet'), 'partner service-worker cache generation must advance with runtime fixes');
-assert.ok(partnerAppSource.includes('jpt-partner-sw.js?v=20261020-stable-queues-history-outlet-1'), 'partner app shell must register the current service-worker URL');
-assert.ok(adminHtmlSource.includes('jpt-partner-sw.js?v=20261020-stable-queues-history-outlet-1'), 'admin dashboard must register the same current service-worker URL');
+assert.ok(adminHtmlSource.includes('jpt-unified-partner-orders-v1.js?v=20261107-jpt-only-audio-timer-scope-1'), 'partner HTML must cache-bust the corrected order runtime');
+assert.ok(partnerSwSource.includes('jpt-partner-pwa-v35-jpt-only-scope'), 'partner service-worker cache generation must advance with runtime fixes');
+assert.ok(partnerAppSource.includes('jpt-partner-sw.js?v=20261107-jpt-only-scope-1'), 'partner app shell must register the current service-worker URL');
+assert.ok(adminHtmlSource.includes('jpt-partner-sw.js?v=20261107-jpt-only-scope-1'), 'admin dashboard must register the same current service-worker URL');
 
 
 

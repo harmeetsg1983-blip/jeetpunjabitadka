@@ -274,7 +274,7 @@ body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
 </section>
 
 <div class="grid">
- <div class="card"><div class="metric" id="ordersCount">—</div><div class="muted">Orders</div></div>
+ <div class="card"><div class="metric" id="ordersCount">—</div><div class="muted">Orders Today</div></div>
  <div class="card"><div class="metric" id="menuCount">—</div><div class="muted">Menu Items</div></div>
  <div class="card"><div class="metric" id="offerCount">—</div><div class="muted">Active Offers</div></div>
  <div class="card"><div class="metric" id="campaignCount">—</div><div class="muted">Campaigns</div></div>
@@ -302,8 +302,9 @@ body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
 </section>
 
 <section id="orders" class="panel">
- <div class="card"><div class="rowactions"><button class="btn" id="ordersRefresh">↻ Refresh Orders</button><button class="btn gold" id="enableAlarm">🔔 Order Alarm Active</button></div><div id="ordersNotice" class="notice">Loading…</div><div id="orderQueueBar" class="jpt-status-tabs" role="tablist" aria-label="Order status filters">
- <button type="button" class="jpt-status-tab is-active orderQueueBtn" data-queue="preparing" role="tab" aria-selected="true">PREPARING</button>
+ <div class="card"><div class="rowactions"><button class="btn" id="ordersRefresh">↻ Refresh Orders</button><button class="btn gold" id="enableAlarm">🔔 ENABLE SOUND</button></div><div id="ordersNotice" class="notice">Loading…</div><div id="staleOrderNotice" class="notice" style="display:none;border-color:#8a6b27;background:#211a0b;color:#f4d77a"></div><div id="orderQueueBar" class="jpt-status-tabs" role="tablist" aria-label="Order status filters">
+ <button type="button" class="jpt-status-tab is-active orderQueueBtn" data-queue="new" role="tab" aria-selected="true">NEW ORDERS</button>
+ <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="preparing" role="tab" aria-selected="false">PREPARATION</button>
  <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="ready" role="tab">READY</button>
  <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="out_for_delivery" role="tab">OUT FOR DELIVERY</button>
  <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="history" role="tab" aria-selected="false">HISTORY ORDERS</button>
@@ -388,11 +389,50 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
 function toast(s){$('toast').textContent=s;$('toast').style.display='block';clearTimeout(window.__toast);window.__toast=setTimeout(()=>$('toast').style.display='none',2400)}
+function notifyOutletDataRefreshed(){window.dispatchEvent(new CustomEvent('jpt:outlet-data-refreshed'))}
 function showPanel(id){document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active',x.id===id));document.querySelectorAll('.tabs .btn').forEach(x=>x.classList.toggle('gold',x.dataset.panel===id))}
 document.querySelectorAll('.tabs .btn').forEach(b=>b.onclick=()=>showPanel(b.dataset.panel));
 
 function outletIdValue(row){return String(row?.code||row?.outlet_id||row?.id||'')}
 function outletNameValue(row){return String(row?.name||row?.outlet_name||row?.code||row?.outlet_id||'Outlet')}
+
+async function loadOrdersTodayCount(){
+  const metric=$('ordersCount');
+  if(!metric||!activeOutlet)return;
+  const now=new Date();
+  const start=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const end=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
+  const result=await sb.from('orders')
+    .select('id',{count:'exact',head:true})
+    .eq('outlet_id',activeOutlet)
+    .gte('created_at',start.toISOString())
+    .lt('created_at',end.toISOString());
+  if(result.error){
+    metric.textContent='—';
+    metric.title='Today’s order count unavailable: '+result.error.message;
+    return;
+  }
+  metric.textContent=String(result.count??0);
+  metric.title='Orders created today for '+activeOutlet;
+  notifyOutletDataRefreshed();
+  const staleNotice=$('staleOrderNotice');
+  if(staleNotice){
+    const stale=await sb.from('orders').select('id',{count:'exact',head:true})
+      .eq('outlet_id',activeOutlet)
+      .in('status',['new','accepted','preparing','ready','out_for_delivery'])
+      .lt('created_at',new Date(Date.now()-24*60*60*1000).toISOString());
+    if(stale.error){
+      staleNotice.textContent='Unable to verify older active orders: '+stale.error.message;
+      staleNotice.style.display='block';
+    }else if(Number(stale.count||0)>0){
+      staleNotice.textContent='⚠ '+stale.count+' active orders are older than 24 hours at '+activeOutlet+'. Review them manually; no order status was changed.';
+      staleNotice.style.display='block';
+    }else{
+      staleNotice.textContent='';
+      staleNotice.style.display='none';
+    }
+  }
+}
 
 async function loadAccess(){
   // Direct RPC is the source of truth. It also supports the current RPC shape
@@ -467,9 +507,25 @@ async function loadMenu(){
   if(r.error){$('menuNotice').innerHTML='<span class="danger">'+esc(r.error.message)+'</span>';return}
   menuItems=(r.data||[]).filter(x=>x.is_deleted!==true);
   const ir=await sb.from('menu_item_images').select('menu_item_id,item_name,image_url').eq('outlet_id',activeOutlet);
-  const imageMap={}; if(!ir.error)(ir.data||[]).forEach(v=>imageMap[v.menu_item_id||v.item_name]=v.image_url);
-  menuItems.forEach(x=>x.image_url=imageMap[x.id]||x.image_url||'');
-  $('menuCount').textContent=menuItems.length;$('menuNotice').textContent='Live menu: '+menuItems.length+' items';
+  const imageById=Object.create(null),imageByName=Object.create(null),ambiguousNames=new Set();
+  const imageNameKey=v=>String(v||'').trim().replace(/\s+/g,' ').toLocaleLowerCase('en-IN');
+  if(!ir.error)(ir.data||[]).forEach(v=>{
+    const url=String(v.image_url||'').trim();if(!url)return;
+    if(v.menu_item_id!=null)imageById[String(v.menu_item_id)]=url;
+    const name=imageNameKey(v.item_name);
+    if(name){
+      if(Object.prototype.hasOwnProperty.call(imageByName,name)&&imageByName[name]!==url)ambiguousNames.add(name);
+      else imageByName[name]=url;
+    }
+  });
+  const menuNameCounts=new Map();
+  menuItems.forEach(x=>{const k=imageNameKey(x.name);if(k)menuNameCounts.set(k,(menuNameCounts.get(k)||0)+1);});
+  menuItems.forEach(x=>{
+    const nameKey=imageNameKey(x.name);
+    const nameFallback=nameKey&&menuNameCounts.get(nameKey)===1&&!ambiguousNames.has(nameKey)?imageByName[nameKey]:'';
+    x.image_url=imageById[String(x.id)]||nameFallback||x.image_url||'';
+  });
+  $('menuCount').textContent=menuItems.length;$('menuNotice').textContent='Live menu: '+menuItems.length+' items';notifyOutletDataRefreshed();
   $('menuList').innerHTML=menuItems.map(x=>`<div class="itemrow">
     ${x.image_url?`<img class="thumb" src="${esc(x.image_url)}" alt="">`:`<div class="thumb" style="display:grid;place-items:center;color:#777">IMG</div>`}<div class="grow"><b>${esc(x.name)}</b><div class="muted">${esc(x.category||'Uncategorised')} • ${money(x.price)}</div><div class="muted">${x.available===false?'OFF':'ON'}${x.featured?' • FEATURED':''}</div></div>
     <div class="rowactions"><button class="btn" onclick="editItem('${esc(x.id)}')">Edit</button><button class="btn" onclick="toggleItem('${esc(x.id)}')">${x.available===false?'Turn ON':'Turn OFF'}</button></div>
@@ -702,7 +758,7 @@ async function configureScratchSlabs(){
 async function loadOffers(){
   const r=await sb.from('offers').select('*').eq('outlet_id',activeOutlet).order('created_at',{ascending:false});
   if(r.error){$('offersNotice').innerHTML='<span class="danger">'+esc(r.error.message)+'</span>';return}
-  currentOffers=r.data||[];$('offerCount').textContent=currentOffers.filter(x=>x.active||x.is_active).length;
+  currentOffers=r.data||[];$('offerCount').textContent=currentOffers.filter(x=>x.active||x.is_active).length;notifyOutletDataRefreshed();
   $('offersNotice').textContent=currentOffers.length+' offer records';
   $('offersList').innerHTML=currentOffers.map(x=>`<div class="itemrow"><div class="grow"><b>${esc(x.title||'Offer')}</b><div class="muted">${esc(x.code||'')} • ${x.active||x.is_active?'ON':'OFF'}</div></div><span class="tag">${x.discount_type?esc(x.discount_type):'Configured'}</span><button class="btn ${x.active||x.is_active?'red':'green'}" data-offer-toggle="${esc(x.id)}">${x.active||x.is_active?'Turn OFF':'Turn ON'}</button></div>`).join('')||'<div class="notice">No offers found.</div>';
   document.querySelectorAll('[data-offer-toggle]').forEach(btn=>btn.onclick=async()=>{
@@ -722,7 +778,7 @@ function activeToday(c){
 async function loadCampaigns(){
   const r=await sb.from('campaigns').select('*').eq('outlet_id',activeOutlet).order('priority',{ascending:false}).order('created_at',{ascending:false});
   if(r.error){$('campaignList').innerHTML='<span class="danger">'+esc(r.error.message)+'</span>';return}
-  currentCampaigns=r.data||[];$('campaignCount').textContent=currentCampaigns.length;
+  currentCampaigns=r.data||[];$('campaignCount').textContent=currentCampaigns.length;notifyOutletDataRefreshed();
   $('campaignList').innerHTML=currentCampaigns.map(c=>`<div class="itemrow"><div class="grow"><b>${esc(c.title||'Campaign')}</b><div class="muted">${c.active?'ON':'OFF'} • priority ${Number(c.priority||0)}</div>${activeToday(c)?'<span class="tag">TODAY OFFER</span>':''}</div></div>`).join('')||'<div class="notice">No campaigns found.</div>';
   loadTodayExisting();
 }
@@ -831,6 +887,12 @@ async function reloadAll(){
     await bindOrderRealtime();
 
     const failures=[];
+    try{await loadOrdersTodayCount()}catch(error){
+      console.error('[JPT Dashboard] today order count',error);
+      $('ordersCount').textContent='—';
+      $('ordersCount').title='Today’s order count unavailable: '+(error?.message||error);
+      failures.push('today order count: '+(error?.message||error));
+    }
     for(const [name,fn] of tasks.slice(3)){
       try{
         await Promise.resolve(fn?.());
@@ -856,6 +918,7 @@ async function reloadAll(){
 }
 $('outletSelect').onchange=async function(){activeOutlet=this.value;localStorage.setItem('jpt_admin_outlet',activeOutlet);await reloadAll()};
 $('reloadBtn').onclick=reloadAll;
+setInterval(()=>{if(activeOutlet)loadOrdersTodayCount().catch(error=>console.warn('[JPT Dashboard] daily count refresh failed',error));},60000);
 
 
 /* Legacy 15-second order poll removed; unified order runtime owns the 5-second recovery poll. */
@@ -1078,13 +1141,13 @@ setTimeout(checkSession,0);
 <script src="./jpt-partner-build-loader-v1.js?v=1"></script>
 <script src="./jpt-partner-final-touch-v10.js?v=20261019-header-clean-1"></script>
 <script src="./jpt-partner-final-touch-v11.js?v=11"></script>
-<script src="./jpt-partner-final-touch-v12.js?v=20261019-all-outlet-picker-1"></script>
+<script src="./jpt-partner-final-touch-v12.js?v=20261107-jpt-only-scope-1"></script>
 <script src="./JPT_Delivery_Partner_Admin_Approval_Bridge_V2.js?v=107"></script>
 <script>
-try{if("serviceWorker" in navigator){navigator.serviceWorker.register("./jpt-partner-sw.js?v=20261020-stable-queues-history-outlet-1",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});}}catch(e){}
+try{if("serviceWorker" in navigator){navigator.serviceWorker.register("./jpt-partner-sw.js?v=20261107-jpt-only-scope-1",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});}}catch(e){}
 </script>
 
-<script src="./jpt-unified-partner-orders-v1.js?v=20261020-stable-queues-history-outlet-1"></script>
+<script src="./jpt-unified-partner-orders-v1.js?v=20261107-jpt-only-audio-timer-scope-1"></script>
 <script src="./jpt-partner-dual-bar-nav-v1.js?v=20261007-1"></script>
 <script src="./jpt-partner-pro-menu-ui-v1.js?v=20261007-1"></script>
 <script src="./jpt-partner-timing-manager-v1.js?v=1"></script>

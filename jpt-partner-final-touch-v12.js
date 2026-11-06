@@ -360,7 +360,7 @@
     popup.appendChild(title);
 
     function currentLabel(){
-      const scope=String(localStorage.getItem('jpt_partner_order_scope')||'ALL');
+      const scope=String(localStorage.getItem('jpt_partner_order_scope')||'JPT-001');
       if(scope==='ALL') return 'Select All Outlets';
       const opt=[...select.options].find(x=>String(x.value)===scope);
       return opt?.textContent || 'Select All Outlets';

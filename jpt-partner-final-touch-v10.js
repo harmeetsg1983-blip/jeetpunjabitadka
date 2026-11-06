@@ -41,6 +41,10 @@
       .jpt-v9-controls select{min-width:260px!important}
       .jpt-v9-poster{position:relative;height:205px;border-radius:20px;overflow:hidden;border:2px solid #d5aa31;background:#050505;box-shadow:0 0 18px rgba(238,190,55,.12),inset 0 0 22px rgba(0,0,0,.55);margin:10px 0 16px}
       .jpt-v9-poster img{width:100%;height:100%;display:block;object-fit:cover;object-position:center;transform:none}
+      .jpt-v9-poster-fallback{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;text-align:center;background:radial-gradient(circle at 50% 35%,#4a3510 0%,#181208 48%,#050505 100%);color:#f4d77a;font-family:Georgia,serif;font-weight:900;letter-spacing:1.2px;text-shadow:0 2px 12px #000}
+      .jpt-v9-poster-fallback b{font-size:clamp(20px,5vw,30px)}
+      .jpt-v9-poster-fallback span{font:800 11px system-ui;letter-spacing:3px;color:#eee}
+      .jpt-v9-logo-fallback{width:58px;height:58px;flex:none;border:2px solid #d8ae42;border-radius:50%;display:grid;place-items:center;background:#111;color:#f4d77a;font-weight:1000;font-size:18px}
       .jpt-v9-poster:before{content:"";position:absolute;inset:5px;border-radius:15px;border:1px solid rgba(255,210,76,.75);pointer-events:none;z-index:2}
       .jpt-v9-poster:after{content:"";position:absolute;left:0;right:0;bottom:0;height:26px;background:linear-gradient(180deg,transparent,rgba(0,0,0,.65));pointer-events:none;z-index:1}
       .jpt-v9-poster button{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:38px;height:38px;border-radius:50%;border:1px solid #e9bd43;background:#050505aa;color:#fff;font-size:25px}
@@ -225,7 +229,7 @@
         <img id="jptV9Poster" src="${POSTERS[0]}" alt="Punjabi food promotion">
         <button class="jpt-v9-prev" id="jptV9Prev">‹</button>
         <button class="jpt-v9-next" id="jptV9Next">›</button>
-        <div class="jpt-v9-dots"><i class="on"></i><i></i></div>
+        <div class="jpt-v9-dots"><i class="on"></i></div>
       </div>
 
       <div class="jpt-v9-status-host" id="jptV9StatusHost">
@@ -263,6 +267,14 @@
     `;
 
     // Keep the original functional controls, but place them inside the new premium header.
+    root.querySelectorAll('.jpt-v9-logo,.jpt-v9-status-logo').forEach(img=>{
+      img.addEventListener('error',function(){
+        const fallback=document.createElement('span');
+        fallback.className='jpt-v9-logo-fallback';
+        fallback.textContent='JPT';
+        this.replaceWith(fallback);
+      },{once:true});
+    });
     moveControls(root);
     if(top)top.style.display='none';
 
@@ -324,13 +336,28 @@ document.querySelectorAll('.jpt-v9-bottom button').forEach(b=>{
   function bindPoster(){
     const img=document.getElementById('jptV9Poster'); if(!img)return;
     const dots=document.querySelectorAll('#'+ROOT+' .jpt-v9-dots i');
-    const show=()=>{img.src=POSTERS[posterIndex];dots.forEach((d,i)=>d.classList.toggle('on',i===posterIndex));};
-    document.getElementById('jptV9Prev').onclick=()=>{posterIndex=(posterIndex+POSTERS.length-1)%POSTERS.length;show()};
-    document.getElementById('jptV9Next').onclick=()=>{posterIndex=(posterIndex+1)%POSTERS.length;show()};
+    const prev=document.getElementById('jptV9Prev'),next=document.getElementById('jptV9Next');
+    if(POSTERS.length<2){
+      if(prev)prev.style.display='none';
+      if(next)next.style.display='none';
+      const dotHost=document.querySelector('#'+ROOT+' .jpt-v9-dots');if(dotHost)dotHost.style.display='none';
+    }
+    img.addEventListener('error',()=>{
+      img.style.display='none';
+      const host=img.closest('.jpt-v9-poster');
+      if(host&&!host.querySelector('.jpt-v9-poster-fallback')){
+        const fallback=document.createElement('div');
+        fallback.className='jpt-v9-poster-fallback';
+        fallback.innerHTML='<b>JEET PUNJABI TADKA</b><span>RESTAURANT PARTNER</span>';
+        host.insertBefore(fallback,host.querySelector('button'));
+      }
+    },{once:true});
+    const show=()=>{img.style.display='block';img.src=POSTERS[posterIndex];dots.forEach((d,i)=>d.classList.toggle('on',i===posterIndex));};
+    if(prev)prev.onclick=()=>{posterIndex=(posterIndex+POSTERS.length-1)%POSTERS.length;show()};
+    if(next)next.onclick=()=>{posterIndex=(posterIndex+1)%POSTERS.length;show()};
     clearInterval(window.__jptV9PosterTimer);
     window.__jptV9PosterTimer=null;
   }
-
   function sync(){
     const root=document.getElementById(ROOT);if(!root)return;
     ['ordersCount','menuCount','offerCount','campaignCount'].forEach(id=>{
