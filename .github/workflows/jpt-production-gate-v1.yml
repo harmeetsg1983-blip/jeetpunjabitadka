@@ -1,5 +1,6 @@
 name: JPT Production Gate V1 - Safe Preflight
 # Partner order-flow validation runs on pull requests as well as production pushes.
+# UI assertions track the current V13 outlet-picker label, not the retired V12 text.
 
 on:
   push:
