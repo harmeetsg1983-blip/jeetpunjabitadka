@@ -215,6 +215,9 @@ assert.ok(source.includes('body.dataset.jptRenderKey===renderKey&&body.children.
 
 // Header must not repeat outlet identity under the bell; outlet list remains in the picker.
 const finalTouch = fs.readFileSync('jpt-partner-final-touch-v10.js', 'utf8');
+assert.ok(finalTouch.includes('if(POSTERS.length<2)'), 'single-poster dashboard must not show misleading carousel arrows');
+assert.ok(finalTouch.includes('jpt-v9-poster-fallback'), 'failed poster media must show a branded fallback instead of a blank grey box');
+assert.ok(finalTouch.includes('jpt-v9-logo-fallback'), 'failed embedded logo media must show a readable JPT fallback');
 assert.doesNotMatch(finalTouch, /<div class="jpt-v9-context">/, 'redundant outlet-name row under the bell must not render');
 const outletPicker = fs.readFileSync('jpt-partner-final-touch-v12.js', 'utf8');
 assert.ok(outletPicker.includes("allButton.textContent='SELECT ALL OUTLETS';"), 'outlet picker must offer SELECT ALL OUTLETS');
