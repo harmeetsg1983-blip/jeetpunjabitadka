@@ -489,7 +489,7 @@ async function loadMenu(){
   menuItems=(r.data||[]).filter(x=>x.is_deleted!==true);
   const ir=await sb.from('menu_item_images').select('menu_item_id,item_name,image_url').eq('outlet_id',activeOutlet);
   const imageById=Object.create(null),imageByName=Object.create(null),ambiguousNames=new Set();
-  const imageNameKey=v=>String(v||'').trim().replace(/\\s+/g,' ').toLocaleLowerCase('en-IN');
+  const imageNameKey=v=>String(v||'').trim().replace(/\s+/g,' ').toLocaleLowerCase('en-IN');
   if(!ir.error)(ir.data||[]).forEach(v=>{
     const url=String(v.image_url||'').trim();if(!url)return;
     if(v.menu_item_id!=null)imageById[String(v.menu_item_id)]=url;
