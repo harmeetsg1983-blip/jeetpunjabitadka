@@ -1,0 +1,43 @@
+name: JPT Customer Native V1 Build
+
+on:
+  push:
+    branches: [jpt-customer-native-v1]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android-customer
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Render Customer launcher logo
+        run: |
+          mkdir -p app/src/main/res/drawable
+          base64 -d branding/jpt_customer_lighting_128.jpg.b64 > app/src/main/res/drawable/jpt_customer_logo.jpg
+      - name: Generate CI signing key
+        run: |
+          keytool -genkeypair -v -keystore ci-debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=JPT Customer CI, O=Jeet Punjabi Tadka, C=IN" || true
+      - name: Build Customer APK
+        run: gradle -p . :app:assembleDebug
+      - name: Zipalign and sign APK
+        working-directory: .
+        run: |
+          SDK="${ANDROID_HOME}/build-tools/35.0.0"
+          mkdir -p customer-apk
+          "$SDK/zipalign" -f 4 android-customer/app/build/outputs/apk/debug/app-debug.apk customer-apk/jpt-customer-native-debug-1.0.0.apk
+          "$SDK/apksigner" sign --ks android-customer/ci-debug.keystore --ks-pass pass:android --key-pass pass:android --out customer-apk/jpt-customer-native-debug-1.0.0.apk customer-apk/jpt-customer-native-debug-1.0.0.apk
+          "$SDK/apksigner" verify --verbose customer-apk/jpt-customer-native-debug-1.0.0.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jpt-customer-native-debug
+          path: customer-apk/jpt-customer-native-debug-1.0.0.apk
