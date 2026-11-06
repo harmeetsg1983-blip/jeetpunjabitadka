@@ -345,7 +345,7 @@
 
     const title=document.createElement('div');
 
-    title.textContent='CHANGE OUTLET';
+    title.textContent='SELECT OUTLET';
 
     title.style.cssText=[
       'padding:12px',
@@ -360,9 +360,9 @@
     popup.appendChild(title);
 
     function currentLabel(){
-
-      const opt=select.options[select.selectedIndex];
-
+      const scope=String(localStorage.getItem('jpt_partner_order_scope')||'ALL');
+      if(scope==='ALL')return 'All Outlet Select';
+      const opt=[...select.options].find(x=>String(x.value)===scope);
       return opt?.textContent || 'Select Outlet';
     }
 
@@ -382,6 +382,25 @@
 
       trigger.replaceChildren(text,arrow);
     }
+
+    const allButton=document.createElement('button');
+    allButton.type='button';
+    allButton.textContent='All Outlet Select';
+    allButton.setAttribute('aria-label','Show orders from all authorized outlets');
+    allButton.style.cssText=[
+      'display:block','width:100%','min-height:58px',
+      'border:0','border-bottom:1px solid #30260e',
+      'background:linear-gradient(145deg,#211805,#090909)',
+      'color:#f4c84e','padding:12px 14px','font-size:16px',
+      'font-weight:950','text-align:left','box-sizing:border-box','cursor:pointer'
+    ].join(';');
+    allButton.addEventListener('click',function(){
+      localStorage.setItem('jpt_partner_order_scope','ALL');
+      refreshTrigger();
+      window.dispatchEvent(new CustomEvent('jpt:order-scope-changed',{detail:{scope:'ALL'}}));
+      closeOutletPopup();
+    });
+    popup.appendChild(allButton);
 
     rows.forEach(row=>{
 
@@ -424,6 +443,7 @@
 
       optionButton.addEventListener('click',async function(){
 
+        localStorage.setItem('jpt_partner_order_scope',id);
         select.value=id;
 
         /*

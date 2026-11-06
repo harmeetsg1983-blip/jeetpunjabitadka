@@ -14,7 +14,7 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
-        buildConfigField("String", "PARTNER_WEB_URL", ""https://REPLACE-WITH-CURRENT-JPT-PARTNER-URL/admin.html"")
+        buildConfigField("String", "PARTNER_WEB_URL", "\"https://REPLACE-WITH-CURRENT-JPT-PARTNER-URL/admin.html\"")
     }
     buildFeatures { buildConfig = true }
 }

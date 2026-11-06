@@ -63,6 +63,7 @@ main{padding-bottom:12px}.item{display:flex;gap:14px;padding:15px 14px;border:1p
    <div class="field"><label>Name</label><input id="custName" class="input" placeholder="Your name"></div>
    <div class="field"><label>Phone</label><input id="phone" class="input" inputmode="tel" maxlength="10" placeholder="10 digit mobile"></div>
    <div class="field"><label>Address</label><textarea id="address" class="area" placeholder="Delivery address"></textarea></div>
+   <div class="field"><label>Cooking instructions (optional)</label><textarea id="cookingInstructions" class="area" maxlength="500" placeholder="e.g. less spicy, no onion, extra crispy"></textarea><small style="color:#aaa">Tell the restaurant how you would like your food prepared.</small></div>
   </div>
   <div class="box"><h3>💳 Payment</h3>
 <select id="payment" class="select" aria-label="Payment method">
@@ -352,8 +353,8 @@ async function placeOrder(){
   let phone=$('phone').value.trim();if(!/^\d{10}$/.test(phone))return toast('Enter 10 digit phone number');
   let c=calc(),payment=$('payment').value;
   let gps=window.JPTDeliveryLocationSnapshot||null;
-  let ord={order_no:'JPT-'+Date.now().toString().slice(-7),customer_name:$('custName').value.trim()||'Customer',customer_phone:phone,customer_address:$('address').value.trim(),items:rows.map(r=>({id:r.x.id,name:r.x.name,qty:r.q,price:Number(r.x.price)})),subtotal:c.subtotal,discount:c.discount,delivery_charge:c.delivery,total:c.total,status:'new',eta_minutes:45,notes:'',outlet_id:outletId,payment,order_type:'delivery',delivery_lat:gps?Number(gps.lat):null,delivery_lng:gps?Number(gps.lng):null,delivery_location_confirmed_at:gps?(gps.at||new Date().toISOString()):null};
-  let msg=`NEW ORDER ${ord.order_no}%0A${encodeURIComponent(rows.map(r=>r.x.name+' x '+r.q).join('\\n'))}%0ASubtotal: ${encodeURIComponent(money(c.subtotal))}%0ADiscount: ${encodeURIComponent(money(c.discount))}%0ADelivery: ${encodeURIComponent(c.delivery?money(c.delivery):'FREE')}%0ATotal: ${encodeURIComponent(money(c.total))}%0AOutlet: ${encodeURIComponent(OUTLETS[outletId].name)}%0AOutlet ID: ${encodeURIComponent(outletId)}%0APayment: ${encodeURIComponent(payment)}%0ACustomer: ${encodeURIComponent(ord.customer_name)}%0APhone: ${phone}%0AAddress: ${encodeURIComponent(ord.customer_address)}`;
+  let ord={order_no:'JPT-'+Date.now().toString().slice(-7),customer_name:$('custName').value.trim()||'Customer',customer_phone:phone,customer_address:$('address').value.trim(),items:rows.map(r=>({id:r.x.id,name:r.x.name,qty:r.q,price:Number(r.x.price)})),subtotal:c.subtotal,discount:c.discount,delivery_charge:c.delivery,total:c.total,status:'new',eta_minutes:45,notes:$('cookingInstructions').value.trim().slice(0,500),outlet_id:outletId,payment,order_type:'delivery',delivery_lat:gps?Number(gps.lat):null,delivery_lng:gps?Number(gps.lng):null,delivery_location_confirmed_at:gps?(gps.at||new Date().toISOString()):null};
+  let msg=`NEW ORDER ${ord.order_no}%0A${encodeURIComponent(rows.map(r=>r.x.name+' x '+r.q).join('\\n'))}%0ASubtotal: ${encodeURIComponent(money(c.subtotal))}%0ADiscount: ${encodeURIComponent(money(c.discount))}%0ADelivery: ${encodeURIComponent(c.delivery?money(c.delivery):'FREE')}%0ATotal: ${encodeURIComponent(money(c.total))}%0AOutlet: ${encodeURIComponent(OUTLETS[outletId].name)}%0AOutlet ID: ${encodeURIComponent(outletId)}%0APayment: ${encodeURIComponent(payment)}%0ACustomer: ${encodeURIComponent(ord.customer_name)}%0APhone: ${phone}%0AAddress: ${encodeURIComponent(ord.customer_address)}${ord.notes?'%0ACooking instructions: '+encodeURIComponent(ord.notes):''}`;
   /* Do not open a secondary browser/app window before tracking. WhatsApp is explicit/secondary. */
   waWindow=null;
   let result=await sb.from('orders').insert(ord).select('id,order_no,outlet_id,status,eta_minutes,created_at').single();
@@ -385,7 +386,7 @@ window.addEventListener('popstate',async e=>{if($('modal').classList.contains('s
 <script src="./customer-menu-runtime-fix-v106.js?v=v106-cart-v2"></script>
 <script src="media-hotfix-v4.js"></script>
 <script src="jpt-v106-customer-referral-connector.js"></script>
-<script src="./jpt-unified-customer-live-v1.js?v=20261007-3"></script>
+<script src="./jpt-unified-customer-live-v1.js?v=20261019-sponsor-rotation-10s-4"></script>
 <script src="jpt-v106-delivery-location-handover.js?v=delivery3"></script>
 <script src="./jpt-customer-sponsor-slider-v1.js?v=20261007-sponsor1"></script>
 </body>

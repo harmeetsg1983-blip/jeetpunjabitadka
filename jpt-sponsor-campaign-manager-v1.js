@@ -56,7 +56,7 @@ function reset(){if(mediaUrl&&mediaUrl.startsWith('blob:'))try{URL.revokeObjectU
 editId=null;mediaUrl='';mediaType='image';crop={x:50,y:50,zoom:1};document.getElementById('jptSMTarget').value='all_live';['jptSMName','jptSMTitle','jptSMClick','jptSMStart','jptSMEnd','jptSMOutlet'].forEach(id=>document.getElementById(id).value='');document.getElementById('jptSMOutlet').disabled=true;document.getElementById('jptSMSort').value='0';document.getElementById('jptSMFile').value='';paintPreview()}
 function paintPreview(){const p=document.getElementById('jptSMPreview');if(!p)return;if(!mediaUrl){p.innerHTML='<div style="height:100%;display:grid;place-items:center;color:#777">Choose media</div>';return}p.innerHTML=mediaType==='video'?'<video muted playsinline controls></video>':'<img alt="Preview">';const el=p.querySelector('img,video');el.src=mediaUrl;el.style.setProperty('--z',crop.zoom);el.style.objectPosition=crop.x+'% '+crop.y+'%'}
 async function previewFile(e){const f=e.target.files?.[0];if(!f)return;
-if(!/^image\\/(png|jpeg|webp|gif)$/.test(f.type)&&!/^video\\/(mp4|webm|quicktime)$/.test(f.type)){alert('Supported media: JPG, PNG, WEBP, GIF, MP4, WEBM');e.target.value='';return}
+if(!/^image\/(png|jpeg|webp|gif)$/.test(f.type)&&!/^video\/(mp4|webm|quicktime)$/.test(f.type)){alert('Supported media: JPG, PNG, WEBP, GIF, MP4, WEBM');e.target.value='';return}
 const maxMb=f.type.startsWith('video/')?50:10;if(f.size>maxMb*1024*1024){alert('File is too large. Maximum '+maxMb+' MB.');e.target.value='';return}
 mediaType=f.type.startsWith('video/')?'video':'image';if(mediaUrl&&mediaUrl.startsWith('blob:'))try{URL.revokeObjectURL(mediaUrl)}catch(_){}
 mediaUrl=URL.createObjectURL(f);paintPreview()}

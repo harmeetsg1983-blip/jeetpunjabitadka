@@ -104,6 +104,7 @@ function activeSponsors(){
  return sponsorRows.filter(x=>x.is_active!==false&&(!x.starts_at||Date.parse(x.starts_at)<=now)&&(!x.ends_at||Date.parse(x.ends_at)>=now)&&(x.target_all_live||((x.outlet_ids||[]).includes(id))));
 }
 function renderSponsor(){
+ clearTimeout(sponsorTimer);
  const host=$('julSponsors');if(!host)return;
  const list=activeSponsors();
  if(!list.length){host.innerHTML='';return}
@@ -112,8 +113,9 @@ function renderSponsor(){
  if(!src){host.innerHTML='';return}
  host.innerHTML='<div class="jul-sponsor"><span class="jul-sponsor-label">'+esc(x.sponsor_name||x.title||'Sponsored')+'</span>'+(type==='video'?'<video autoplay muted playsinline></video>':'<img alt="Sponsored promotion">')+'</div>';
  const el=host.querySelector(type==='video'?'video':'img');el.src=src;
- if(type==='video'){el.onended=()=>{sponsorIndex=(sponsorIndex+1)%list.length;renderSponsor()};el.play?.().catch(()=>{})}
- else{clearTimeout(sponsorTimer);sponsorTimer=setTimeout(()=>{sponsorIndex=(sponsorIndex+1)%list.length;renderSponsor()},10000)}
+ const advance=()=>{clearTimeout(sponsorTimer);sponsorIndex=(sponsorIndex+1)%list.length;renderSponsor()};
+ sponsorTimer=setTimeout(advance,10000);
+ if(type==='video'){el.onended=advance;el.play?.().catch(()=>{})}
 }
 async function refreshSponsors(){
  const c=client();if(!c)return;
