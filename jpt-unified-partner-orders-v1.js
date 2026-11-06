@@ -149,7 +149,9 @@ function selectedOrderScope(codes=managedOutlets()){
   const saved=String(localStorage.getItem(ORDER_SCOPE_KEY)||'JPT-001');
   if(saved==='ALL'||!saved)return 'ALL';
   if(codes.includes(saved))return saved;
-  /* A stale or no-longer-authorized scope must never hide every order. */
+  /* JPT-only startup is fail-closed: if JPT-001 is not authorized, show no outlet orders. */
+  if(saved==='JPT-001')return saved;
+  /* A stale or no-longer-authorized user-selected scope must never hide every order. */
   localStorage.setItem(ORDER_SCOPE_KEY,'ALL');
   return 'ALL';
 }
