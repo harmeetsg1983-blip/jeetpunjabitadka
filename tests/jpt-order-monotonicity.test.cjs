@@ -255,12 +255,13 @@ const scopeApi = vm.runInNewContext(
   },
   { timeout: 1000 }
 );
-assert.equal([...scopeApi.selectedOutletCodes(['JPT-001','NME-001'])].join(','), 'JPT-001,NME-001', 'default order scope must include every authorized outlet');
+assert.equal([...scopeApi.selectedOutletCodes(['JPT-001','NME-001'])].join(','), 'JPT-001', 'default order scope must isolate JPT-001');
+assert.equal([...scopeApi.selectedOutletCodes(['NME-001'])].length, 0, 'JPT-only default must fail closed when JPT-001 is not authorized');
 scopeStore.value = 'NME-001';
 assert.equal([...scopeApi.selectedOutletCodes(['JPT-001','NME-001'])].join(','), 'NME-001', 'a specific outlet scope must filter the query');
 assert.equal(scopeApi.orderMatchesSelectedScope({outlet_id:'JPT-001'}), false, 'events from another outlet must not enter a specific outlet scope');
 scopeStore.value = 'NOT_AUTHORIZED';
-assert.equal([...scopeApi.selectedOutletCodes(['JPT-001','NME-001'])].join(','), 'JPT-001,NME-001', 'stale unauthorized scope must fail open to authorized all-outlet view');
+assert.equal([...scopeApi.selectedOutletCodes(['JPT-001','NME-001'])].join(','), 'JPT-001,NME-001', 'stale non-JPT user-selected scope must fail open to authorized all-outlet view');
 assert.equal(scopeStore.value, 'ALL', 'stale scope must be reset to All Outlet Select');
 
 assert.ok(source.includes('primeOrderAudio().then(primed=>{if(primed)retryBlockedRingtones()})'), 'first user gesture must retry a browser-blocked new-order ringtone automatically');
