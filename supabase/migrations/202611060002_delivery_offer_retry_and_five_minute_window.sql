@@ -212,6 +212,103 @@ begin
 end;
 $function$;
 
+
+
+-- Enforce the same five-minute deadline at the final ACCEPT RPC boundary.
+-- A stale rider screen must never be able to accept an already-expired offer.
+CREATE OR REPLACE FUNCTION public.delivery_assignment_respond(
+  p_assignment_id uuid,
+  p_accept boolean,
+  p_reason text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public', 'auth'
+AS $function$
+declare
+  v_uid uuid:=auth.uid();
+  a public.delivery_assignments%rowtype;
+  rider public.delivery_partners%rowtype;
+  next_offer jsonb;
+begin
+  if v_uid is null then raise exception 'AUTH_REQUIRED'; end if;
+
+  select * into rider
+  from public.delivery_partners
+  where user_id=v_uid and is_active=true
+  limit 1;
+
+  if rider.id is null then raise exception 'DELIVERY_PARTNER_REQUIRED'; end if;
+
+  select * into a
+  from public.delivery_assignments
+  where id=p_assignment_id
+  for update;
+
+  if not found then raise exception 'ASSIGNMENT_NOT_FOUND'; end if;
+  if a.delivery_partner_id <> rider.id then raise exception 'NOT_ASSIGNMENT_OWNER'; end if;
+  if a.status <> 'offered' then
+    return jsonb_build_object('status','not_offered');
+  end if;
+
+  if p_accept then
+    if a.offered_at < now()-interval '5 minutes' then
+      update public.delivery_assignments
+      set status='expired',
+          responded_at=coalesce(responded_at,now()),
+          rejection_reason='offer_timeout',
+          updated_at=now()
+      where id=a.id and status='offered';
+
+      next_offer:=public._delivery_offer_next_internal(a.order_id);
+      return jsonb_build_object(
+        'status','expired',
+        'assignment_id',a.id,
+        'order_id',a.order_id,
+        'next_offer',next_offer
+      );
+    end if;
+
+    update public.delivery_assignments
+    set status='accepted',
+        responded_at=now(),
+        accepted_at=now(),
+        updated_at=now()
+    where id=a.id and status='offered';
+
+    if not found then
+      return jsonb_build_object('status','not_offered');
+    end if;
+
+    return jsonb_build_object(
+      'status','accepted',
+      'assignment_id',a.id,
+      'order_id',a.order_id
+    );
+  else
+    update public.delivery_assignments
+    set status='rejected',
+        responded_at=now(),
+        rejection_reason=left(coalesce(p_reason,'rejected'),500),
+        updated_at=now()
+    where id=a.id and status='offered';
+
+    if not found then
+      return jsonb_build_object('status','not_offered');
+    end if;
+
+    next_offer:=public._delivery_offer_next_internal(a.order_id);
+    return jsonb_build_object(
+      'status','rejected',
+      'assignment_id',a.id,
+      'order_id',a.order_id,
+      'next_offer',next_offer
+    );
+  end if;
+end;
+$function$;
+
 -- Ensure the retry processor actually runs. pg_cron is already installed in this project.
 DO $schedule$
 DECLARE
