@@ -302,7 +302,7 @@ body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
 </section>
 
 <section id="orders" class="panel">
- <div class="card"><div class="rowactions"><button class="btn" id="ordersRefresh">↻ Refresh Orders</button><button class="btn gold" id="enableAlarm">🔔 Order Alarm Active</button></div><div id="ordersNotice" class="notice">Loading…</div><div id="orderQueueBar" class="jpt-status-tabs" role="tablist" aria-label="Order status filters">
+ <div class="card"><div class="rowactions"><button class="btn" id="ordersRefresh">↻ Refresh Orders</button><button class="btn gold" id="enableAlarm">🔔 Order Alarm Active</button></div><div id="ordersNotice" class="notice">Loading…</div><div id="staleOrderNotice" class="notice" style="display:none;border-color:#8a6b27;background:#211a0b;color:#f4d77a"></div><div id="orderQueueBar" class="jpt-status-tabs" role="tablist" aria-label="Order status filters">
  <button type="button" class="jpt-status-tab is-active orderQueueBtn" data-queue="new" role="tab" aria-selected="true">NEW ORDERS</button>
  <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="preparing" role="tab" aria-selected="false">PREPARATION</button>
  <button type="button" class="jpt-status-tab orderQueueBtn" data-queue="ready" role="tab">READY</button>
@@ -413,6 +413,23 @@ async function loadOrdersTodayCount(){
   }
   metric.textContent=String(result.count??0);
   metric.title='Orders created today for '+activeOutlet;
+  const staleNotice=$('staleOrderNotice');
+  if(staleNotice){
+    const stale=await sb.from('orders').select('id',{count:'exact',head:true})
+      .eq('outlet_id',activeOutlet)
+      .in('status',['new','accepted','preparing','ready','out_for_delivery'])
+      .lt('created_at',new Date(Date.now()-24*60*60*1000).toISOString());
+    if(stale.error){
+      staleNotice.textContent='Unable to verify older active orders: '+stale.error.message;
+      staleNotice.style.display='block';
+    }else if(Number(stale.count||0)>0){
+      staleNotice.textContent='⚠ '+stale.count+' active orders are older than 24 hours at '+activeOutlet+'. Review them manually; no order status was changed.';
+      staleNotice.style.display='block';
+    }else{
+      staleNotice.textContent='';
+      staleNotice.style.display='none';
+    }
+  }
 }
 
 async function loadAccess(){
