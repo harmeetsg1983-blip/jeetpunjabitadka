@@ -160,6 +160,11 @@ assert.ok(source.includes("? (historyOutlet==='ALL'"), 'history query scope must
 assert.ok(source.includes('orderMatchesSelectedScope(o)'), 'order cards and realtime events must honor selected outlet scope');
 assert.ok(source.includes('await initialLoad({alertNewOrders:true});'), 'startup/scope refresh must ring recent NEW orders already placed while app was closed');
 
+// NEW orders have their own first queue; ACCEPTED/PREPARING belong to preparation.
+assert.ok(source.includes("if(st==='new')return 'new';"), 'NEW orders must remain in the dedicated NEW ORDERS queue');
+assert.ok(source.includes("if(['accepted','preparing'].includes(st))return 'preparing';"), 'accepted orders must move into PREPARATION');
+assert.ok(source.includes("let selectedQueue='new';"), 'dashboard must open on NEW ORDERS by default');
+
 // Queue changes must not auto-navigate the operator away from the selected screen.
 const queueFocus = between('function focusQueueForStatus(value){', '\nfunction syncHistoryTools(){');
 assert.match(queueFocus, /Deliberately keep the operator on the chosen queue[\s\S]*?return;/,
