@@ -146,7 +146,7 @@ async function resolveManagedOutlets(){
 }
 const ORDER_SCOPE_KEY='jpt_partner_order_scope';
 function selectedOrderScope(codes=managedOutlets()){
-  const saved=String(localStorage.getItem(ORDER_SCOPE_KEY)||'ALL');
+  const saved=String(localStorage.getItem(ORDER_SCOPE_KEY)||'JPT-001');
   if(saved==='ALL'||!saved)return 'ALL';
   if(codes.includes(saved))return saved;
   /* A stale or no-longer-authorized scope must never hide every order. */
@@ -1075,7 +1075,7 @@ async function performSubscribe(){
     console.warn('[JPT Orders] Realtime not started: authorized outlet list is empty.');
     return;
   }
-  const liveCodes=[...new Set(codes.map(String).filter(Boolean))];
+  const liveCodes=selectedOutletCodes([...new Set(codes.map(String).filter(Boolean))]);
   for(const code of liveCodes){
     const ch=window.sb.channel('jpt-unified-orders-'+code+'-'+Date.now());
     ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'orders',filter:'outlet_id=eq.'+code},payload=>{
