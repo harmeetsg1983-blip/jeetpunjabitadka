@@ -682,6 +682,35 @@ async function reject(id){
      Keep the NEW-order alert active until the server confirms cancellation. */
   actionBusy.add(key);
   try{
+    /* Reject only while the canonical server row is still NEW. A stale card
+       must never send a cancellation transition for an already accepted order. */
+    let canonical;
+    try{
+      canonical=await read(id,o.outlet_id);
+      if(actionAuthGeneration!==authGeneration)return;
+    }catch(preflightError){
+      if(actionAuthGeneration!==authGeneration)return;
+      toast('REJECT paused: server status could not be verified. Refresh Orders before retrying.');
+      await initialLoad().catch(()=>{});
+      return;
+    }
+    if(!canonical){
+      rows.delete(key);
+      acknowledgeRingtone(key);
+      toast('Order is no longer in the live server queue; stale card removed.');
+      render();
+      return;
+    }
+    if(status(canonical.status)!=='new'){
+      const latest=rows.get(key)||o;
+      const reconciled=mergeOrderMonotonic(latest,canonical);
+      rows.set(key,reconciled);
+      if(status(reconciled.status)!=='new')acknowledgeRingtone(key);
+      toast('Server confirms '+status(reconciled.status).toUpperCase()+'. Duplicate REJECT blocked.');
+      render();
+      return;
+    }
+    rows.set(key,mergeOrderMonotonic(rows.get(key)||o,canonical));
     const r=await window.sb.rpc('jpt_partner_transition_order',{
       p_order_id:Number(id),
       p_next_status:'cancelled',
