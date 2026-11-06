@@ -277,8 +277,11 @@ assert.ok(!source.includes('speakOrder(o.id);'), 'speech must not start automati
 
 const adminHtmlSource = fs.readFileSync('admin.html', 'utf8');
 assert.ok(adminHtmlSource.includes("select('id',{count:'exact',head:true})"), 'dashboard Orders Today metric must use an exact read-only count');
-const countWriter = source.slice(source.indexOf('function updateCounts('),source.indexOf('\\nasync function read(',source.indexOf('function updateCounts(')));
-assert.doesNotMatch(countWriter,/getElementById\\('ordersCount'\\)/, 'active queue row count must not overwrite the outlet-scoped Orders Today metric');
+const countWriterStart = source.indexOf('function updateCounts(');
+const countWriterEnd = source.indexOf(String.fromCharCode(10)+'async function read(',countWriterStart);
+assert.ok(countWriterStart>=0&&countWriterEnd>countWriterStart,'order count writer must be present for regression inspection');
+const countWriter = source.slice(countWriterStart,countWriterEnd);
+assert.ok(!countWriter.includes("getElementById('ordersCount')"), 'active queue row count must not overwrite the outlet-scoped Orders Today metric');
 assert.ok(adminHtmlSource.includes(".eq('outlet_id',activeOutlet)") && adminHtmlSource.includes("metric.title='Orders created today for '+activeOutlet"), 'dashboard daily order count must be scoped to the selected outlet');
 assert.ok(adminHtmlSource.includes('imageById[String(x.id)]||nameFallback||x.image_url||'), 'menu image mapping must resolve both menu item IDs and safe unique-name fallbacks');
 assert.ok(adminHtmlSource.includes('menuNameCounts.get(nameKey)===1&&!ambiguousNames.has(nameKey)'), 'menu image fallback must not assign an ambiguous same-name image to multiple dishes');
