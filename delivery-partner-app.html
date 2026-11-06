@@ -80,7 +80,7 @@ async function sendDeliveryHeartbeat(){
   try{
     const s=await ensureSession();
     if(!s)return;
-    const {error}=await sb.rpc('delivery_partner_heartbeat');
+    const {error}=await sb.rpc('delivery_partner_heartbeat',{p_notification_permission:(typeof Notification!=='undefined'?Notification.permission:'default'),p_sound_enabled:true,p_vibration_enabled:true});
     if(error)throw error;
   }catch(e){
     if($('submitMsg'))$('submitMsg').textContent='Live status: '+(e.message||'heartbeat unavailable');
