@@ -395,6 +395,26 @@ document.querySelectorAll('.tabs .btn').forEach(b=>b.onclick=()=>showPanel(b.dat
 function outletIdValue(row){return String(row?.code||row?.outlet_id||row?.id||'')}
 function outletNameValue(row){return String(row?.name||row?.outlet_name||row?.code||row?.outlet_id||'Outlet')}
 
+async function loadOrdersTodayCount(){
+  const metric=$('ordersCount');
+  if(!metric||!activeOutlet)return;
+  const now=new Date();
+  const start=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const end=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
+  const result=await sb.from('orders')
+    .select('id',{count:'exact',head:true})
+    .eq('outlet_id',activeOutlet)
+    .gte('created_at',start.toISOString())
+    .lt('created_at',end.toISOString());
+  if(result.error){
+    metric.textContent='—';
+    metric.title='Today’s order count unavailable: '+result.error.message;
+    return;
+  }
+  metric.textContent=String(result.count??0);
+  metric.title='Orders created today for '+activeOutlet;
+}
+
 async function loadAccess(){
   // Direct RPC is the source of truth. It also supports the current RPC shape
   // (code/name) as well as the newer outlet_id/outlet_name shape.
@@ -468,8 +488,24 @@ async function loadMenu(){
   if(r.error){$('menuNotice').innerHTML='<span class="danger">'+esc(r.error.message)+'</span>';return}
   menuItems=(r.data||[]).filter(x=>x.is_deleted!==true);
   const ir=await sb.from('menu_item_images').select('menu_item_id,item_name,image_url').eq('outlet_id',activeOutlet);
-  const imageMap={}; if(!ir.error)(ir.data||[]).forEach(v=>imageMap[v.menu_item_id||v.item_name]=v.image_url);
-  menuItems.forEach(x=>x.image_url=imageMap[x.id]||x.image_url||'');
+  const imageById=Object.create(null),imageByName=Object.create(null),ambiguousNames=new Set();
+  const imageNameKey=v=>String(v||'').trim().replace(/\\s+/g,' ').toLocaleLowerCase('en-IN');
+  if(!ir.error)(ir.data||[]).forEach(v=>{
+    const url=String(v.image_url||'').trim();if(!url)return;
+    if(v.menu_item_id!=null)imageById[String(v.menu_item_id)]=url;
+    const name=imageNameKey(v.item_name);
+    if(name){
+      if(Object.prototype.hasOwnProperty.call(imageByName,name)&&imageByName[name]!==url)ambiguousNames.add(name);
+      else imageByName[name]=url;
+    }
+  });
+  const menuNameCounts=new Map();
+  menuItems.forEach(x=>{const k=imageNameKey(x.name);if(k)menuNameCounts.set(k,(menuNameCounts.get(k)||0)+1);});
+  menuItems.forEach(x=>{
+    const nameKey=imageNameKey(x.name);
+    const nameFallback=nameKey&&menuNameCounts.get(nameKey)===1&&!ambiguousNames.has(nameKey)?imageByName[nameKey]:'';
+    x.image_url=imageById[String(x.id)]||nameFallback||x.image_url||'';
+  });
   $('menuCount').textContent=menuItems.length;$('menuNotice').textContent='Live menu: '+menuItems.length+' items';
   $('menuList').innerHTML=menuItems.map(x=>`<div class="itemrow">
     ${x.image_url?`<img class="thumb" src="${esc(x.image_url)}" alt="">`:`<div class="thumb" style="display:grid;place-items:center;color:#777">IMG</div>`}<div class="grow"><b>${esc(x.name)}</b><div class="muted">${esc(x.category||'Uncategorised')} • ${money(x.price)}</div><div class="muted">${x.available===false?'OFF':'ON'}${x.featured?' • FEATURED':''}</div></div>
@@ -832,6 +868,12 @@ async function reloadAll(){
     await bindOrderRealtime();
 
     const failures=[];
+    try{await loadOrdersTodayCount()}catch(error){
+      console.error('[JPT Dashboard] today order count',error);
+      $('ordersCount').textContent='—';
+      $('ordersCount').title='Today’s order count unavailable: '+(error?.message||error);
+      failures.push('today order count: '+(error?.message||error));
+    }
     for(const [name,fn] of tasks.slice(3)){
       try{
         await Promise.resolve(fn?.());
