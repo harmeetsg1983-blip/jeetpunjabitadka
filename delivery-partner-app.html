@@ -75,7 +75,7 @@ async function refresh(){try{let s=await ensureSession();if(!s)return;let {data}
 function renderStatus(v){$('statusPill').textContent=v?'ONLINE':'OFFLINE';$('statusPill').className='pill '+(v?'online':'');if(v)startDeliveryHeartbeat();else stopDeliveryHeartbeat()}
 let deliveryHeartbeatTimer=null;
 let deliveryHeartbeatBusy=false;
-async function sendDeliveryHeartbeat(){
+async async function sendDeliveryHeartbeat(){
   if(deliveryHeartbeatBusy)return false;
   deliveryHeartbeatBusy=true;
   try{
