@@ -1,6 +1,10 @@
 name: Build JPT Customer Android APK
 
 on:
+  pull_request:
+    paths:
+      - 'android-customer/**'
+      - '.github/workflows/build-jpt-customer-apk.yml'
   push:
     branches: [main]
     paths:
