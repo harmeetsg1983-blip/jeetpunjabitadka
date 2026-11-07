@@ -197,11 +197,22 @@ async function loadEarnings(){try{let {data,error}=await sb.rpc('delivery_partne
 const JPT_DELIVERY_OFFER_AUDIO='./ringtones/1000449571.mp4';
 const JPT_DELIVERY_ACCEPTED_AUDIO='./ringtones/1000449491.mp4';
 function toneFile(){return null}
+let deliveryTonePending=false;
 function startTone(){
-  stopTone();
-  try{audio=new Audio(JPT_DELIVERY_OFFER_AUDIO);audio.preload='auto';audio.loop=true;audio.play().catch(()=>{})}catch(e){}
+  try{
+    if(!audio){audio=new Audio(JPT_DELIVERY_OFFER_AUDIO);audio.preload='auto';audio.loop=true;}
+    audio.loop=true;
+    const p=audio.play();
+    if(p&&typeof p.catch==='function')p.catch(()=>{deliveryTonePending=true;});
+    deliveryTonePending=false;
+  }catch(e){deliveryTonePending=true;}
 }
-function stopTone(){if(audio){audio.pause();audio.currentTime=0;audio=null}}
+function retryPendingDeliveryTone(){
+  if(deliveryTonePending&&offer)startTone();
+}
+document.addEventListener('pointerdown',retryPendingDeliveryTone,{passive:true});
+document.addEventListener('keydown',retryPendingDeliveryTone);
+function stopTone(){deliveryTonePending=false;if(audio){audio.pause();try{audio.currentTime=0}catch(e){}}}
 function playDeliveryAcceptedTone(){
   try{
     const a=new Audio(JPT_DELIVERY_ACCEPTED_AUDIO);
