@@ -1,0 +1,15 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.jeetpunjabitadka.customer'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.jeetpunjabitadka.customer'
+        minSdk 23
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0'
+        buildConfigField 'String', 'CUSTOMER_WEB_URL', '"https://harmeetsg1983-blip.github.io/jeetpunjabitadka/customer-app.html"'
+    }
+    buildFeatures { buildConfig true }
+}
